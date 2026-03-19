@@ -1,52 +1,28 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const connectDB = require('./config/db');
-const errorHandler = require('./middleware/error');
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import connectDB from './config/db.js';
+import authRoutes from './routes/authRoutes.js';
 
-// Connect Database
+// Connect to MongoDB
 connectDB();
 
 const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 app.use(cors());
-app.use(helmet());
-if (process.env.NODE_ENV === 'development') {
-    app.use(morgan('dev'));
-}
 
-// Route files
-const authRoutes = require('./routes/authRoutes');
-const adminRoutes = require('./routes/adminRoutes');
-const studentRoutes = require('./routes/studentRoutes');
-const advisorRoutes = require('./routes/advisorRoutes');
-const departmentRoutes = require('./routes/departmentRoutes');
-
-// Mount Routers
+// Mount Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/student', studentRoutes);
-app.use('/api/advisor', advisorRoutes);
-app.use('/api/department', departmentRoutes);
 
-// Basic Route for testing
+// Basic route for testing
 app.get('/', (req, res) => {
-    res.json({ success: true, message: 'DBU-IMS API is running', data: null });
+  res.send('API is running (ES Modules)...');
 });
-
-// Standardized 404 Error handler
-app.use((req, res, next) => {
-    res.status(404).json({ success: false, message: 'Endpoint not found', data: null });
-});
-
-// Global Error Handler
-app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => console.log(`Server started on port ${PORT} in ${process.env.NODE_ENV} mode.`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
