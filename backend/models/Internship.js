@@ -32,14 +32,14 @@ const internshipSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  advisor: {
+  advisor_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User' // Links to ADVISOR role
   },
   status: {
     type: String,
-    enum: ['NOT_APPLIED', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'ONGOING', 'COMPLETED', 'GRADED'],
-    default: 'PENDING_APPROVAL'
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
   },
   finalGrade: {
     advisorScore: { type: Number, min: 0, max: 100 },

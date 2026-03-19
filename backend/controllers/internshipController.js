@@ -1,6 +1,7 @@
 import Internship from '../models/Internship.js';
 import Student from '../models/Student.js';
 import Company from '../models/Company.js';
+import User from '../models/User.js';
 
 // @desc    Apply for internship
 // @route   POST /api/internships/apply
@@ -59,12 +60,146 @@ export const applyInternship = async (req, res) => {
       endDate: end_date,
       companySupervisorName: supervisor_name,
       companySupervisorPhone: supervisor_phone,
-      status: 'PENDING_APPROVAL' 
+      status: 'pending' 
     });
 
     res.status(201).json({
       success: true,
       message: 'Internship application submitted successfully',
+      data: internship
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server Error',
+      data: null
+    });
+  }
+};
+
+// @desc    Approve internship
+// @route   PUT /api/internships/:id/approve
+// @access  Private/Department Head
+export const approveInternship = async (req, res) => {
+  try {
+    const internship = await Internship.findById(req.params.id);
+
+    if (!internship) {
+      return res.status(404).json({
+        success: false,
+        message: 'Internship not found',
+        data: null
+      });
+    }
+
+    internship.status = 'approved';
+    await internship.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Internship approved successfully',
+      data: internship
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server Error',
+      data: null
+    });
+  }
+};
+
+// @desc    Reject internship
+// @route   PUT /api/internships/:id/reject
+// @access  Private/Department Head
+export const rejectInternship = async (req, res) => {
+  try {
+    const internship = await Internship.findById(req.params.id);
+
+    if (!internship) {
+      return res.status(404).json({
+        success: false,
+        message: 'Internship not found',
+        data: null
+      });
+    }
+
+    internship.status = 'rejected';
+    await internship.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Internship rejected successfully',
+      data: internship
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server Error',
+      data: null
+    });
+  }
+};
+
+// @desc    Get all pending internships
+// @route   GET /api/internships/pending
+// @access  Private/Department Head
+export const getPendingInternships = async (req, res) => {
+  try {
+    const internships = await Internship.find({ status: 'pending' })
+      .populate('student')
+      .populate('company');
+
+    res.status(200).json({
+      success: true,
+      count: internships.length,
+      data: internships
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server Error',
+      data: null
+    });
+  }
+};
+
+// @desc    Assign advisor to internship
+// @route   PUT /api/internships/:id/assign-advisor
+// @access  Private/Department Head
+export const assignAdvisor = async (req, res) => {
+  try {
+    const { advisor_id } = req.body;
+    const internship = await Internship.findById(req.params.id);
+
+    if (!internship) {
+      return res.status(404).json({
+        success: false,
+        message: 'Internship not found',
+        data: null
+      });
+    }
+
+    // Verify advisor role
+    const advisor = await User.findById(advisor_id);
+    if (!advisor || advisor.role !== 'advisor') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid advisor ID or user is not an advisor',
+        data: null
+      });
+    }
+
+    internship.advisor_id = advisor_id;
+    await internship.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Advisor assigned successfully',
       data: internship
     });
   } catch (error) {
