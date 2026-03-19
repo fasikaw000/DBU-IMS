@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const reportSchema = new mongoose.Schema({
   student: {
@@ -66,4 +66,4 @@ reportSchema.pre('save', function(next) {
   next();
 });
 
-module.exports = mongoose.model('Report', reportSchema);
+export default mongoose.model('Report', reportSchema);

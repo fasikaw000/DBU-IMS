@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const internshipSchema = new mongoose.Schema({
   student: {
@@ -50,4 +50,4 @@ const internshipSchema = new mongoose.Schema({
   timestamps: true // Tracks exactly when the internship transitions state
 });
 
-module.exports = mongoose.model('Internship', internshipSchema);
+export default mongoose.model('Internship', internshipSchema);

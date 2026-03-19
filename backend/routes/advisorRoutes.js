@@ -4,7 +4,7 @@ import { protect, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 router.use(protect);
-router.use(authorize('ADVISOR'));
+router.use(authorize('advisor'));
 
 router.get('/students', getAssignedStudents);
 router.put('/logbook/:id/comment', commentOnLogbook);

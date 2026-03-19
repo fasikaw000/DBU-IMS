@@ -5,7 +5,7 @@ import { protect, authorize } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.use(protect);
-router.use(authorize('STUDENT'));
+router.use(authorize('student'));
 
 router.post('/apply', applyForInternship);
 router.route('/logbook')

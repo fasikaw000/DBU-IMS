@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const logbookSchema = new mongoose.Schema({
   student: {
@@ -38,4 +38,4 @@ const logbookSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Logbook', logbookSchema);
+export default mongoose.model('Logbook', logbookSchema);
