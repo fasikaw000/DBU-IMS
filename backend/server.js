@@ -7,6 +7,7 @@ import adminRoutes from './routes/adminRoutes.js';
 import advisorRoutes from './routes/advisorRoutes.js';
 import departmentRoutes from './routes/departmentRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
+import internshipRoutes from './routes/internshipRoutes.js';
 
 // Connect to MongoDB
 connectDB();
@@ -23,6 +24,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/advisor', advisorRoutes);
 app.use('/api/department', departmentRoutes);
 app.use('/api/student', studentRoutes);
+app.use('/api/internships', internshipRoutes);
 
 // Basic route for testing
 app.get('/', (req, res) => {
