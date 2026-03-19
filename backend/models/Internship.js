@@ -34,7 +34,11 @@ const internshipSchema = new mongoose.Schema({
   },
   advisor_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User' // Links to ADVISOR role
+    ref: 'User' // Links to University Advisor
+  },
+  supervisor_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User' // Links to Company Supervisor (Supervisor)
   },
   status: {
     type: String,

@@ -1,26 +1,31 @@
 import mongoose from 'mongoose';
 
 const notificationSchema = new mongoose.Schema({
-  user: {
+  recipient_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
+    required: true
+  },
+  type: {
+    type: String,
+    enum: ['internship_approved', 'report_submitted', 'evaluation_submitted', 'advisor_assigned', 'info'],
     required: true
   },
   message: {
     type: String,
     required: true
   },
-  type: {
+  link: {
     type: String,
-    enum: ['INFO', 'WARNING', 'DEADLINE', 'APPROVAL', 'FEEDBACK', 'SYSTEM'],
-    default: 'INFO'
+    default: null
   },
-  isRead: {
+  is_read: {
     type: Boolean,
     default: false
   },
-  actionUrl: {
-    type: String // Optional URL to redirect the user (e.g., /reports/123)
+  created_at: {
+    type: Date,
+    default: Date.now
   }
 }, {
   timestamps: true

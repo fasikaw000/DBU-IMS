@@ -2,6 +2,7 @@ import Internship from '../models/Internship.js';
 import Student from '../models/Student.js';
 import Company from '../models/Company.js';
 import User from '../models/User.js';
+import { notify } from './notificationController.js';
 
 // @desc    Apply for internship
 // @route   POST /api/internships/apply
@@ -13,6 +14,7 @@ export const applyInternship = async (req, res) => {
       location,
       field,
       supervisor_name,
+      supervisor_email,
       supervisor_phone,
       start_date,
       end_date
@@ -51,7 +53,19 @@ export const applyInternship = async (req, res) => {
       });
     }
 
-    // 4. Create internship
+    // 4. Handle Company Supervisor (Supervisor) account
+    let supervisor = await User.findOne({ email: supervisor_email });
+    if (!supervisor) {
+        // Create new supervisor account with temporary password
+        supervisor = await User.create({
+            name: supervisor_name,
+            email: supervisor_email,
+            password: 'Welcome123!',
+            role: 'supervisor'
+        });
+    }
+
+    // 5. Create internship
     const internship = await Internship.create({
       student: student._id,
       company: company._id,
@@ -60,6 +74,7 @@ export const applyInternship = async (req, res) => {
       endDate: end_date,
       companySupervisorName: supervisor_name,
       companySupervisorPhone: supervisor_phone,
+      supervisor_id: supervisor._id,
       status: 'pending' 
     });
 
@@ -95,6 +110,17 @@ export const approveInternship = async (req, res) => {
 
     internship.status = 'approved';
     await internship.save();
+
+    // Notify student
+    const populatedInternship = await internship.populate('student');
+    if (populatedInternship.student && populatedInternship.student.user) {
+        await notify(
+            populatedInternship.student.user, 
+            'internship_approved', 
+            `Your internship application for ${populatedInternship.field} has been approved!`,
+            `/internships/${internship._id}`
+        );
+    }
 
     res.status(200).json({
       success: true,
@@ -197,6 +223,14 @@ export const assignAdvisor = async (req, res) => {
     internship.advisor_id = advisor_id;
     await internship.save();
 
+    // Notify advisor
+    await notify(
+        advisor_id, 
+        'advisor_assigned', 
+        'You have been assigned as an advisor for a new internship.',
+        `/advisor/internships`
+    );
+
     res.status(200).json({
       success: true,
       message: 'Advisor assigned successfully',
@@ -208,6 +242,59 @@ export const assignAdvisor = async (req, res) => {
       success: false,
       message: error.message || 'Server Error',
       data: null
+    });
+  }
+};
+
+// @desc    Get logged-in student's internship
+// @route   GET /api/internships/my-internship
+// @access  Private (Student)
+export const getStudentInternship = async (req, res) => {
+  try {
+    const internship = await Internship.findOne({ student_id: req.user._id })
+      .populate('advisor_id', 'name email')
+      .populate('supervisor_id', 'name email phone');
+
+    if (!internship) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'No internship found for this student',
+        data: null 
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: internship
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error', 
+      error: error.message 
+    });
+  }
+};
+
+// @desc    Get students assigned to supervisor
+// @route   GET /api/internships/supervisor/students
+// @access  Private (Supervisor)
+export const getSupervisorInternships = async (req, res) => {
+  try {
+    const internships = await Internship.find({ supervisor_id: req.user._id })
+      .populate('student_id', 'name studentId email department phone');
+
+    res.status(200).json({
+      success: true,
+      data: internships
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error', 
+      error: error.message 
     });
   }
 };

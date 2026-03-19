@@ -18,29 +18,37 @@ const Sidebar = () => {
   // Define nav items based on role
   const getNavItems = () => {
     switch (user?.role) {
-      case 'STUDENT':
+      case 'student':
         return [
           { name: 'Dashboard', path: '/student/dashboard', icon: LayoutDashboard },
-          { name: 'Apply', path: '/student/apply', icon: Briefcase },
-          { name: 'Logbook', path: '/student/logbook', icon: BookOpen },
           { name: 'Reports', path: '/student/reports', icon: FileText },
         ];
-      case 'ADVISOR':
+      case 'advisor':
         return [
           { name: 'Dashboard', path: '/advisor/dashboard', icon: LayoutDashboard },
           { name: 'Students', path: '/advisor/students', icon: Users },
         ];
-      case 'DEPARTMENT_HEAD':
+      case 'supervisor':
+        return [
+          { name: 'Dashboard', path: '/supervisor/dashboard', icon: LayoutDashboard },
+          { name: 'Students', path: '/supervisor/students', icon: Users },
+        ];
+      case 'department_head':
         return [
           { name: 'Dashboard', path: '/department/dashboard', icon: LayoutDashboard },
           { name: 'Companies', path: '/department/companies', icon: Building },
-          { name: 'Assign Advisors', path: '/department/assignments', icon: Users },
+          { name: 'Assignments', path: '/department/assignments', icon: Users },
         ];
-      case 'COLLEGE_DEAN':
+      case 'college_head':
+        return [
+          { name: 'Dashboard', path: '/college-head/dashboard', icon: LayoutDashboard },
+          { name: 'Analytics', path: '/college-head/analytics', icon: BarChart },
+        ];
+      case 'admin':
         return [
           { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
           { name: 'Staff', path: '/admin/staff', icon: Users },
-          { name: 'Analytics', path: '/admin/analytics', icon: BarChart },
+          { name: 'Seed IDs', path: '/admin/seed-ids', icon: FileText },
         ];
       default:
         return [];
@@ -52,7 +60,7 @@ const Sidebar = () => {
       <div className="flex items-center justify-center h-16 border-b border-slate-700 mt-2">
         <h1 className="text-xl font-bold tracking-wider text-dbu-light">DBU<span className="text-dbu-accent">IMS</span></h1>
       </div>
-      
+
       <div className="flex flex-col flex-1 py-4 overflow-y-auto">
         <nav className="flex-1 px-4 space-y-2">
           {getNavItems().map((item) => (
@@ -60,10 +68,9 @@ const Sidebar = () => {
               key={item.name}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                  isActive
-                    ? 'bg-dbu-primary text-white'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${isActive
+                  ? 'bg-dbu-primary text-white'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`
               }
             >

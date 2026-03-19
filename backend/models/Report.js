@@ -1,69 +1,51 @@
 import mongoose from 'mongoose';
 
 const reportSchema = new mongoose.Schema({
-  student: {
+  student_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Student',
+    ref: 'User',
     required: true
   },
-  internship: {
+  internship_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Internship',
     required: true
   },
-  type: {
+  title: {
     type: String,
-    enum: ['WEEKLY', 'MONTHLY', 'FINAL'],
     required: true
   },
-  fileUrl: {
+  description: {
     type: String,
-    required: [true, 'Please provide the Cloudinary file URL']
+    required: true
   },
-  version: {
+  file: {
+    type: String,
+    required: true
+  },
+  week_number: {
     type: Number,
-    default: 1
+    required: true
   },
-  isLatest: {
-    type: Boolean,
-    default: true
+  status: {
+    type: String,
+    enum: ['submitted', 'approved', 'rejected'],
+    default: 'submitted'
   },
-  submissionDate: {
+  advisor_feedback: {
+    type: String,
+    default: null
+  },
+  feedback_date: {
+    type: Date,
+    default: null
+  },
+  createdAt: {
     type: Date,
     default: Date.now
-  },
-  dueDate: {
-    type: Date,
-    required: true
-  },
-  isLate: {
-    type: Boolean,
-    default: false // This will be calculated on .save() middleware
-  },
-  feedback: {
-    comment: String,
-    advisor: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    dateAdded: Date
-  },
-  approved: {
-    type: Boolean,
-    default: false
   }
 }, {
   timestamps: true
-});
-
-// Middleware to calculate isLate prior to saving
-reportSchema.pre('save', function(next) {
-  if (this.submissionDate > this.dueDate) {
-    this.isLate = true;
-  } else {
-    this.isLate = false;
-  }
-  next();
 });
 
 export default mongoose.model('Report', reportSchema);

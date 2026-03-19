@@ -20,10 +20,10 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Standardized Login Function
-  const login = async (identifier, password) => {
+  const login = async (email, password) => {
     try {
       setError(null);
-      const res = await api.post('/auth/login', { identifier, password });
+      const res = await api.post('/auth/login', { email, password });
       
       // res corresponds to the backend `data` object due to the interceptor returning response.data
       const userData = res.data; 

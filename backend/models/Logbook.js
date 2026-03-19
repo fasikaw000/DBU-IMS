@@ -1,38 +1,33 @@
 import mongoose from 'mongoose';
 
 const logbookSchema = new mongoose.Schema({
-  student: {
+  student_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Student',
-    required: true
-  },
-  internship: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Internship',
+    ref: 'User',
     required: true
   },
   date: {
     type: Date,
-    required: true,
-    default: Date.now
+    required: true
   },
-  activity: {
+  tasks_completed: {
     type: String,
-    required: [true, 'Please describe your activity'],
+    required: [true, 'Please describe your tasks completed'],
     trim: true
   },
-  hoursWorked: { // Optional extra field typical in logbooks
+  hours_spent: {
     type: Number,
+    required: true,
     min: 0,
     max: 24
   },
-  comment: { // Advisor's comment on the daily/weekly log
-    text: String,
-    advisor: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    dateAdded: Date
+  remarks: {
+    type: String,
+    trim: true
+  },
+  created_at: {
+    type: Date,
+    default: Date.now
   }
 }, {
   timestamps: true

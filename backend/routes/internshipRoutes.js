@@ -4,7 +4,9 @@ import {
   approveInternship, 
   rejectInternship, 
   getPendingInternships,
-  assignAdvisor
+  assignAdvisor,
+  getStudentInternship,
+  getSupervisorInternships
 } from '../controllers/internshipController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
@@ -34,5 +36,15 @@ router.put('/:id/reject', protect, authorize('department_head'), rejectInternshi
 // @desc    Assign advisor to internship
 // @access  Private (Department Head only)
 router.put('/:id/assign-advisor', protect, authorize('department_head'), assignAdvisor);
+
+// @route   GET /api/internships/my-internship
+// @desc    Get logged-in student's internship
+// @access  Private (Student only)
+router.get('/my-internship', protect, authorize('student'), getStudentInternship);
+
+// @route   GET /api/internships/supervisor/students
+// @desc    Get students assigned to supervisor
+// @access  Private (Supervisor only)
+router.get('/supervisor/students', protect, authorize('supervisor'), getSupervisorInternships);
 
 export default router;
