@@ -1,9 +1,9 @@
-const User = require('../models/User');
+import User from '../models/User.js';
 
 // @desc    Admin Provisions a Staff Member (Advisor or Dept Head)
 // @route   POST /api/admin/provision
 // @access  Private (COLLEGE_DEAN Only)
-exports.provisionStaff = async (req, res, next) => {
+export const provisionStaff = async (req, res, next) => {
   try {
     const { userId, email, password, name, role } = req.body;
 
@@ -40,7 +40,7 @@ exports.provisionStaff = async (req, res, next) => {
 // @desc    Get all users (Paginated list APIs)
 // @route   GET /api/admin/users
 // @access  Private (COLLEGE_DEAN Only)
-exports.getUsers = async (req, res, next) => {
+export const getUsers = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 20;

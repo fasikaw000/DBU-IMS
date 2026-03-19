@@ -1,6 +1,6 @@
-const express = require('express');
-const { applyForInternship, submitLogbook, submitReport, getMyLogbooks } = require('../controllers/studentController');
-const { protect, authorize } = require('../middleware/auth');
+import express from 'express';
+import { applyForInternship, submitLogbook, submitReport, getMyLogbooks } from '../controllers/studentController.js';
+import { protect, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -13,4 +13,4 @@ router.route('/logbook')
     .get(getMyLogbooks);
 router.post('/reports', submitReport);
 
-module.exports = router;
+export default router;

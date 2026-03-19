@@ -1,13 +1,13 @@
-const Student = require('../models/Student');
-const Internship = require('../models/Internship');
-const Company = require('../models/Company');
-const User = require('../models/User');
-const AuditLog = require('../models/AuditLog');
+import Student from '../models/Student.js';
+import Internship from '../models/Internship.js';
+import Company from '../models/Company.js';
+import User from '../models/User.js';
+import AuditLog from '../models/AuditLog.js';
 
 // @desc    Approve/Reject Student-Submitted Company
 // @route   PUT /api/department/company/:id/approve
 // @access  Private (DEPARTMENT_HEAD only)
-exports.approveCompany = async (req, res, next) => {
+export const approveCompany = async (req, res, next) => {
   try {
     const { status } = req.body; // 'APPROVED' or 'REJECTED'
     const companyId = req.params.id;
@@ -41,7 +41,7 @@ exports.approveCompany = async (req, res, next) => {
 // @desc    Assign Advisor to Internship Workflow (Manual or Auto)
 // @route   PUT /api/department/internship/:id/assign
 // @access  Private (DEPARTMENT_HEAD only)
-exports.assignAdvisor = async (req, res, next) => {
+export const assignAdvisor = async (req, res, next) => {
     try {
         const internshipId = req.params.id;
         let { advisorId, autoAssign } = req.body;

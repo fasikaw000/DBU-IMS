@@ -1,6 +1,6 @@
-const express = require('express');
-const { getAssignedStudents, commentOnLogbook, gradeReport } = require('../controllers/advisorController');
-const { protect, authorize } = require('../middleware/auth');
+import express from 'express';
+import { getAssignedStudents, commentOnLogbook, gradeReport } from '../controllers/advisorController.js';
+import { protect, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 router.use(protect);
@@ -10,4 +10,4 @@ router.get('/students', getAssignedStudents);
 router.put('/logbook/:id/comment', commentOnLogbook);
 router.put('/report/:id/grade', gradeReport);
 
-module.exports = router;
+export default router;

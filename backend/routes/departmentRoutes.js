@@ -1,6 +1,6 @@
-const express = require('express');
-const { approveCompany, assignAdvisor } = require('../controllers/departmentController');
-const { protect, authorize } = require('../middleware/auth');
+import express from 'express';
+import { approveCompany, assignAdvisor } from '../controllers/departmentController.js';
+import { protect, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 router.use(protect);
@@ -9,4 +9,4 @@ router.use(authorize('DEPARTMENT_HEAD'));
 router.put('/company/:id/approve', approveCompany);
 router.put('/internship/:id/assign', assignAdvisor);
 
-module.exports = router;
+export default router;

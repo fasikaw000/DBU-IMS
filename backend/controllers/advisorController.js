@@ -1,12 +1,12 @@
-const Internship = require('../models/Internship');
-const Logbook = require('../models/Logbook');
-const Report = require('../models/Report');
-const Notification = require('../models/Notification'); // Used to trigger alerts to student
+import Internship from '../models/Internship.js';
+import Logbook from '../models/Logbook.js';
+import Report from '../models/Report.js';
+import Notification from '../models/Notification.js'; // Used to trigger alerts to student
 
 // @desc    Get assigned students' internships
 // @route   GET /api/advisor/students
 // @access  Private (ADVISOR only)
-exports.getAssignedStudents = async (req, res, next) => {
+export const getAssignedStudents = async (req, res, next) => {
     try {
         const page = parseInt(req.query.page, 10) || 1;
         const limit = parseInt(req.query.limit, 10) || 20;
@@ -26,7 +26,7 @@ exports.getAssignedStudents = async (req, res, next) => {
 // @desc    Comment on a student logbook
 // @route   PUT /api/advisor/logbook/:id/comment
 // @access  Private (ADVISOR only)
-exports.commentOnLogbook = async (req, res, next) => {
+export const commentOnLogbook = async (req, res, next) => {
     try {
         const { text } = req.body;
         const logbook = await Logbook.findById(req.params.id).populate('student');
@@ -60,7 +60,7 @@ exports.commentOnLogbook = async (req, res, next) => {
 // @desc    Review and Grade a Report
 // @route   PUT /api/advisor/report/:id/grade
 // @access  Private (ADVISOR only)
-exports.gradeReport = async (req, res, next) => {
+export const gradeReport = async (req, res, next) => {
     try {
         const { comment, approved } = req.body;
         const report = await Report.findById(req.params.id).populate('student');

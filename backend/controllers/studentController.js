@@ -1,13 +1,13 @@
-const Student = require('../models/Student');
-const Internship = require('../models/Internship');
-const Company = require('../models/Company');
-const Report = require('../models/Report');
-const Logbook = require('../models/Logbook');
+import Student from '../models/Student.js';
+import Internship from '../models/Internship.js';
+import Company from '../models/Company.js';
+import Report from '../models/Report.js';
+import Logbook from '../models/Logbook.js';
 
 // @desc    Student proposes a company & applies for internship
 // @route   POST /api/student/apply
 // @access  Private (STUDENT only)
-exports.applyForInternship = async (req, res, next) => {
+export const applyForInternship = async (req, res, next) => {
   try {
     const student = await Student.findOne({ user: req.user.id });
 
@@ -53,7 +53,7 @@ exports.applyForInternship = async (req, res, next) => {
 // @desc    Submit a daily/weekly logbook entry
 // @route   POST /api/student/logbook
 // @access  Private (STUDENT only)
-exports.submitLogbook = async (req, res, next) => {
+export const submitLogbook = async (req, res, next) => {
   try {
     const { activity, hoursWorked } = req.body;
     const student = await Student.findOne({ user: req.user.id });
@@ -79,7 +79,7 @@ exports.submitLogbook = async (req, res, next) => {
 // @desc    Submit a Report (Weekly, Monthly, Final) w/ Versioning & Deadlines
 // @route   POST /api/student/reports
 // @access  Private (STUDENT only)
-exports.submitReport = async (req, res, next) => {
+export const submitReport = async (req, res, next) => {
   try {
     const { type, fileUrl, dueDate } = req.body;
     const student = await Student.findOne({ user: req.user.id });
@@ -119,7 +119,7 @@ exports.submitReport = async (req, res, next) => {
 // @desc    Get paginated logbooks for the current student
 // @route   GET /api/student/logbook
 // @access  Private (STUDENT only)
-exports.getMyLogbooks = async (req, res, next) => {
+export const getMyLogbooks = async (req, res, next) => {
     try {
         const student = await Student.findOne({ user: req.user.id });
         const page = parseInt(req.query.page, 10) || 1;

@@ -1,6 +1,6 @@
-const express = require('express');
-const { provisionStaff, getUsers } = require('../controllers/adminController');
-const { protect, authorize } = require('../middleware/auth');
+import express from 'express';
+import { provisionStaff, getUsers } from '../controllers/adminController.js';
+import { protect, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -11,4 +11,4 @@ router.use(authorize('COLLEGE_DEAN'));
 router.post('/provision', provisionStaff);
 router.route('/users').get(getUsers);
 
-module.exports = router;
+export default router;
