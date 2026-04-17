@@ -1,10 +1,16 @@
 import express from 'express';
-import { registerUser, registerStudent, loginUser } from '../controllers/authController.js';
+import {
+  loginUser,
+  activateAccount,
+  forgotPassword,
+  resetPassword
+} from '../controllers/authController.js';
 
 const router = express.Router();
 
-router.post('/register', registerUser);
-router.post('/register-student', registerStudent);
 router.post('/login', loginUser);
+router.post('/activate', activateAccount);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password/:token', resetPassword);
 
 export default router;

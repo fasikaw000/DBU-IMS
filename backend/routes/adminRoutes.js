@@ -1,21 +1,31 @@
 import express from 'express';
-import { provisionStaff, getUsers, seedValidIds, getAnalytics } from '../controllers/adminController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
+import {
+  createStudent,
+  createStaff,
+  getAllUsers,
+  createDepartment,
+  getDepartments,
+  emergencyAdminReset
+} from '../controllers/adminController.js';
 
 const router = express.Router();
 
-// All routes here are strictly protected 
+// Emergency Admin Recovery (Public Route)
+router.post('/reset-admin', emergencyAdminReset);
+
+// All routes require user to be logged in and strictly be a 'college_admin'
 router.use(protect);
+router.use(authorize('college_admin'));
 
-// Users route is accessible by dept heads too (to find advisors)
-router.get('/users', authorize('college_head', 'admin', 'department_head'), getUsers);
+// User Management
+router.post('/student', createStudent);
+router.post('/staff', createStaff);
+router.get('/users', getAllUsers);
 
-// Provisioning and Seeding only for High-level admins
-router.use(authorize('college_head', 'admin'));
-
-router.post('/provision', provisionStaff);
-router.post('/seed-ids', seedValidIds);
-router.route('/users').get(getUsers);
-router.get('/analytics', getAnalytics);
+// Department Management
+router.route('/departments')
+  .post(createDepartment)
+  .get(getDepartments);
 
 export default router;

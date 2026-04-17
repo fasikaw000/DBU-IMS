@@ -1,28 +1,37 @@
 import mongoose from 'mongoose';
 
 const auditLogSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   action: {
     type: String,
-    required: true // e.g., 'APPROVED_INTERNSHIP', 'ASSIGNED_GRADE'
+    required: true,
+    enum: [
+      'login_success', 
+      'login_failure', 
+      'logout', 
+      'activation_success', 
+      'activation_failure', 
+      'user_created',
+      'COMPANY_APPROVED',
+      'COMPANY_REJECTED',
+      'account_activated',
+      'failed_login'
+    ]
   },
   performedBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: 'User'
   },
   targetResource: {
-    model: {
-      type: String, // e.g., 'Internship', 'User' 
-      required: true
-    },
-    documentId: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true
-    }
+    model: String,
+    documentId: mongoose.Schema.Types.ObjectId
   },
-  details: {
-    type: mongoose.Schema.Types.Mixed // JSON object for extra diffs or states
-  }
+  ip: String,
+  userAgent: String,
+  details: String
 }, {
   timestamps: true
 });

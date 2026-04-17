@@ -5,6 +5,7 @@ import { Building, ShieldCheck, Database, UserCheck, AlertCircle } from 'lucide-
 const DeptDashboard = () => {
     const [internships, setInternships] = useState([]);
     const [advisors, setAdvisors] = useState([]);
+    const [departmentName, setDepartmentName] = useState('');
     const [loading, setLoading] = useState(true);
     const [approving, setApproving] = useState(false);
     const [message, setMessage] = useState('');
@@ -15,12 +16,25 @@ const DeptDashboard = () => {
 
     const fetchData = async () => {
         try {
-            const [intRes, advRes] = await Promise.all([
-                api.get('/internships/pending'),
-                api.get('/admin/users?role=advisor')
+            const [studentRes, advRes] = await Promise.all([
+                api.get('/department/students'),
+                api.get('/department/advisors/workload')
             ]);
-            setInternships(intRes.data.data);
-            setAdvisors(advRes.data.data);
+            // Extract pending internships from students
+            const pending = studentRes.data.data
+              .filter(s => s.internship && (s.internship.status === 'Pending' || s.internship.status === 'Approved'))
+              .map(s => s.internship);
+            setInternships(pending);
+            const advisorList = advRes.data.data.map(w => w.advisor);
+            setAdvisors(advisorList);
+
+            // Extract department name from the first student or advisor if available
+            const firstRecord = studentRes.data.data[0] || advRes.data.data[0];
+            if (firstRecord?.department?.name) {
+                setDepartmentName(firstRecord.department.name);
+            } else if (firstRecord?.department?.code) {
+                setDepartmentName(firstRecord.department.code);
+            }
         } catch (err) {
             console.error(err);
         } finally {
@@ -32,7 +46,7 @@ const DeptDashboard = () => {
         setApproving(true);
         setMessage('');
         try {
-            await api.put(`/internships/${id}/approve`);
+            await api.put(`/department/internship/${id}`, { status: 'Approved' });
             setMessage('Internship approved. Now assign an advisor.');
             fetchData();
         } catch (err) {
@@ -46,7 +60,7 @@ const DeptDashboard = () => {
         if (!advisorId) return;
         setMessage('');
         try {
-            await api.put(`/internships/${internshipId}/assign-advisor`, { advisor_id: advisorId });
+            await api.put(`/department/internship/${internshipId}/advisor`, { advisorId });
             setMessage('Advisor assigned successfully!');
             fetchData();
         } catch (err) {
@@ -64,7 +78,14 @@ const DeptDashboard = () => {
         <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-slate-800 text-dbu-dark">Department Head Panel</h2>
+                    <div className="flex items-center gap-3 mb-1">
+                        <h2 className="text-2xl font-bold text-slate-800 text-dbu-dark">Department Head Panel</h2>
+                        {departmentName && (
+                            <span className="bg-dbu-primary text-white text-xs font-black px-3 py-1 rounded-full tracking-widest uppercase">
+                                {departmentName}
+                            </span>
+                        )}
+                    </div>
                     <p className="text-slate-500">Review student applications and coordinate advisor workloads.</p>
                 </div>
                 <div className="flex gap-4">
@@ -114,11 +135,11 @@ const DeptDashboard = () => {
                               internships.map(intern => (
                                 <tr key={intern._id} className="border-b border-slate-100 hover:bg-slate-50 transition">
                                     <td className="p-4">
-                                        <p className="font-bold text-slate-800">{intern.student_id?.name || 'Unknown User'}</p>
-                                        <p className="text-[10px] text-slate-400 font-medium">{intern.student_id?.studentId || 'NO_ID_RECORDED'}</p>
+                                        <p className="font-bold text-slate-800">{intern.student?.name || 'Unknown User'}</p>
+                                        <p className="text-[10px] text-slate-400 font-medium">{intern.student?.studentId || 'NO_ID_RECORDED'}</p>
                                     </td>
                                     <td className="p-4">
-                                        <p className="text-sm font-bold text-slate-700">{intern.company_name}</p>
+                                        <p className="text-sm font-bold text-slate-700">{intern.companyName}</p>
                                         <p className="text-[10px] text-slate-400 capitalize">{intern.location}</p>
                                     </td>
                                     <td className="p-4">

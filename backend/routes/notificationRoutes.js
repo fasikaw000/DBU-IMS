@@ -11,7 +11,7 @@ const router = express.Router();
 router.use(protect);
 
 // Admin can manually create notifications
-router.post('/', authorize('admin'), createNotification);
+router.post('/', authorize('college_admin'), createNotification);
 
 // User fetches their own notifications
 router.get('/', getUserNotifications);

@@ -1,90 +1,136 @@
 import Student from '../models/Student.js';
-import Internship from '../models/Internship.js';
-import Company from '../models/Company.js';
 import User from '../models/User.js';
+import Internship from '../models/Internship.js';
 import AuditLog from '../models/AuditLog.js';
 
-// @desc    Approve/Reject Student-Submitted Company
-// @route   PUT /api/department/company/:id/approve
-// @access  Private (DEPARTMENT_HEAD only)
-export const approveCompany = async (req, res, next) => {
+// ─────────────────────────────────────────────────────────────
+// @desc    Get all students in the dean's department
+// @route   GET /api/department/students
+// @access  Private (Department Dean)
+// ─────────────────────────────────────────────────────────────
+export const getDepartmentStudents = async (req, res, next) => {
   try {
-    const { status } = req.body; // 'APPROVED' or 'REJECTED'
-    const companyId = req.params.id;
+    const deanId = req.user.id;
+    const dean = await User.findById(deanId);
 
-    if (!['APPROVED', 'REJECTED'].includes(status)) {
-        return res.status(400).json({ success: false, message: 'Status must be APPROVED or REJECTED', data: null });
+    if (!dean.department) {
+      return res.status(400).json({ success: false, message: 'Dean is not assigned to a department' });
     }
 
-    const company = await Company.findById(companyId);
-    if (!company) {
-        return res.status(404).json({ success: false, message: 'Company not found', data: null });
+    const students = await Student.find({ department: dean.department })
+      .populate('user', 'name email isActivated role')
+      .lean();
+
+    // Attach internship info for these students
+    for (let student of students) {
+      const internship = await Internship.findOne({ student: student.user._id })
+        .populate('advisor', 'name email');
+      student.internship = internship || null;
     }
 
-    company.approvalStatus = status;
-    company.departmentApprover = req.user.id;
-    await company.save();
-
-    // Audit the action
-    await AuditLog.create({
-        action: `COMPANY_${status}`,
-        performedBy: req.user.id,
-        targetResource: { model: 'Company', documentId: company._id }
-    });
-
-    res.status(200).json({ success: true, message: `Company ${status}`, data: company });
-  } catch (err) {
-    next(err);
+    res.status(200).json({ success: true, count: students.length, data: students });
+  } catch (error) {
+    next(error);
   }
 };
 
-// @desc    Assign Advisor to Internship Workflow (Manual or Auto)
-// @route   PUT /api/department/internship/:id/assign
-// @access  Private (DEPARTMENT_HEAD only)
-export const assignAdvisor = async (req, res, next) => {
-    try {
-        const internshipId = req.params.id;
-        let { advisorId, autoAssign } = req.body;
+// ─────────────────────────────────────────────────────────────
+// @desc    Approve or reject internship application
+// @route   PUT /api/department/internship/:internshipId
+// @access  Private (Department Dean)
+// ─────────────────────────────────────────────────────────────
+export const processInternshipApp = async (req, res, next) => {
+  try {
+    const { status } = req.body; // 'Approved' or 'Rejected'
+    const internshipId = req.params.internshipId;
 
-        const internship = await Internship.findById(internshipId).populate('student');
-        if (!internship) return res.status(404).json({ success: false, message: 'Internship not found', data: null });
-
-        if (internship.status === 'NOT_APPLIED') {
-            return res.status(400).json({ success: false, message: 'Cannot assign advisor. Student has not applied.', data: null });
-        }
-
-        // Auto-Assignment Logic: Find an active advisor with the fewest current workloads
-        if (autoAssign) {
-            const workloadCounts = await Internship.aggregate([
-                { $group: { _id: "$advisor", count: { $sum: 1 } } }
-            ]);
-            
-            // Map the db to find advisors with fewest students
-            const allAdvisors = await User.find({ role: 'ADVISOR' });
-            if (allAdvisors.length === 0) {
-                 return res.status(404).json({ success: false, message: 'No advisors exist in system to auto-assign.', data: null });
-            }
-
-            // A simplified selection of the first advisor (for advanced logic, map vs workloadCounts here)
-            advisorId = allAdvisors[0]._id;
-        }
-
-        const advisor = await User.findById(advisorId);
-        if (!advisor || advisor.role !== 'ADVISOR') {
-             return res.status(400).json({ success: false, message: 'Invalid Advisor ID provided', data: null });
-        }
-
-        internship.advisor = advisor._id;
-        // Bump lifecycle to ONGOING if company is also approved
-        const company = await Company.findById(internship.company);
-        if (company.approvalStatus === 'APPROVED') {
-            internship.status = 'ONGOING';
-        }
-        await internship.save();
-
-        res.status(200).json({ success: true, message: `Advisor assigned successfully. Workflow status is now ${internship.status}.`, data: internship });
-
-    } catch (err) {
-        next(err);
+    if (!['Approved', 'Rejected'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
     }
-}
+
+    const internship = await Internship.findById(internshipId);
+    if (!internship) {
+      return res.status(404).json({ success: false, message: 'Internship not found' });
+    }
+
+    internship.status = status;
+    await internship.save();
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: `internship_${status.toLowerCase()}`,
+      details: `Internship ${internshipId} ${status.toLowerCase()}`,
+      ip: req.ip
+    });
+
+    res.status(200).json({ success: true, data: internship });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// @desc    Assign advisor to an approved internship
+// @route   PUT /api/department/internship/:internshipId/advisor
+// @access  Private (Department Dean)
+// ─────────────────────────────────────────────────────────────
+export const assignAdvisor = async (req, res, next) => {
+  try {
+    const internshipId = req.params.internshipId;
+    const { advisorId } = req.body;
+
+    const internship = await Internship.findById(internshipId);
+    if (!internship) {
+      return res.status(404).json({ success: false, message: 'Internship not found' });
+    }
+
+    if (internship.status !== 'Approved' && internship.status !== 'Active') {
+      return res.status(400).json({ success: false, message: 'Internship must be approved before assigning an advisor' });
+    }
+
+    const advisor = await User.findOne({ _id: advisorId, role: 'advisor' });
+    if (!advisor) {
+      return res.status(404).json({ success: false, message: 'Advisor not found or invalid user role' });
+    }
+
+    internship.advisor = advisor._id;
+    // Potentially upgrade state to active
+    if (internship.status === 'Approved') {
+       internship.status = 'Active';
+    }
+    
+    await internship.save();
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: 'advisor_assigned',
+      details: `Assisted advisor ${advisor.username} to internship ${internshipId}`,
+      ip: req.ip
+    });
+
+    res.status(200).json({ success: true, message: 'Advisor assigned successfully', data: internship });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// @desc    Get advisor workload in the department
+// @route   GET /api/department/advisors/workload
+// @access  Private (Department Dean)
+// ─────────────────────────────────────────────────────────────
+export const getAdvisorWorkload = async (req, res, next) => {
+  try {
+    const dean = await User.findById(req.user.id);
+    const advisors = await User.find({ role: 'advisor', department: dean.department }).select('name username email');
+
+    const workloads = await Promise.all(advisors.map(async (adv) => {
+      const activeInternships = await Internship.countDocuments({ advisor: adv._id, status: { $in: ['Active', 'Approved'] }});
+      return { advisor: adv, activeStudentsCount: activeInternships };
+    }));
+
+    res.status(200).json({ success: true, data: workloads });
+  } catch (error) {
+    next(error);
+  }
+};

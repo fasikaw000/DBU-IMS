@@ -1,51 +1,65 @@
 import mongoose from 'mongoose';
 
 const reportSchema = new mongoose.Schema({
-  student_id: {
+  student: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'Student',
     required: true
   },
-  internship_id: {
+  internship: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Internship',
     required: true
   },
-  title: {
+  type: {
+    type: String,
+    enum: ['WEEKLY', 'MONTHLY', 'FINAL'],
+    required: true
+  },
+  fileUrl: {
     type: String,
     required: true
   },
-  description: {
-    type: String,
+  dueDate: {
+    type: Date,
     required: true
   },
-  file: {
-    type: String,
-    required: true
+  isLate: {
+    type: Boolean,
+    default: false
   },
-  week_number: {
+  version: {
     type: Number,
-    required: true
+    default: 1
   },
-  status: {
-    type: String,
-    enum: ['submitted', 'approved', 'rejected'],
-    default: 'submitted'
+  isLatest: {
+    type: Boolean,
+    default: true
   },
-  advisor_feedback: {
-    type: String,
-    default: null
+  approved: {
+    type: Boolean,
+    default: null // null = pending, true = approved, false = rejected
   },
-  feedback_date: {
-    type: Date,
-    default: null
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
+  feedback: {
+    comment: String,
+    advisor: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    dateAdded: Date
   }
 }, {
   timestamps: true
+});
+
+// Middleware to check if submission is late
+reportSchema.pre('save', function (next) {
+    if (this.isModified('fileUrl') || this.isNew) {
+        if (this.dueDate && new Date() > this.dueDate) {
+            this.isLate = true;
+        }
+    }
+    next();
 });
 
 export default mongoose.model('Report', reportSchema);

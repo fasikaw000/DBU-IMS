@@ -28,6 +28,10 @@ const internshipSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  companySupervisorEmail: {
+    type: String,
+    required: false
+  },
   companySupervisorPhone: {
     type: String,
     required: true
@@ -36,18 +40,22 @@ const internshipSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User' // Links to University Advisor
   },
-  supervisor_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User' // Links to Company Supervisor (Supervisor)
+  companyEvaluationUrl: {
+    type: String
+  },
+  presentationCompleted: {
+    type: Boolean,
+    default: false
   },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected'],
-    default: 'pending'
+    enum: ['NOT_STARTED', 'PENDING_APPROVAL', 'APPROVED', 'ONGOING', 'SUBMITTED', 'EVALUATED', 'COMPLETED'],
+    default: 'NOT_STARTED'
   },
   finalGrade: {
-    advisorScore: { type: Number, min: 0, max: 100 },
-    companyScore: { type: Number, min: 0, max: 100 },
+    advisorGrade: { type: Number, min: 0, max: 100 }, // Weight: 40%
+    companyGrade: { type: Number, min: 0, max: 100 }, // Weight: 30%
+    projectGrade: { type: Number, min: 0, max: 100 }, // Weight: 30%
     total: { type: Number, min: 0, max: 100 }
   }
 }, {

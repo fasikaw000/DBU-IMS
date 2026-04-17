@@ -55,7 +55,7 @@ export const applyForInternship = async (req, res, next) => {
 // @access  Private (STUDENT only)
 export const submitLogbook = async (req, res, next) => {
   try {
-    const { activity, hoursWorked } = req.body;
+    const { activity, hoursWorked, tasksCompleted, problemsFaced } = req.body;
     const student = await Student.findOne({ user: req.user.id });
     const internship = await Internship.findOne({ student: student._id });
 
@@ -67,7 +67,9 @@ export const submitLogbook = async (req, res, next) => {
       student: student._id,
       internship: internship._id,
       activity,
-      hoursWorked
+      hoursWorked,
+      tasksCompleted,
+      problemsFaced
     });
 
     res.status(201).json({ success: true, message: 'Logbook entry added', data: logbook });
@@ -137,3 +139,24 @@ export const getMyLogbooks = async (req, res, next) => {
         next(err);
     }
 }
+// @desc    Update student profile (phone, cbeAccount)
+// @route   PUT /api/student/profile
+// @access  Private (STUDENT only)
+export const updateProfile = async (req, res, next) => {
+  try {
+    const { phone, cbeAccount } = req.body;
+    const student = await Student.findOneAndUpdate(
+      { user: req.user.id },
+      { phone, cbeAccount },
+      { new: true, runValidators: true }
+    );
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student profile not found' });
+    }
+
+    res.status(200).json({ success: true, message: 'Profile updated successfully', data: student });
+  } catch (err) {
+    next(err);
+  }
+};

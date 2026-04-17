@@ -1,33 +1,49 @@
 import mongoose from 'mongoose';
 
 const logbookSchema = new mongoose.Schema({
-  student_id: {
+  student: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'Student',
+    required: true
+  },
+  internship: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Internship',
     required: true
   },
   date: {
     type: Date,
-    required: true
+    default: Date.now
   },
-  tasks_completed: {
+  activity: {
     type: String,
-    required: [true, 'Please describe your tasks completed'],
+    required: [true, 'Please describe your activity'],
     trim: true
   },
-  hours_spent: {
+  tasksCompleted: {
+    type: String,
+    required: false
+  },
+  problemsFaced: {
+    type: String,
+    required: false
+  },
+  attachments: [{
+    type: String
+  }],
+  hoursWorked: {
     type: Number,
     required: true,
     min: 0,
     max: 24
   },
-  remarks: {
-    type: String,
-    trim: true
-  },
-  created_at: {
-    type: Date,
-    default: Date.now
+  comment: {
+    text: String,
+    advisor: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    dateAdded: Date
   }
 }, {
   timestamps: true

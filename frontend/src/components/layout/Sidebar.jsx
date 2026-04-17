@@ -9,7 +9,8 @@ import {
   Building,
   Briefcase,
   BarChart,
-  LogOut
+  LogOut,
+  MessageSquare
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -20,35 +21,29 @@ const Sidebar = () => {
     switch (user?.role) {
       case 'student':
         return [
-          { name: 'Dashboard', path: '/student/dashboard', icon: LayoutDashboard },
+          { name: 'Dashboard', path: '/student-dashboard', icon: LayoutDashboard },
           { name: 'Reports', path: '/student/reports', icon: FileText },
+          { name: 'Messages', path: '/messages', icon: MessageSquare },
         ];
       case 'advisor':
         return [
-          { name: 'Dashboard', path: '/advisor/dashboard', icon: LayoutDashboard },
+          { name: 'Dashboard', path: '/advisor-dashboard', icon: LayoutDashboard },
           { name: 'Students', path: '/advisor/students', icon: Users },
+          { name: 'Messages', path: '/messages', icon: MessageSquare },
         ];
-      case 'supervisor':
+      case 'department_dean':
         return [
-          { name: 'Dashboard', path: '/supervisor/dashboard', icon: LayoutDashboard },
-          { name: 'Students', path: '/supervisor/students', icon: Users },
-        ];
-      case 'department_head':
-        return [
-          { name: 'Dashboard', path: '/department/dashboard', icon: LayoutDashboard },
+          { name: 'Dashboard', path: '/dept-dashboard', icon: LayoutDashboard },
           { name: 'Companies', path: '/department/companies', icon: Building },
           { name: 'Assignments', path: '/department/assignments', icon: Users },
+          { name: 'Messages', path: '/messages', icon: MessageSquare },
         ];
-      case 'college_head':
+      case 'college_admin':
         return [
-          { name: 'Dashboard', path: '/college-head/dashboard', icon: LayoutDashboard },
-          { name: 'Analytics', path: '/college-head/analytics', icon: BarChart },
-        ];
-      case 'admin':
-        return [
-          { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+          { name: 'Dashboard', path: '/admin-dashboard', icon: LayoutDashboard },
           { name: 'Staff', path: '/admin/staff', icon: Users },
           { name: 'Seed IDs', path: '/admin/seed-ids', icon: FileText },
+          { name: 'Messages', path: '/messages', icon: MessageSquare },
         ];
       default:
         return [];
@@ -57,8 +52,17 @@ const Sidebar = () => {
 
   return (
     <div className="flex flex-col w-64 bg-dbu-dark min-h-screen text-white border-r border-slate-700 fixed left-0 top-0">
-      <div className="flex items-center justify-center h-16 border-b border-slate-700 mt-2">
-        <h1 className="text-xl font-bold tracking-wider text-dbu-light">DBU<span className="text-dbu-accent">IMS</span></h1>
+      <div className="flex items-center px-4 h-24 border-b border-slate-700 mt-2 bg-slate-900/50">
+        <div className="h-14 w-20 rounded-xl overflow-hidden mr-3 flex items-center justify-center">
+          <img 
+            src="/dbu.png" 
+            alt="Logo" 
+            className="w-full h-full scale-[1.05] object-contain" 
+          />
+        </div>
+        <h1 className="text-xl font-bold tracking-wider text-dbu-light leading-tight">
+          DBU<span className="text-dbu-accent">IMS</span>
+        </h1>
       </div>
 
       <div className="flex flex-col flex-1 py-4 overflow-y-auto">

@@ -20,6 +20,10 @@ const StudentDashboard = () => {
   
   const [activity, setActivity] = useState('');
   const [hours, setHours] = useState('');
+  const [tasksCompleted, setTasksCompleted] = useState('');
+  const [problemsFaced, setProblemsFaced] = useState('');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [cbeAccount, setCbeAccount] = useState(user?.cbeAccount || '');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -36,7 +40,7 @@ const StudentDashboard = () => {
         const internshipRes = await api.get('/internships/my-internship');
         const data = internshipRes.data.data;
         setInternship(data);
-        setInternshipStatus(data.status.toUpperCase());
+        setInternshipStatus(data.status.toUpperCase()); // e.g. PENDING_APPROVAL, APPROVED, COMPLETED
       } catch (err) {
         if (err.response?.status === 404) {
           setInternshipStatus('NOT_APPLIED');
@@ -71,15 +75,32 @@ const StudentDashboard = () => {
     setMessage('');
 
     try {
-      await api.post('/logbooks/submit', {
-        tasks_completed: activity,
-        hours_spent: Number(hours),
-        date: new Date().toISOString().split('T')[0]
+      await api.post('/student/logbook', {
+        activity,
+        hoursWorked: Number(hours),
+        tasksCompleted,
+        problemsFaced
       });
       setMessage('Logbook entry submitted successfully!');
       setActivity('');
       setHours('');
+      setTasksCompleted('');
+      setProblemsFaced('');
       fetchDashboardData();
+    } catch (err) {
+      setMessage(`Error: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setMessage('');
+    try {
+      await api.put('/student/profile', { phone, cbeAccount });
+      setMessage('Profile updated successfully!');
     } catch (err) {
       setMessage(`Error: ${err.response?.data?.message || err.message}`);
     } finally {
@@ -103,15 +124,17 @@ const StudentDashboard = () => {
          </div>
          <div className="flex items-center gap-3">
             <div className={`px-4 py-2 rounded-full border flex items-center ${
-              internshipStatus === 'APPROVED' ? 'bg-green-50 text-green-700 border-green-200' :
-              internshipStatus === 'PENDING' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+              internshipStatus === 'APPROVED' || internshipStatus === 'ACTIVE' || internshipStatus === 'COMPLETED' ? 'bg-green-50 text-green-700 border-green-200' :
+              internshipStatus === 'PENDING_APPROVAL' || internshipStatus === 'PENDING' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
               internshipStatus === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-200' :
               'bg-slate-50 text-slate-700 border-slate-200'
             }`}>
-                {internshipStatus === 'APPROVED' ? <CheckCircle className="w-4 h-4 mr-2" /> : 
+                {internshipStatus === 'APPROVED' || internshipStatus === 'ACTIVE' || internshipStatus === 'COMPLETED' ? <CheckCircle className="w-4 h-4 mr-2" /> : 
                  internshipStatus === 'REJECTED' ? <XCircle className="w-4 h-4 mr-2" /> :
                  <Clock className="w-4 h-4 mr-2" />}
-                <span className="font-semibold tracking-wide text-sm">Status: {internshipStatus}</span>
+                <span className="font-semibold tracking-wide text-sm">
+                  Status: {internshipStatus === 'PENDING_APPROVAL' ? 'Pending Approval' : internshipStatus.replace('_', ' ')}
+                </span>
             </div>
             {internshipStatus === 'NOT_APPLIED' && !showApplyForm && (
               <button 
@@ -162,7 +185,7 @@ const StudentDashboard = () => {
                 <input type="text" className="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-dbu-primary outline-none" required value={applyData.supervisor_phone} onChange={e => setApplyData({...applyData, supervisor_phone: e.target.value})} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Supervisor Email (Login will be created)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Supervisor Email</label>
                 <input type="email" className="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-dbu-primary outline-none" required value={applyData.supervisor_email} onChange={e => setApplyData({...applyData, supervisor_email: e.target.value})} />
               </div>
               <div>
@@ -185,31 +208,89 @@ const StudentDashboard = () => {
           {/* Left Col: Info & Actions */}
           <div className="lg:col-span-1 space-y-6">
             {internship && (
+             <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+                <h3 className="text-lg font-semibold border-b pb-2 mb-4 flex items-center">
+                    <User className="w-5 h-5 mr-2 text-dbu-primary" />
+                    Student Profile Settings
+                </h3>
+                <form onSubmit={handleProfileUpdate} className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">CBE Account Number</label>
+                    <input 
+                      type="text" 
+                      value={cbeAccount} 
+                      onChange={(e) => setCbeAccount(e.target.value)} 
+                      className="w-full px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-dbu-primary outline-none" 
+                      placeholder="e.g. 100034567890"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Phone Number</label>
+                    <input 
+                      type="text" 
+                      value={phone} 
+                      onChange={(e) => setPhone(e.target.value)} 
+                      className="w-full px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-dbu-primary outline-none" 
+                    />
+                  </div>
+                  <button type="submit" disabled={submitting} className="w-full bg-slate-100 text-slate-700 py-2 rounded text-xs font-bold hover:bg-slate-200 transition">
+                    UPDATE PROFILE
+                  </button>
+                </form>
+             </div>
+            )}
+
+            {internshipStatus === 'APPROVED' && (
               <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-                 <h3 className="text-lg font-semibold border-b pb-2 mb-4 flex items-center">
-                    <Briefcase className="w-5 h-5 mr-2 text-dbu-primary" />
-                    Internship Details
-                 </h3>
-                 <div className="space-y-4">
-                    <div className="flex items-start">
-                      <div className="bg-slate-100 p-2 rounded mr-3"><Building className="w-4 h-4 text-slate-600" /></div>
-                      <div><p className="text-xs text-slate-500 uppercase font-bold tracking-tighter">Company</p><p className="text-sm font-medium">{internship.company_name}</p></div>
+                <h3 className="text-lg font-semibold border-b pb-2 mb-4 flex items-center">
+                    <FileText className="w-5 h-5 mr-2 text-dbu-primary" />
+                    Company Evaluation
+                </h3>
+                {internship?.companyEvaluationUrl ? (
+                    <div className="bg-green-50 p-4 rounded-lg border border-green-200 text-center">
+                        <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                        <p className="text-sm font-medium text-green-700">Evaluation Uploaded</p>
+                        <a 
+                            href={`http://localhost:5001${internship.companyEvaluationUrl}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="mt-2 text-xs text-dbu-primary hover:underline block font-bold"
+                        >
+                            View Document
+                        </a>
                     </div>
-                    <div className="flex items-start">
-                      <div className="bg-slate-100 p-2 rounded mr-3"><MapPin className="w-4 h-4 text-slate-600" /></div>
-                      <div><p className="text-xs text-slate-500 uppercase font-bold tracking-tighter">Location</p><p className="text-sm font-medium">{internship.location}</p></div>
+                ) : (
+                    <div className="space-y-4">
+                        <p className="text-sm text-slate-500 italic">
+                            Upload your scanned company evaluation form (PDF only).
+                        </p>
+                        <input 
+                            type="file" 
+                            accept=".pdf"
+                            onChange={async (e) => {
+                                const file = e.target.files[0];
+                                if (!file) return;
+                                
+                                const formData = new FormData();
+                                formData.append('evaluation', file);
+                                
+                                setSubmitting(true);
+                                try {
+                                    await api.post('/internships/upload-evaluation', formData, {
+                                        headers: { 'Content-Type': 'multipart/form-data' }
+                                    });
+                                    setMessage('Evaluation uploaded successfully!');
+                                    fetchDashboardData();
+                                } catch (err) {
+                                    setMessage(`Upload failed: ${err.response?.data?.message || err.message}`);
+                                } finally {
+                                    setSubmitting(false);
+                                }
+                            }}
+                            className="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-dbu-light file:text-dbu-primary hover:file:bg-dbu-primary hover:file:text-white transition-all cursor-pointer"
+                        />
                     </div>
-                    <div className="flex items-start border-t pt-4">
-                      <div className="bg-slate-100 p-2 rounded mr-3"><User className="w-4 h-4 text-slate-600" /></div>
-                      <div><p className="text-xs text-slate-500 uppercase font-bold tracking-tighter">Supervisor</p><p className="text-sm font-medium">{internship.supervisor_name}</p></div>
-                    </div>
-                    {internship.advisor_id && (
-                      <div className="flex items-start border-t pt-4">
-                        <div className="bg-dbu-light p-2 rounded mr-3"><User className="w-4 h-4 text-dbu-primary" /></div>
-                        <div><p className="text-xs text-dbu-primary uppercase font-bold tracking-tighter">Assigned Advisor</p><p className="text-sm font-medium">{internship.advisor_id.name}</p></div>
-                      </div>
-                    )}
-                 </div>
+                )}
               </div>
             )}
 
@@ -217,16 +298,26 @@ const StudentDashboard = () => {
               <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
                 <h3 className="text-lg font-semibold border-b pb-2 mb-4">Submit Daily Logbook</h3>
                 <form onSubmit={handleLogbookSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Hours Worked</label>
-                    <input type="number" min="0" max="12" value={hours} onChange={(e) => setHours(e.target.value)} className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-dbu-primary outline-none" required />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Hours Worked</label>
+                      <input type="number" min="0" max="12" value={hours} onChange={(e) => setHours(e.target.value)} className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-dbu-primary outline-none" required />
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Tasks Completed</label>
-                    <textarea value={activity} onChange={(e) => setActivity(e.target.value)} className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-dbu-primary outline-none" rows="3" required placeholder="Describe what you did today..."></textarea>
+                    <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Activity Overview</label>
+                    <textarea value={activity} onChange={(e) => setActivity(e.target.value)} className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-dbu-primary outline-none" rows="2" required placeholder="General summary..."></textarea>
                   </div>
-                  <button type="submit" disabled={submitting} className="w-full bg-dbu-primary text-white py-2 rounded hover:bg-dbu-accent transition disabled:opacity-50">
-                    {submitting ? 'Submitting...' : 'Submit Entry'}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Tasks Completed</label>
+                    <textarea value={tasksCompleted} onChange={(e) => setTasksCompleted(e.target.value)} className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-dbu-primary outline-none" rows="2" placeholder="Detail specific tasks..."></textarea>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Problems Faced</label>
+                    <textarea value={problemsFaced} onChange={(e) => setProblemsFaced(e.target.value)} className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-dbu-primary outline-none" rows="2" placeholder="Any issues encountered?"></textarea>
+                  </div>
+                  <button type="submit" disabled={submitting} className="w-full bg-dbu-primary text-white py-2 rounded font-bold hover:bg-dbu-accent transition disabled:opacity-50">
+                    {submitting ? 'Submitting...' : 'SUBMIT ENTRY'}
                   </button>
                 </form>
               </div>

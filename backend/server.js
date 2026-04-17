@@ -15,12 +15,19 @@ import feedbackRoutes from './routes/feedbackRoutes.js';
 import logbookRoutes from './routes/logbookRoutes.js';
 import evaluationRoutes from './routes/evaluationRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import messageRoutes from './routes/messageRoutes.js';
+import seedDatabase from './utils/seeder.js';
+import debugRoutes from './routes/debugRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Connect to MongoDB
-connectDB();
+await connectDB();
+mongoose.set('debug', true);
+console.log('Connected to DB:', mongoose.connection.name);
+// Seed database if empty
+await seedDatabase();
 
 const app = express();
 
@@ -40,6 +47,8 @@ app.use('/api/feedback', feedbackRoutes);
 app.use('/api/logbooks', logbookRoutes);
 app.use('/api/evaluations', evaluationRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/debug', debugRoutes);
 
 // Static folders
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

@@ -1,115 +1,145 @@
+import Student from '../models/Student.js';
 import Internship from '../models/Internship.js';
-import Logbook from '../models/Logbook.js';
 import Report from '../models/Report.js';
-import Notification from '../models/Notification.js'; // Used to trigger alerts to student
+import Evaluation from '../models/Evaluation.js';
+import Logbook from '../models/Logbook.js';
+import AuditLog from '../models/AuditLog.js';
+import { checkAndCompleteInternship } from './internshipController.js';
 
-// @desc    Get assigned students' internships
+// ─────────────────────────────────────────────────────────────
+// @desc    Get advisor's assigned students
 // @route   GET /api/advisor/students
-// @access  Private (ADVISOR only)
+// @access  Private (Advisor)
+// ─────────────────────────────────────────────────────────────
 export const getAssignedStudents = async (req, res, next) => {
-    try {
-        const page = parseInt(req.query.page, 10) || 1;
-        const limit = parseInt(req.query.limit, 10) || 20;
+  try {
+    const advisorId = req.user.id;
 
-        const internships = await Internship.find({ advisor_id: req.user.id })
-            .populate({ path: 'student', populate: { path: 'user', select: 'name email' }})
-            .populate('company', 'name')
-            .skip((page - 1) * limit)
-            .limit(limit);
+    // Find all internships assigned to this advisor
+    const internships = await Internship.find({ advisor: advisorId })
+      .populate({
+        path: 'student',
+        populate: { path: 'user', select: 'name email username isActivated' }
+      });
 
-        res.status(200).json({ success: true, message: 'Assigned students retrieved', data: { count: internships.length, page, internships }});
-    } catch (err) {
-        next(err);
-    }
+    res.status(200).json({ success: true, count: internships.length, data: internships });
+  } catch (error) {
+    next(error);
+  }
 };
 
-// @desc    Comment on a student logbook
-// @route   PUT /api/advisor/logbook/:id/comment
-// @access  Private (ADVISOR only)
-export const commentOnLogbook = async (req, res, next) => {
-    try {
-        const { text } = req.body;
-        const logbook = await Logbook.findById(req.params.id).populate('student');
+// ─────────────────────────────────────────────────────────────
+// @desc    Review a report (Approve / Request Revision)
+// @route   PUT /api/advisor/report/:reportId
+// @access  Private (Advisor)
+// ─────────────────────────────────────────────────────────────
+export const reviewReport = async (req, res, next) => {
+  try {
+    const { status, feedback } = req.body;
+    const reportId = req.params.reportId;
 
-        if (!logbook) return res.status(404).json({ success: false, message: 'Logbook not found', data: null });
-
-        // Ensure this advisor actually advises this student
-        const internship = await Internship.findOne({ student: logbook.student._id, advisor_id: req.user.id });
-        if (!internship) return res.status(403).json({ success: false, message: 'Not authorized: Student not assigned to you.', data: null });
-
-        logbook.comment = {
-            text,
-            advisor: req.user.id,
-            dateAdded: new Date()
-        };
-        await logbook.save();
-
-        // Dispatch notification directly to student
-        await Notification.create({
-            user: logbook.student.user,
-            message: `Your advisor added a comment to your logbook entry on ${logbook.date.toLocaleDateString()}`,
-            type: 'FEEDBACK'
-        });
-
-        res.status(200).json({ success: true, message: 'Comment added', data: logbook });
-    } catch (err) {
-        next(err);
+    if (!['Approved', 'Revision Required'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status. Must be Approved or Revision Required.' });
     }
+
+    const report = await Report.findById(reportId);
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Report not found' });
+    }
+
+    // Optional: check if report's student is mapped to this advisor
+    
+    report.status = status;
+    if (feedback) {
+      report.feedback = feedback;
+    }
+    await report.save();
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: 'report_reviewed',
+      details: `Report ${reportId} marked as ${status}`,
+      ip: req.ip
+    });
+
+    res.status(200).json({ success: true, data: report });
+  } catch (error) {
+    next(error);
+  }
 };
 
-// @desc    Review and Grade a Report
-// @route   PUT /api/advisor/report/:id/grade
-// @access  Private (ADVISOR only)
-export const gradeReport = async (req, res, next) => {
-    try {
-        const { comment, approved } = req.body;
-        const report = await Report.findById(req.params.id).populate('student');
+// ─────────────────────────────────────────────────────────────
+// @desc    Evaluate student and assign final grade
+// @route   POST /api/advisor/internship/:internshipId/evaluate
+// @access  Private (Advisor)
+// ─────────────────────────────────────────────────────────────
+export const evaluateStudent = async (req, res, next) => {
+  try {
+    const internshipId = req.params.internshipId;
+    const { 
+      companyGrade, 
+      documentationGrade, 
+      implementationGrade, 
+      presentationGrade, 
+      advisorComment 
+    } = req.body;
 
-        if (!report) return res.status(404).json({ success: false, message: 'Report not found', data: null });
-
-        // RBAC validation
-        const internship = await Internship.findOne({ student: report.student._id, advisor_id: req.user.id });
-        if (!internship) return res.status(403).json({ success: false, message: 'Not authorized: Student not assigned to you.', data: null });
-
-        report.feedback = { comment, advisor: req.user.id, dateAdded: new Date() };
-        report.approved = approved;
-        await report.save();
-
-        // Dispatch feedback tag
-        await Notification.create({
-            user: report.student.user,
-            message: `Your advisor graded your ${report.type} report. Approved: ${approved}.`,
-            type: 'FEEDBACK',
-            actionUrl: `/reports/view/${report._id}`
-        });
-
-        // Trigger Final Workflow step if final report is approved
-        if (report.type === 'FINAL' && approved === true) {
-            internship.status = 'GRADED';
-            await internship.save();
-        }
-
-        res.status(200).json({ success: true, message: 'Report graded', data: report });
-    } catch (err) {
-        next(err);
+    const internship = await Internship.findOne({ _id: internshipId, advisor: req.user.id });
+    if (!internship) {
+      return res.status(404).json({ success: false, message: 'Internship not found or not assigned to you' });
     }
-};
 
-// @desc    Get all internships assigned to the current advisor
-// @route   GET /api/advisor/internships
-// @access  Private (ADVISOR only)
-export const getAdvisorInternships = async (req, res, next) => {
-    try {
-        const internships = await Internship.find({ advisor_id: req.user.id })
-            .populate({ path: 'student', populate: { path: 'user', select: 'name email' }})
-            .populate('company');
+    // Calculate total
+    const total = (companyGrade * 0.30) + 
+                  (documentationGrade * 0.25) + 
+                  (implementationGrade * 0.25) + 
+                  (presentationGrade * 0.20);
 
-        res.status(200).json({
-            success: true,
-            count: internships.length,
-            data: internships
-        });
-    } catch (error) {
-        next(error);
-    }
+    // Create an Evaluation record (matching the new weights)
+    const evaluation = await Evaluation.create({
+      student: internship.student,
+      advisor: req.user.id,
+      internship: internshipId,
+      scores: {
+        companyGrade,
+        documentationGrade,
+        implementationGrade,
+        presentationGrade
+      },
+      advisorFeedback: advisorComment,
+      finalGrade: total
+    });
+
+    // Update internship with component grades and mark as graded
+    internship.finalGrade = {
+      companyGrade,
+      documentationGrade,
+      implementationGrade,
+      presentationGrade,
+      total
+    };
+    internship.status = 'GRADED';
+    internship.presentationCompleted = true; // Evaluation occurs after presentation
+    await internship.save();
+
+    // Check for full completion criteria
+    const completionStatus = await checkAndCompleteInternship(internshipId);
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: 'student_evaluated',
+      details: `Evaluated internship ${internshipId} with final grade ${total}. Completion: ${completionStatus.success}`,
+      ip: req.ip
+    });
+
+    res.status(201).json({ 
+      success: true, 
+      message: completionStatus.success 
+        ? 'Student evaluated and internship marked as COMPLETED.' 
+        : `Student graded (Status: GRADED). Note: ${completionStatus.message}`, 
+      data: evaluation 
+    });
+  } catch (error) {
+    next(error);
+  }
 };

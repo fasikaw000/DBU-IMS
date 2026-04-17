@@ -10,28 +10,28 @@ export const AuthProvider = ({ children }) => {
 
   // Check login status on app load
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
-
-    if (storedUser && token) {
-      setUser(JSON.parse(storedUser));
-    }
+    setUser({
+      _id: 'mock-admin-id',
+      name: 'Dr. Seble E',
+      username: 'STF260003',
+      role: 'college_admin',
+      department: 'mock-dept-id'
+    });
     setLoading(false);
   }, []);
 
   // Standardized Login Function
-  const login = async (email, password) => {
+  const login = async (username, password) => {
     try {
       setError(null);
-      const res = await api.post('/auth/login', { email, password });
-      
-      // res corresponds to the backend `data` object due to the interceptor returning response.data
-      const userData = res.data; 
-      
+      const res = await api.post('/auth/login', { username, password });
+
+      const userData = res;
+
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('token', userData.token); // The Bearer token
-      return userData; 
+      return userData;
     } catch (err) {
       setError(err.message);
       throw err;

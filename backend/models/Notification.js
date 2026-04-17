@@ -1,14 +1,14 @@
 import mongoose from 'mongoose';
 
 const notificationSchema = new mongoose.Schema({
-  recipient_id: {
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
   type: {
     type: String,
-    enum: ['internship_approved', 'report_submitted', 'evaluation_submitted', 'advisor_assigned', 'info'],
+    enum: ['internship_approved', 'report_submitted', 'evaluation_submitted', 'advisor_assigned', 'info', 'FEEDBACK'],
     required: true
   },
   message: {

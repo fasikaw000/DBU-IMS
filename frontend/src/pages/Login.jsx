@@ -1,72 +1,33 @@
 import { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { LogIn, UserPlus, AlertCircle } from 'lucide-react';
-import api from '../utils/api';
+import { LogIn, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
-  const [isRegister, setIsRegister] = useState(false);
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-
-  // Registration fields
-  const [name, setName] = useState('');
-  const [studentId, setStudentId] = useState('');
-  const [department, setDepartment] = useState('CS');
-  const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [localError, setLocalError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const { login, error } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [localError, setLocalError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setLocalError('');
-    setSuccessMsg('');
-
     try {
-      if (isRegister) {
-        await api.post('/auth/register-student', {
-          name,
-          email,
-          password,
-          student_id: studentId,
-          department,
-          phone
-        });
-        setSuccessMsg('Registration successful! Please sign in with your credentials.');
-        setIsRegister(false);
-      } else {
-        const userData = await login(email, password);
-        // Role-Based Redirect
-        switch (userData.role) {
-          case 'student':
-            navigate('/student/dashboard');
-            break;
-          case 'advisor':
-            navigate('/advisor/dashboard');
-            break;
-          case 'supervisor':
-            navigate('/supervisor/dashboard');
-            break;
-          case 'department_head':
-            navigate('/department/dashboard');
-            break;
-          case 'college_head':
-            navigate('/college-head/dashboard');
-            break;
-          case 'admin':
-            navigate('/admin/dashboard');
-            break;
-          default:
-            navigate('/');
-        }
+      const userData = await login(username, password);
+      switch (userData.role) {
+        case 'student': navigate('/student-dashboard'); break;
+        case 'advisor': navigate('/advisor-dashboard'); break;
+        case 'department_dean': navigate('/dept-dashboard'); break;
+        case 'college_admin': navigate('/admin-dashboard'); break;
+        default: navigate('/');
       }
     } catch (err) {
-      setLocalError(err.response?.data?.message || err.message || 'Action failed');
+      setLocalError(err.response?.data?.message || err.message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -75,33 +36,29 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-dbu-dark flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <h2 className="mt-6 text-3xl font-extrabold text-white">
-          DBU Internship System
+        <div className="mx-auto h-40 w-56 rounded-[2.5rem] overflow-hidden mb-6 flex items-center justify-center bg-dbu-dark">
+          <img
+            src="/dbu.png"
+            alt="Debre Berhan University Logo"
+            className="w-full h-full scale-[1.05]"
+          />
+        </div>
+        <h2 className="mt-2 text-3xl font-extrabold text-white">
+          DEBRE BERHAN UNIVERSITY
+          <span className="block text-lg font-medium text-dbu-light mt-1 uppercase">college of computing</span>
+          <span className="block text-xl text-dbu-accent mt-2">Internship Management System</span>
         </h2>
-        <p className="mt-2 text-sm text-dbu-light/80">
-          Computing Science College
-        </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <div className="flex mb-6 border-b border-slate-200">
-            <button
-              onClick={() => { setIsRegister(false); setLocalError(''); setSuccessMsg(''); }}
-              className={`flex-1 pb-4 text-sm font-medium ${!isRegister ? 'text-dbu-primary border-b-2 border-dbu-primary' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => { setIsRegister(true); setLocalError(''); setSuccessMsg(''); }}
-              className={`flex-1 pb-4 text-sm font-medium ${isRegister ? 'text-dbu-primary border-b-2 border-dbu-primary' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              Register Student
-            </button>
+          <div className="mb-6 text-center">
+            <h3 className="text-xl font-bold text-slate-800 flex items-center justify-center">
+              <LogIn className="w-5 h-5 mr-2 text-dbu-primary" /> Sign In
+            </h3>
           </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
-
             {(error || localError) && (
               <div className="bg-red-50 border-l-4 border-red-400 p-4">
                 <div className="flex items-center">
@@ -111,92 +68,44 @@ const Login = () => {
               </div>
             )}
 
-            {successMsg && (
-              <div className="bg-green-50 border-l-4 border-green-400 p-4">
-                <div className="flex items-center">
-                  <p className="text-sm text-green-700">{successMsg}</p>
-                </div>
-              </div>
-            )}
-
-            {isRegister && (
-              <>
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-slate-700">Full Name</label>
-                  <input
-                    id="name"
-                    type="text"
-                    required
-                    className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary sm:text-sm"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="studentId" className="block text-sm font-medium text-slate-700">Student ID (DBUXXXXXXX)</label>
-                  <input
-                    id="studentId"
-                    type="text"
-                    required
-                    placeholder="e.g. DBU1234567"
-                    className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary sm:text-sm"
-                    value={studentId}
-                    onChange={(e) => setStudentId(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="department" className="block text-sm font-medium text-slate-700">Department</label>
-                    <select
-                      id="department"
-                      className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary sm:text-sm"
-                      value={department}
-                      onChange={(e) => setDepartment(e.target.value)}
-                    >
-                      <option value="CS">CS</option>
-                      <option value="IS">IS</option>
-                      <option value="IT">IT</option>
-                      <option value="DS">DS</option>
-                      <option value="SE">SE</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-slate-700">Phone</label>
-                    <input
-                      id="phone"
-                      type="text"
-                      required
-                      className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary sm:text-sm"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700">Email Address</label>
+              <label className="block text-sm font-medium text-slate-700">Username</label>
               <input
-                id="email"
-                type="email"
+                id="username"
+                type="text"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary sm:text-sm"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your username"
+                className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary text-sm"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toUpperCase())}
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700">Password</label>
-              <input
-                id="password"
-                type="password"
-                required
-                className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary sm:text-sm"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="flex justify-between items-center">
+                <label className="block text-sm font-medium text-slate-700">Password</label>
+                <Link to="/forgot-password" className="text-sm font-bold text-dbu-primary hover:text-dbu-accent hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="mt-1 relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  placeholder="Enter your password"
+                  className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary text-sm pr-10"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-dbu-primary"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
             <div className="pt-2">
@@ -205,15 +114,24 @@ const Login = () => {
                 disabled={loading}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-dbu-primary hover:bg-dbu-accent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-dbu-primary transition-colors disabled:opacity-50"
               >
-                {loading ? 'Processing...' : (
+                {loading ? 'Signing in...' : (
                   <>
-                    {isRegister ? <UserPlus className="w-5 h-5 mr-2" /> : <LogIn className="w-5 h-5 mr-2" />}
-                    {isRegister ? 'Register' : 'Sign In'}
+                    <LogIn className="w-5 h-5 mr-2" />
+                    Sign In
                   </>
                 )}
               </button>
             </div>
           </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-slate-600">
+              First time?{' '}
+              <Link to="/activate" className="font-bold text-dbu-primary hover:text-dbu-accent hover:underline">
+                Activate Account
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>

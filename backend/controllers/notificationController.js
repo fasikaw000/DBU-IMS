@@ -8,7 +8,7 @@ export const createNotification = async (req, res) => {
     const { recipient_id, type, message, link } = req.body;
 
     const notification = await Notification.create({
-      recipient_id,
+      user: recipient_id,
       type,
       message,
       link
@@ -36,7 +36,7 @@ export const createNotification = async (req, res) => {
 export const notify = async (recipient_id, type, message, link = null) => {
     try {
         await Notification.create({
-            recipient_id,
+            user: recipient_id,
             type,
             message,
             link
@@ -51,7 +51,7 @@ export const notify = async (recipient_id, type, message, link = null) => {
 // @access  Private
 export const getUserNotifications = async (req, res) => {
   try {
-    const notifications = await Notification.find({ recipient_id: req.user.id }).sort({ created_at: -1 });
+    const notifications = await Notification.find({ user: req.user.id }).sort({ created_at: -1 });
     res.status(200).json({ success: true, count: notifications.length, data: notifications });
   } catch (error) {
     console.error(error);
@@ -70,7 +70,7 @@ export const markAsRead = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Notification not found' });
     }
 
-    if (notification.recipient_id.toString() !== req.user.id.toString()) {
+    if (notification.user.toString() !== req.user.id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
