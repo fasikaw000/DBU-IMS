@@ -4,7 +4,6 @@ import { UserCheck, AlertCircle, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import api from '../utils/api';
 
 const ActivateAccount = () => {
-  const [role, setRole] = useState('student');
   const [username, setUsername] = useState('');
   const [studentId, setStudentId] = useState('');
   const [email, setEmail] = useState('');
@@ -23,12 +22,6 @@ const ActivateAccount = () => {
     setLoading(true);
     setError('');
 
-    if (role === 'student' && username !== studentId) {
-      setError('Student ID must match username');
-      setLoading(false);
-      return;
-    }
-
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       setLoading(false);
@@ -38,7 +31,7 @@ const ActivateAccount = () => {
     try {
       await api.post('/auth/activate', {
         username,
-        student_id: role === 'student' ? studentId : undefined,
+        student_id: studentId,
         email,
         password,
         confirmPassword
@@ -83,20 +76,6 @@ const ActivateAccount = () => {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Account Role</label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary text-sm"
-                >
-                  <option value="student">Student</option>
-                  <option value="advisor">Advisor</option>
-                  <option value="department_dean">Department Dean</option>
-                  <option value="college_admin">Admin</option>
-                </select>
-              </div>
-
-              <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Username</label>
                 <input
                   type="text"
@@ -108,19 +87,16 @@ const ActivateAccount = () => {
                 />
               </div>
 
-              {role === 'student' && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">ID (Students only)</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="DBU1501198"
-                    className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary text-sm"
-                    value={studentId}
-                    onChange={(e) => setStudentId(e.target.value.toUpperCase())}
-                  />
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">ID (Students only)</label>
+                <input
+                  type="text"
+                  placeholder="Enter your ID"
+                  className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary text-sm"
+                  value={studentId}
+                  onChange={(e) => setStudentId(e.target.value.toUpperCase())}
+                />
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>

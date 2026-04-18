@@ -6,7 +6,7 @@ import Department from './models/Department.js';
 async function run() {
   try {
     await mongoose.connect('mongodb://localhost:27017/dbu-ims');
-    
+
     // Clear existing data for a clean test environment
     await User.deleteMany({});
     await Student.deleteMany({});
