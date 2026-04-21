@@ -34,21 +34,21 @@ function App() {
 
       {/* Role Protected Routes Wrapped in Standard Layout */}
       <Route element={<DashboardLayout />}>
-        <Route element={<ProtectedRoute allowedRoles={['student']} />}>
+        <Route element={<ProtectedRoute allowedRoles={['Student']} />}>
           <Route path="/student-dashboard" element={<StudentDashboard />} />
           <Route path="/student/reports" element={<ReportUpload />} />
         </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={['advisor']} />}>
+        <Route element={<ProtectedRoute allowedRoles={['Advisor']} />}>
           <Route path="/advisor-dashboard" element={<AdvisorDashboard />} />
           <Route path="/advisor/students" element={<AdvisorDashboard />} />
         </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={['department_dean']} />}>
+        <Route element={<ProtectedRoute allowedRoles={['Dean']} />}>
           <Route path="/dept-dashboard" element={<DeptDashboard />} />
         </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={['college_admin']} />}>
+        <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
           <Route path="/admin/students" element={<AdminStudents />} />
           <Route path="/admin/staff" element={<AdminStaff />} />

@@ -426,7 +426,7 @@ export const getAdminStats = async (req, res, next) => {
     const recentActivity = await AuditLog.find()
       .populate('user', 'name role')
       .sort({ createdAt: -1 })
-      .limit(5);
+      .limit(3);
 
     res.status(200).json({
       success: true,
@@ -1019,6 +1019,48 @@ export const updateSettings = async (req, res, next) => {
     });
 
     res.status(200).json({ success: true, data: settings });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// @desc    Admin: Get System Audit Logs
+// @route   GET /api/admin/logs
+// @access  Private (Admin)
+// ─────────────────────────────────────────────────────────────
+export const getLogs = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const search = req.query.search || '';
+    
+    // Construct search filter
+    const searchFilter = search ? {
+      $or: [
+        { action: { $regex: search, $options: 'i' } },
+        { details: { $regex: search, $options: 'i' } }
+      ]
+    } : {};
+
+    const totalLogs = await AuditLog.countDocuments(searchFilter);
+    const totalPages = Math.ceil(totalLogs / limit) || 1;
+
+    const logs = await AuditLog.find(searchFilter)
+      .populate('user', 'name role username')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        logs,
+        page,
+        totalPages,
+        totalLogs
+      }
+    });
   } catch (error) {
     next(error);
   }

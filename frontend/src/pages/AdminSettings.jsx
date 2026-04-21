@@ -70,8 +70,8 @@ const AdminSettings = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight">System Configuration</h1>
-          <p className="text-slate-500 text-sm">Fine-tune the DBU Internship Management System global behavior.</p>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight">System Settings</h1>
+          <p className="text-slate-500 text-sm">Configure global policies, email delivery, and security controls.</p>
         </div>
       </div>
 

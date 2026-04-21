@@ -68,8 +68,8 @@ const AdminDashboard = () => {
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-black text-slate-800 tracking-tight">Console Overview</h1>
-                <p className="text-slate-500 mt-1">Welcome back. Here's what's happening with the system today.</p>
+                <h1 className="text-3xl font-black text-slate-800 tracking-tight">System Overview</h1>
+                <p className="text-slate-500 mt-1">Key metrics and recent activity across DBU-IMS.</p>
             </div>
 
             {/* Stats Grid */}
@@ -100,30 +100,47 @@ const AdminDashboard = () => {
                             <Activity className="w-5 h-5 mr-3 text-dbu-primary" />
                             Recent System Activity
                         </h2>
-                        <button className="text-sm font-bold text-dbu-primary hover:text-dbu-accent transition-colors">View All Logs</button>
+                        <button
+                            onClick={() => navigate('/admin/logs')}
+                            className="text-sm font-bold text-dbu-primary hover:text-dbu-accent transition-colors"
+                        >
+                            View All Logs
+                        </button>
                     </div>
                     <div className="divide-y divide-slate-50">
                         {stats.recentActivity.length === 0 ? (
                             <div className="p-8 text-center text-slate-400 italic">No recent activity found.</div>
                         ) : (
-                            stats.recentActivity.map((log, idx) => (
-                                <div key={idx} className="p-4 hover:bg-slate-50/50 transition-colors flex items-start gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
-                                        <Clock className="w-5 h-5" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between">
-                                            <p className="text-sm font-bold text-slate-800">{log.action.replace(/_/g, ' ').toUpperCase()}</p>
-                                            <span className="text-[10px] text-slate-400 font-medium">{new Date(log.createdAt).toLocaleString()}</span>
+                            stats.recentActivity.map((log, idx) => {
+                                const actionStr = log.action || '';
+                                let targetRoute = '/admin/logs';
+                                if (actionStr.includes('student')) targetRoute = '/admin/students';
+                                else if (actionStr.includes('staff')) targetRoute = '/admin/staff';
+                                else if (actionStr.includes('dept')) targetRoute = '/admin/departments';
+
+                                return (
+                                    <div
+                                        key={idx}
+                                        onClick={() => navigate(targetRoute)}
+                                        className="p-4 hover:bg-slate-50/50 transition-colors flex items-start gap-4 cursor-pointer"
+                                    >
+                                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                                            <Clock className="w-5 h-5" />
                                         </div>
-                                        <p className="text-sm text-slate-500 mt-0.5">{log.details}</p>
-                                        <div className="flex items-center mt-2 text-[10px] uppercase font-black tracking-widest text-slate-400">
-                                            <span className="text-dbu-primary mr-2">Admin:</span>
-                                            {log.user?.name || 'System'}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-sm font-bold text-slate-800">{actionStr.replace(/_/g, ' ').toUpperCase()}</p>
+                                                <span className="text-[10px] text-slate-400 font-medium">{new Date(log.createdAt).toLocaleString()}</span>
+                                            </div>
+                                            <p className="text-sm text-slate-500 mt-0.5">{log.details}</p>
+                                            <div className="flex items-center mt-2 text-[10px] uppercase font-black tracking-widest text-slate-400">
+                                                <span className="text-dbu-primary mr-2">Admin:</span>
+                                                {log.user?.name || 'System'}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 </div>

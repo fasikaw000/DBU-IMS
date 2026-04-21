@@ -1,12 +1,19 @@
-export const ROLE_VALUES = ['college_admin', 'department_dean', 'advisor', 'student'];
+export const ROLE_VALUES = ['Admin', 'Dean', 'Advisor', 'Student'];
 
 const LEGACY_ROLE_MAP = {
-  admin: 'college_admin',
-  dean: 'department_dean',
-  advisor: 'advisor',
-  student: 'student',
-  college_admin: 'college_admin',
-  department_dean: 'department_dean'
+  // canonical
+  Admin: 'Admin',
+  Dean: 'Dean',
+  Advisor: 'Advisor',
+  Student: 'Student',
+  // legacy db values
+  college_admin: 'Admin',
+  department_dean: 'Dean',
+  advisor: 'Advisor',
+  student: 'Student',
+  // legacy intermediate values used previously
+  admin: 'Admin',
+  dean: 'Dean'
 };
 
 export const normalizeRole = (role) => {

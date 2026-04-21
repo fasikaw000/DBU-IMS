@@ -9,7 +9,7 @@ import {
 const router = express.Router();
 
 router.use(protect);
-router.use(authorize('advisor'));
+router.use(authorize('Advisor'));
 
 router.get('/students', getAssignedStudents);
 router.put('/report/:reportId', reviewReport);

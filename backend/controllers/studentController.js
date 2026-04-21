@@ -144,10 +144,10 @@ export const getMyLogbooks = async (req, res, next) => {
 // @access  Private (STUDENT only)
 export const updateProfile = async (req, res, next) => {
   try {
-    const { phone, cbeAccount } = req.body;
+    const { phone } = req.body;
     const student = await Student.findOneAndUpdate(
       { user: req.user.id },
-      { phone, cbeAccount },
+      { phone },
       { new: true, runValidators: true }
     );
 

@@ -7,9 +7,9 @@ const router = express.Router();
 router.use(protect);
 
 // Advisor adds feedback
-router.post('/add/:reportId', authorize('advisor'), addFeedback);
+router.post('/add/:reportId', authorize('Advisor'), addFeedback);
 
 // Student views feedback
-router.get('/my-reports/:reportId', authorize('student'), getReportFeedback);
+router.get('/my-reports/:reportId', authorize('Student'), getReportFeedback);
 
 export default router;

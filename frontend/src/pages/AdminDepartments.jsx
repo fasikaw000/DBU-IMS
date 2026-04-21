@@ -123,7 +123,7 @@ const AdminDepartments = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-black text-slate-800 tracking-tight">Department Management</h1>
-                    <p className="text-slate-500 text-sm">Create and manage departments used across students and staff.</p>
+                    <p className="text-slate-500 text-sm">Manage departments used for user assignment, reporting, and oversight.</p>
                 </div>
                 <button
                     onClick={() => {

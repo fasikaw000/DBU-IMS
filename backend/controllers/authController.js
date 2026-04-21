@@ -69,7 +69,7 @@ export const loginUser = async (req, res, next) => {
     const token = generateToken(user._id, user.role);
     let studentId = undefined;
 
-    if (normalizeRole(user.role) === 'student') {
+    if (normalizeRole(user.role) === 'Student') {
       const student = await Student.findOne({ user: user._id });
       studentId = student?.studentId;
     }
@@ -162,7 +162,7 @@ export const activateAccount = async (req, res, next) => {
     let student = null;
     const role = normalizeRole(user.role);
 
-    if (role === 'student') {
+    if (role === 'Student') {
       if (!normalizedStudentId) {
         return res.status(400).json({ success: false, message: 'Student ID is required' });
       }

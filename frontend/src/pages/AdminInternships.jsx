@@ -74,7 +74,7 @@ const AdminInternships = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">Internship Management</h1>
-          <p className="text-slate-500 text-sm">Monitor and manage student internship assignments and statuses.</p>
+          <p className="text-slate-500 text-sm">Monitor internship placements, approvals, and lifecycle status.</p>
         </div>
       </div>
 

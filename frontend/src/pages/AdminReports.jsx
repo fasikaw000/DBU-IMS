@@ -74,7 +74,7 @@ const AdminReports = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">System Reports</h1>
-          <p className="text-slate-500 text-sm">Actionable insights and distribution analytics for the internship system.</p>
+          <p className="text-slate-500 text-sm">Analytics and exports for internships, workload, and outcomes.</p>
         </div>
         <div className="flex items-center gap-2">
             <button className="bg-white text-slate-700 border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold flex items-center hover:bg-slate-50 transition-all">

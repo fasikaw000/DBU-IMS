@@ -21,26 +21,26 @@ const Sidebar = () => {
   // Define nav items based on role
   const getNavItems = () => {
     switch (user?.role) {
-      case 'student':
+      case 'Student':
         return [
           { name: 'Dashboard', path: '/student-dashboard', icon: LayoutDashboard },
           { name: 'Reports', path: '/student/reports', icon: FileText },
           { name: 'Messages', path: '/messages', icon: MessageSquare },
         ];
-      case 'advisor':
+      case 'Advisor':
         return [
           { name: 'Dashboard', path: '/advisor-dashboard', icon: LayoutDashboard },
           { name: 'Students', path: '/advisor/students', icon: Users },
           { name: 'Messages', path: '/messages', icon: MessageSquare },
         ];
-      case 'department_dean':
+      case 'Dean':
         return [
           { name: 'Dashboard', path: '/dept-dashboard', icon: LayoutDashboard },
           { name: 'Companies', path: '/department/companies', icon: Building },
           { name: 'Assignments', path: '/department/assignments', icon: Users },
           { name: 'Messages', path: '/messages', icon: MessageSquare },
         ];
-      case 'college_admin':
+      case 'Admin':
         return [
           { name: 'Dashboard', path: '/admin-dashboard', icon: LayoutDashboard },
           { name: 'Students', path: '/admin/students', icon: Users },

@@ -20,10 +20,10 @@ const Login = () => {
     try {
       const userData = await login(username, password);
       switch (userData.role) {
-        case 'student': navigate('/student-dashboard'); break;
-        case 'advisor': navigate('/advisor-dashboard'); break;
-        case 'department_dean': navigate('/dept-dashboard'); break;
-        case 'college_admin': navigate('/admin-dashboard'); break;
+        case 'Student': navigate('/student-dashboard'); break;
+        case 'Advisor': navigate('/advisor-dashboard'); break;
+        case 'Dean': navigate('/dept-dashboard'); break;
+        case 'Admin': navigate('/admin-dashboard'); break;
         default: navigate('/');
       }
     } catch (err) {

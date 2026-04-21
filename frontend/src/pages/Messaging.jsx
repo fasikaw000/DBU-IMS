@@ -98,6 +98,15 @@ const Messaging = () => {
 
     const currentUserId = user?.id || user?._id;
 
+    const getAvatarInitial = (name) => {
+        if (!name) return 'U';
+        const cleaned = String(name).trim().replace(/\.+/g, '.');
+        const parts = cleaned.split(/\s+/).filter(Boolean);
+        const honorifics = new Set(['dr', 'dr.', 'mr', 'mr.', 'ms', 'ms.', 'mrs', 'mrs.', 'prof', 'prof.']);
+        const first = parts.find((p) => !honorifics.has(p.toLowerCase())) || parts[0];
+        return (first?.charAt(0) || 'U').toUpperCase();
+    };
+
     return (
         <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden h-[calc(100vh-180px)] min-h-[600px] flex">
             {/* Left Panel: Contacts */}
@@ -138,8 +147,12 @@ const Messaging = () => {
                                     onClick={() => setSelectedContact(c)}
                                     className={`w-full p-4 flex items-center gap-4 hover:bg-white transition-all text-left ${selectedContact?._id === c._id ? 'bg-white shadow-sm z-10' : ''}`}
                                 >
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0 transition-all ${selectedContact?._id === c._id ? 'bg-dbu-primary text-white scale-105 shadow-lg shadow-dbu-primary/30' : 'bg-slate-100 text-slate-400'}`}>
-                                        {c.name.charAt(0)}
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0 transition-all overflow-hidden ${selectedContact?._id === c._id ? 'bg-dbu-primary text-white scale-105 shadow-lg shadow-dbu-primary/30' : 'bg-slate-100 text-slate-400'}`}>
+                                        {c.profilePhoto ? (
+                                            <img src={`http://localhost:5001${c.profilePhoto}`} alt={c.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            getAvatarInitial(c.name)
+                                        )}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className={`font-bold truncate ${selectedContact?._id === c._id ? 'text-dbu-primary' : 'text-slate-800'}`}>
@@ -163,8 +176,12 @@ const Messaging = () => {
                         {/* Conversation Header */}
                         <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-20">
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-dbu-primary/10 flex items-center justify-center text-dbu-primary font-bold">
-                                    {selectedContact.name.charAt(0)}
+                                <div className="w-10 h-10 rounded-xl bg-dbu-primary/10 flex items-center justify-center text-dbu-primary font-bold overflow-hidden">
+                                    {selectedContact.profilePhoto ? (
+                                        <img src={`http://localhost:5001${selectedContact.profilePhoto}`} alt={selectedContact.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        getAvatarInitial(selectedContact.name)
+                                    )}
                                 </div>
                                 <div>
                                     <h3 className="font-black text-slate-800">{selectedContact.name}</h3>

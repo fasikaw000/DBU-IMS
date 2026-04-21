@@ -17,8 +17,10 @@ import logbookRoutes from './routes/logbookRoutes.js';
 import evaluationRoutes from './routes/evaluationRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 import seedDatabase from './utils/seeder.js';
 import debugRoutes from './routes/debugRoutes.js';
+import errorHandler from './middleware/error.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,6 +51,7 @@ app.use('/api/logbooks', logbookRoutes);
 app.use('/api/evaluations', evaluationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/debug', debugRoutes);
 
 // Static folders
@@ -58,6 +61,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.get('/', (req, res) => {
   res.send('API is running (ES Modules)...');
 });
+
+// Global error handler (must be last)
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 

@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema({
     trim: true,
     validate: {
       validator: function (v) {
-        if (normalizeRole(this.role) === 'student') {
+        if (normalizeRole(this.role) === 'Student') {
           return /^DBU\d{7}$/.test(v);
         }
         // staff roles
@@ -44,11 +44,18 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Department'
   },
+  profilePhoto: {
+    type: String,
+    default: ''
+  },
   role: {
     type: String,
     enum: ROLE_VALUES,
     set: normalizeRole,
-    default: 'student'
+    required: true
+  },
+  lastActive: {
+    type: Date
   },
   isActivated: {
     type: Boolean,

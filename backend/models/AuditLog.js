@@ -7,19 +7,7 @@ const auditLogSchema = new mongoose.Schema({
   },
   action: {
     type: String,
-    required: true,
-    enum: [
-      'login_success', 
-      'login_failure', 
-      'logout', 
-      'activation_success', 
-      'activation_failure', 
-      'user_created',
-      'COMPANY_APPROVED',
-      'COMPANY_REJECTED',
-      'account_activated',
-      'failed_login'
-    ]
+    required: true
   },
   performedBy: {
     type: mongoose.Schema.Types.ObjectId,

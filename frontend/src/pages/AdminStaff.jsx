@@ -51,16 +51,16 @@ const AdminStaff = () => {
         try {
             const [staffRes, deptsRes] = await Promise.all([
                 api.get('/staff'), // Wait, I see 'api.get('/admin/staff')' earlier. I'll check the base URL.
-                api.get('/departments') 
+                api.get('/departments')
             ].map(p => p.catch(e => { console.error(e); return { data: [] }; })));
-            
+
             // Actually I should stick to the pattern used in the component
             const resStaff = await api.get('/admin/staff');
             const resDepts = await api.get('/admin/departments');
 
             setUsers(Array.isArray(resStaff?.data) ? resStaff.data : []);
             setDepartments(Array.isArray(resDepts?.data) ? resDepts.data : []);
-            
+
             if (resDepts?.data?.length > 0) {
                 setStaffData(prev => ({ ...prev, department: resDepts.data[0]._id }));
             }
@@ -244,7 +244,7 @@ const AdminStaff = () => {
     };
 
     const toggleSelect = (id) => {
-        setSelectedIds(prev => 
+        setSelectedIds(prev =>
             prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
         );
     };
@@ -266,7 +266,7 @@ const AdminStaff = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-black text-slate-800 tracking-tight">Staff Management</h1>
-                    <p className="text-slate-500 text-sm">Register staff accounts, manage records, and provide system access.</p>
+                    <p className="text-slate-500 text-sm">Manage staff accounts, roles, and access status across the system.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
@@ -277,7 +277,7 @@ const AdminStaff = () => {
                         <UserPlus className="w-5 h-5 mr-1.5" />
                         Add Staff
                     </button>
-                    
+
                     <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-xl shadow-sm">
                         <button
                             onClick={() => printRecords(users, 'All Staff')}
@@ -327,8 +327,8 @@ const AdminStaff = () => {
                             <thead className="bg-slate-50 text-[10px] uppercase font-black tracking-widest text-slate-500 border-b border-slate-100">
                                 <tr>
                                     <th className="px-4 py-4 w-10">
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             className="rounded border-slate-300 text-dbu-primary focus:ring-dbu-primary cursor-pointer"
                                             checked={selectedIds.length > 0 && selectedIds.length === filteredStaff.length}
                                             onChange={toggleSelectAll}
@@ -347,60 +347,60 @@ const AdminStaff = () => {
                                     <tr>
                                         <td colSpan="7" className="px-6 py-8 text-center text-slate-400 italic">No staff members found.</td>
                                     </tr>
-                                ) : (                                    filteredStaff.map((staff) => (
-                                        <tr key={staff._id} className={`${selectedIds.includes(staff._id) ? 'bg-blue-50/50' : 'hover:bg-slate-50/50'} transition-colors ${staff.status === 'deactivated' ? 'opacity-60 grayscale-[0.5]' : ''}`}>
-                                            <td className="px-4 py-4">
-                                                <input 
-                                                    type="checkbox" 
-                                                    className="rounded border-slate-300 text-dbu-primary focus:ring-dbu-primary cursor-pointer"
-                                                    checked={selectedIds.includes(staff._id)}
-                                                    onChange={() => toggleSelect(staff._id)}
-                                                />
-                                            </td>
-                                            <td className="px-6 py-4 text-sm font-bold text-slate-800">{staff.name}</td>
-                                            <td className="px-6 py-4 text-sm text-slate-600 font-medium">{staff.department?.code || 'Central'}</td>
-                                            <td className="px-6 py-4 text-sm font-mono text-slate-600">{staff.username}</td>
-                                            <td className="px-6 py-4">
-                                                <span className={`text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded ${staff.role === 'dean' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
-                                                    {staff.role}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <div className="flex flex-col items-center gap-1">
-                                                    {staff.isActivated ? (
-                                                        <span className="bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded inline-flex items-center">
-                                                            <ShieldCheck className="w-3 h-3 mr-1" /> Active
-                                                        </span>
-                                                    ) : (
-                                                        <span className="bg-orange-50 text-orange-500 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded inline-flex items-center">
-                                                            Pending
-                                                        </span>
-                                                    )}
-                                                    {staff.status === 'deactivated' && (
-                                                        <span className="bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded mt-1 border border-red-100">Deactivated</span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-4 text-right">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <button 
-                                                        onClick={() => handleEditStaff(staff)}
-                                                        className="p-2 text-slate-400 hover:text-dbu-primary hover:bg-dbu-primary/5 rounded-lg transition-all"
-                                                        title="Edit Staff Member"
-                                                    >
-                                                        <Edit className="w-4 h-4" />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleToggleStatus(staff.userId)}
-                                                        className={`p-2 rounded-lg transition-all ${staff.status === 'active' ? 'text-slate-400 hover:text-red-500 hover:bg-red-50' : 'text-red-500 hover:text-green-500 hover:bg-green-50'}`}
-                                                        title={staff.status === 'active' ? 'Deactivate User' : 'Activate User'}
-                                                    >
-                                                        {staff.status === 'active' ? <Shield className="w-4 h-4" /> : <ShieldOff className="w-4 h-4" />}
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
+                                ) : (filteredStaff.map((staff) => (
+                                    <tr key={staff._id} className={`${selectedIds.includes(staff._id) ? 'bg-blue-50/50' : 'hover:bg-slate-50/50'} transition-colors ${staff.status === 'deactivated' ? 'opacity-60 grayscale-[0.5]' : ''}`}>
+                                        <td className="px-4 py-4">
+                                            <input
+                                                type="checkbox"
+                                                className="rounded border-slate-300 text-dbu-primary focus:ring-dbu-primary cursor-pointer"
+                                                checked={selectedIds.includes(staff._id)}
+                                                onChange={() => toggleSelect(staff._id)}
+                                            />
+                                        </td>
+                                        <td className="px-6 py-4 text-sm font-bold text-slate-800">{staff.name}</td>
+                                        <td className="px-6 py-4 text-sm text-slate-600 font-medium">{staff.department?.code || 'Central'}</td>
+                                        <td className="px-6 py-4 text-sm font-mono text-slate-600">{staff.username}</td>
+                                        <td className="px-6 py-4">
+                                            <span className={`text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded ${staff.role === 'dean' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
+                                                {staff.role}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <div className="flex flex-col items-center gap-1">
+                                                {staff.isActivated ? (
+                                                    <span className="bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded inline-flex items-center">
+                                                        <ShieldCheck className="w-3 h-3 mr-1" /> Active
+                                                    </span>
+                                                ) : (
+                                                    <span className="bg-orange-50 text-orange-500 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded inline-flex items-center">
+                                                        Pending
+                                                    </span>
+                                                )}
+                                                {staff.status === 'deactivated' && (
+                                                    <span className="bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded mt-1 border border-red-100">Deactivated</span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-4 text-right">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <button
+                                                    onClick={() => handleEditStaff(staff)}
+                                                    className="p-2 text-slate-400 hover:text-dbu-primary hover:bg-dbu-primary/5 rounded-lg transition-all"
+                                                    title="Edit Staff Member"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleToggleStatus(staff.userId)}
+                                                    className={`p-2 rounded-lg transition-all ${staff.status === 'active' ? 'text-slate-400 hover:text-red-500 hover:bg-red-50' : 'text-red-500 hover:text-green-500 hover:bg-green-50'}`}
+                                                    title={staff.status === 'active' ? 'Deactivate User' : 'Activate User'}
+                                                >
+                                                    {staff.status === 'active' ? <Shield className="w-4 h-4" /> : <ShieldOff className="w-4 h-4" />}
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
 
                                 )}
                             </tbody>
@@ -433,10 +433,10 @@ const AdminStaff = () => {
                             Required columns: Full Name, Department, Role
                         </p>
                         {uploadSummary && (
-                          <div className="mt-4 text-xs bg-slate-50 border border-slate-100 rounded-xl p-3">
-                            <p className="font-bold text-slate-700">Created: {uploadSummary.createdCount || 0}</p>
-                            <p className="font-bold text-slate-700">Failed: {uploadSummary.failedCount || 0}</p>
-                          </div>
+                            <div className="mt-4 text-xs bg-slate-50 border border-slate-100 rounded-xl p-3">
+                                <p className="font-bold text-slate-700">Created: {uploadSummary.createdCount || 0}</p>
+                                <p className="font-bold text-slate-700">Failed: {uploadSummary.failedCount || 0}</p>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -453,7 +453,7 @@ const AdminStaff = () => {
                             </h3>
                             <p className="text-white/70 text-sm mt-1">Manual account creation for staff.</p>
                         </div>
-                        
+
                         <form onSubmit={handleCreateStaff} className="p-8 space-y-5">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="col-span-2">
@@ -467,7 +467,7 @@ const AdminStaff = () => {
                                         required
                                     />
                                 </div>
-                                
+
                                 <div className="col-span-2">
                                     <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Department</label>
                                     <select
@@ -478,18 +478,18 @@ const AdminStaff = () => {
                                     >
                                         <option value="" disabled>Select Department</option>
                                         {departments.length > 0 ? (
-                                          [...departments]
-                                            .filter(d => d.status === 'Active')
-                                            .sort((a,b) => a.name.localeCompare(b.name))
-                                            .map(dept => <option key={dept._id} value={dept._id}>{dept.name} ({dept.code})</option>)
+                                            [...departments]
+                                                .filter(d => d.status === 'Active')
+                                                .sort((a, b) => a.name.localeCompare(b.name))
+                                                .map(dept => <option key={dept._id} value={dept._id}>{dept.name} ({dept.code})</option>)
                                         ) : (
-                                          <>
-                                            <option value="Computer Science">Computer Science</option>
-                                            <option value="Data Science">Data Science</option>
-                                            <option value="Information Systems">Information Systems</option>
-                                            <option value="Information Technology">Information Technology</option>
-                                            <option value="Software Engineering">Software Engineering</option>
-                                          </>
+                                            <>
+                                                <option value="Computer Science">Computer Science</option>
+                                                <option value="Data Science">Data Science</option>
+                                                <option value="Information Systems">Information Systems</option>
+                                                <option value="Information Technology">Information Technology</option>
+                                                <option value="Software Engineering">Software Engineering</option>
+                                            </>
                                         )}
                                     </select>
                                 </div>
@@ -547,7 +547,7 @@ const AdminStaff = () => {
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
-                        
+
                         <form onSubmit={handleUpdateStaff} className="p-8 space-y-5">
                             <div className="space-y-4">
                                 <div>

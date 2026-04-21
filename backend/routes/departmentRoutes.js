@@ -10,7 +10,7 @@ import {
 const router = express.Router();
 
 router.use(protect);
-router.use(authorize('department_dean'));
+router.use(authorize('Dean'));
 
 router.get('/students', getDepartmentStudents);
 router.get('/advisors/workload', getAdvisorWorkload);

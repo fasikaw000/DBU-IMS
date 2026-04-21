@@ -9,7 +9,7 @@ import User from './models/User.js';
 const adminDetails = {
   name: "Dr. Seblewengel E.",   // You can change this
   username: "STF000001",    // Professional format STFXXXXXX
-  role: "college_admin",    // DO NOT CHANGE THIS ROLE
+  role: "Admin",    // DO NOT CHANGE THIS ROLE
   email: "admin@gmail.com",
   isActivated: false        // Set to false so you can activate it through the UI
 };

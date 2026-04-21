@@ -289,7 +289,7 @@ const AdminStudents = () => {
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">Student Management</h1>
           <p className="text-slate-500 text-sm">
-            Register students, manage records, and generate printable credentials.
+            Maintain student records and manage enrollment data securely.
           </p>
         </div>
         <div className="flex items-center gap-2">

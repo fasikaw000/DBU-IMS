@@ -11,10 +11,10 @@ const router = express.Router();
 router.use(protect);
 
 // Student routes
-router.post('/submit', authorize('student'), submitLogbook);
-router.get('/my-logbooks', authorize('student'), getStudentLogbooks);
+router.post('/submit', authorize('Student'), submitLogbook);
+router.get('/my-logbooks', authorize('Student'), getStudentLogbooks);
 
 // Advisor routes
-router.get('/assigned-logbooks', authorize('advisor'), getAssignedStudentLogbooks);
+router.get('/assigned-logbooks', authorize('Advisor'), getAssignedStudentLogbooks);
 
 export default router;

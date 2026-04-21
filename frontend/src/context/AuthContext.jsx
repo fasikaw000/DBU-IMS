@@ -4,34 +4,12 @@ import api from '../utils/api';
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const normalizeRole = (role) => {
-    const roleMap = {
-      admin: 'college_admin',
-      dean: 'department_dean',
-      advisor: 'advisor',
-      student: 'student',
-      college_admin: 'college_admin',
-      department_dean: 'department_dean'
-    };
-    return roleMap[role] || role;
-  };
-
   const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem('user');
     const storedToken = localStorage.getItem('token');
     if (storedUser && storedToken) {
       try {
-        const parsed = JSON.parse(storedUser);
-        const roleMap = {
-          admin: 'college_admin',
-          dean: 'department_dean',
-          advisor: 'advisor',
-          student: 'student',
-          college_admin: 'college_admin',
-          department_dean: 'department_dean'
-        };
-        parsed.role = roleMap[parsed.role] || parsed.role;
-        return parsed;
+        return JSON.parse(storedUser);
       } catch (e) {
         return null;
       }
@@ -69,12 +47,10 @@ export const AuthProvider = ({ children }) => {
       const res = await api.post('/auth/login', { username, password });
 
       const userData = res;
-      const normalizedUserData = { ...userData, role: normalizeRole(userData.role) };
-
-      setUser(normalizedUserData);
-      localStorage.setItem('user', JSON.stringify(normalizedUserData));
-      localStorage.setItem('token', normalizedUserData.token); // The Bearer token
-      return normalizedUserData;
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('token', userData.token); // The Bearer token
+      return userData;
     } catch (err) {
       setError(err.message);
       throw err;
@@ -93,8 +69,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const setUserAndPersist = (nextUser) => {
+    setUser(nextUser);
+    if (nextUser) {
+      localStorage.setItem('user', JSON.stringify(nextUser));
+    } else {
+      localStorage.removeItem('user');
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, error, login, logout, setUser: setUserAndPersist }}>
       {children}
     </AuthContext.Provider>
   );

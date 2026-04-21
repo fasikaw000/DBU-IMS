@@ -48,6 +48,15 @@ const Topbar = () => {
     }
   };
 
+  const getAvatarInitial = (name) => {
+    if (!name) return 'U';
+    const cleaned = String(name).trim().replace(/\.+/g, '.');
+    const parts = cleaned.split(/\s+/).filter(Boolean);
+    const honorifics = new Set(['dr', 'dr.', 'mr', 'mr.', 'ms', 'ms.', 'mrs', 'mrs.', 'prof', 'prof.']);
+    const first = parts.find((p) => !honorifics.has(p.toLowerCase())) || parts[0];
+    return (first?.charAt(0) || 'U').toUpperCase();
+  };
+
   return (
     <header className="bg-white border-b border-slate-200 h-20 flex items-center justify-between px-8 sticky top-0 z-30 w-full shadow-sm">
       <div className="flex-1">
@@ -146,8 +155,16 @@ const Topbar = () => {
             </div>
 
             <div className="relative">
-              <div className="w-10 h-10 rounded-2xl bg-dbu-primary/10 flex items-center justify-center text-dbu-primary group-hover:scale-105 transition-transform">
-                <UserCircle className="h-7 w-7" />
+              <div className="w-10 h-10 rounded-2xl bg-dbu-primary/10 flex items-center justify-center text-dbu-primary group-hover:scale-105 transition-transform overflow-hidden">
+                {user?.profilePhoto ? (
+                  <img
+                    src={`http://localhost:5001${user.profilePhoto}`}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-sm font-black">{getAvatarInitial(user?.name)}</span>
+                )}
               </div>
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
             </div>
@@ -174,15 +191,6 @@ const Topbar = () => {
                 >
                   <User className="mr-3 h-4 w-4" />
                   View Profile
-                </Link>
-
-                <Link
-                  to="/settings"
-                  className="flex items-center px-4 py-3 text-sm text-slate-600 hover:bg-slate-50 hover:text-dbu-primary transition-colors"
-                  onClick={() => setShowDropdown(false)}
-                >
-                  <Lock className="mr-3 h-4 w-4" />
-                  Change Password
                 </Link>
 
                 <div className="h-px bg-slate-50 my-1 mx-2"></div>

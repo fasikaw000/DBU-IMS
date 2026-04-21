@@ -26,7 +26,8 @@ import {
   getInternshipDashboardStats,
   getReportAnalytics,
   getSettings,
-  updateSettings
+  updateSettings,
+  getLogs
 } from '../controllers/adminController.js';
 
 const router = express.Router();
@@ -40,7 +41,7 @@ router.post('/reset-admin', emergencyAdminReset);
 
 // All routes require user to be logged in and strictly be a 'college_admin'
 router.use(protect);
-router.use(authorize('college_admin'));
+router.use(authorize('Admin'));
 
 // User Management
 router.post('/student', createStudent);
@@ -81,5 +82,8 @@ router.get('/reports/analytics', getReportAnalytics);
 router.route('/settings')
   .get(getSettings)
   .put(updateSettings);
+
+// Audit Logs
+router.get('/logs', getLogs);
 
 export default router;

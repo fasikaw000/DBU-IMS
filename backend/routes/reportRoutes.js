@@ -14,12 +14,12 @@ const router = express.Router();
 router.use(protect);
 
 // Student routes
-router.post('/upload', authorize('student'), upload.single('file'), uploadReport);
-router.get('/my-reports', authorize('student'), getStudentReports);
+router.post('/upload', authorize('Student'), upload.single('file'), uploadReport);
+router.get('/my-reports', authorize('Student'), getStudentReports);
 
 // Advisor routes
-router.get('/advisor-reports', authorize('advisor'), getAdvisorReports);
-router.put('/:id/approve', authorize('advisor'), approveReport);
-router.put('/:id/reject', authorize('advisor'), rejectReport);
+router.get('/advisor-reports', authorize('Advisor'), getAdvisorReports);
+router.put('/:id/approve', authorize('Advisor'), approveReport);
+router.put('/:id/reject', authorize('Advisor'), rejectReport);
 
 export default router;
