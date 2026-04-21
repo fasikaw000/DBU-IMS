@@ -14,6 +14,14 @@ import ActivateAccount from './pages/ActivateAccount';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Messaging from './pages/Messaging';
+import AdminStudents from './pages/AdminStudents';
+import AdminStaff from './pages/AdminStaff';
+import AdminDepartments from './pages/AdminDepartments';
+import AdminLogs from './pages/AdminLogs';
+import { AdminInternships, AdminReports, AdminSettings } from './pages/AdminModules';
+import Profile from './pages/Profile';
+import AccountSettings from './pages/AccountSettings';
+import NotificationCenter from './pages/NotificationCenter';
 
 function App() {
   return (
@@ -42,10 +50,22 @@ function App() {
 
         <Route element={<ProtectedRoute allowedRoles={['college_admin']} />}>
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/students" element={<AdminStudents />} />
+          <Route path="/admin/staff" element={<AdminStaff />} />
+          <Route path="/admin/departments" element={<AdminDepartments />} />
+          <Route path="/admin/internships" element={<AdminInternships />} />
+          <Route path="/admin/reports" element={<AdminReports />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/logs" element={<AdminLogs />} />
         </Route>
 
-        {/* Messaging is available to all authenticated roles under the layout */}
-        <Route path="/messages" element={<Messaging />} />
+        {/* Shared authenticated routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/messages" element={<Messaging />} />
+          <Route path="/notifications" element={<NotificationCenter />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/settings" element={<AccountSettings />} />
+        </Route>
       </Route>
 
       {/* Fallback */}

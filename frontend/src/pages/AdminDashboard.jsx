@@ -1,198 +1,234 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import { UserPlus, Shield, Activity, FileText, Database, Building } from 'lucide-react';
+import {
+    Users,
+    Building,
+    Briefcase,
+    Activity,
+    ArrowUpRight,
+    Clock,
+    Shield,
+    ShieldCheck,
+    CheckCircle2,
+    PieChart
+} from 'lucide-react';
 
 const AdminDashboard = () => {
-    const [userData, setUserData] = useState({ name: '', email: '', role: 'student', studentId: '', department: '', cbeAccount: '' });
-    const [deptData, setDeptData] = useState({ name: '', code: '', description: '' });
-    const [departments, setDepartments] = useState([]);
-    
-    const [idSeed, setIdSeed] = useState('');
-    const [message, setMessage] = useState('');
-    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
+    const [stats, setStats] = useState({
+        totalStudents: 0,
+        totalStaff: 0,
+        totalDepartments: 0,
+        activeInternships: 0,
+        completedInternships: 0,
+        departmentStats: [],
+        recentActivity: []
+    });
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchDepartments = async () => {
+        const fetchStats = async () => {
             try {
-                const res = await api.get('/admin/departments');
-                setDepartments(res.data.data);
-                if (res.data.data.length > 0) {
-                    setUserData(prev => ({ ...prev, department: res.data.data[0]._id }));
-                }
+                const res = await api.get('/admin/stats');
+                const payload = res?.data || {};
+                setStats({
+                    totalStudents: payload.totalStudents ?? 0,
+                    totalStaff: payload.totalStaff ?? 0,
+                    totalDepartments: payload.totalDepartments ?? 0,
+                    activeInternships: payload.activeInternships ?? 0,
+                    completedInternships: payload.completedInternships ?? 0,
+                    departmentStats: Array.isArray(payload.departmentStats) ? payload.departmentStats : [],
+                    recentActivity: Array.isArray(payload.recentActivity) ? payload.recentActivity : []
+                });
             } catch (err) {
-                console.error("Failed to load departments", err);
+                console.error("Failed to load stats", err);
+            } finally {
+                setLoading(false);
             }
         };
-        fetchDepartments();
+        fetchStats();
     }, []);
 
-    const handleCreateUser = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setMessage('');
+    const statCards = [
+        { title: 'Total Students', value: stats.totalStudents, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+        { title: 'Total Staff', value: stats.totalStaff, icon: Shield, color: 'text-purple-600', bg: 'bg-purple-50' },
+        { title: 'Total Departments', value: stats.totalDepartments, icon: Building, color: 'text-orange-600', bg: 'bg-orange-50' },
+        { title: 'Active Internships', value: stats.activeInternships, icon: Briefcase, color: 'text-green-600', bg: 'bg-green-50' },
+        { title: 'Completed Internships', value: stats.completedInternships, icon: CheckCircle2, color: 'text-slate-600', bg: 'bg-slate-100' },
+    ];
 
-        try {
-            const endpoint = userData.role === 'student' ? '/admin/student' : '/admin/staff';
-            const payload = { ...userData };
-            
-            await api.post(endpoint, payload);
-            setMessage(`Success: ${userData.role} account provisioned. Username generated.`);
-            setUserData({ ...userData, name: '', email: '', studentId: '', cbeAccount: '' });
-        } catch (err) {
-            setMessage(`Failed: ${err.response?.data?.message || err.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleCreateDept = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setMessage('');
-        try {
-            const res = await api.post('/admin/departments', deptData);
-            setDepartments([...departments, res.data.data]);
-            setMessage(`Success: Department ${deptData.name} created.`);
-            setDeptData({ name: '', code: '', description: '' });
-            if (!userData.department) {
-                setUserData(prev => ({ ...prev, department: res.data.data._id }));
-            }
-        } catch (err) {
-            setMessage(`Failed: ${err.response?.data?.message || err.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSeedIds = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setMessage('');
-
-        try {
-            const studentIds = idSeed.split(',').map(id => id.trim()).filter(id => id);
-            if (studentIds.length === 0) return;
-            await api.post('/admin/seed-ids', { studentIds });
-            setMessage('Success: Student IDs seeded.');
-            setIdSeed('');
-        } catch (err) {
-            setMessage(`Failed: ${err.response?.data?.message || err.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
+    if (loading) return (
+        <div className="flex h-96 items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dbu-primary"></div>
+        </div>
+    );
 
     return (
-        <div className="space-y-6 px-4 py-6 max-w-7xl mx-auto">
-            <div className="bg-dbu-dark rounded-xl shadow-lg p-8 text-white flex justify-between items-center relative overflow-hidden">
-                <div className="relative z-10">
-                    <h2 className="text-3xl font-bold mb-2">College Administrative Console</h2>
-                    <p className="text-slate-300 max-w-xl">
-                        Monitor university-wide metrics, oversee computing department performances, and securely provision staff and student access.
-                    </p>
-                </div>
-                <Shield className="absolute -right-6 -bottom-6 w-48 h-48 text-white opacity-5" />
+        <div className="space-y-8 animate-in fade-in duration-500">
+            {/* Header */}
+            <div>
+                <h1 className="text-3xl font-black text-slate-800 tracking-tight">Console Overview</h1>
+                <p className="text-slate-500 mt-1">Welcome back. Here's what's happening with the system today.</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* User Lifecycle Management */}
-                <div className="bg-white rounded-xl shadow-md border border-slate-100 p-6">
-                    <h3 className="text-xl font-bold border-b border-slate-100 pb-4 mb-6 flex items-center text-slate-800">
-                        <UserPlus className="w-6 h-6 mr-3 text-dbu-primary" />
-                        Provision New Access
-                    </h3>
-                    
-                    <form onSubmit={handleCreateUser} className="space-y-5">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Full Name</label>
-                                <input type="text" value={userData.name} onChange={e => setUserData({...userData, name: e.target.value})} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-dbu-primary outline-none transition-all" required placeholder="John Doe" />
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {statCards.map((stat, idx) => (
+                    <div key={idx} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className={`p-3 rounded-xl ${stat.bg}`}>
+                                <stat.icon className={`w-6 h-6 ${stat.color}`} />
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">System Role</label>
-                                <select value={userData.role} onChange={e => setUserData({...userData, role: e.target.value})} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-dbu-primary outline-none transition-all">
-                                    <option value="student">Student</option>
-                                    <option value="advisor">Advisor</option>
-                                    <option value="department_dean">Department Dean</option>
-                                    <option value="college_admin">College Admin</option>
-                                </select>
-                            </div>
+                            <span className="text-xs font-bold text-green-500 bg-green-50 px-2 py-1 rounded-lg flex items-center">
+                                <ArrowUpRight className="w-3 h-3 mr-1" />
+                                Live
+                            </span>
                         </div>
+                        <h3 className="text-slate-500 text-sm font-medium">{stat.title}</h3>
+                        <p className="text-3xl font-black text-slate-800 mt-1">{stat.value}</p>
+                    </div>
+                ))}
+            </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Academic Email</label>
-                                <input type="email" value={userData.email} onChange={e => setUserData({...userData, email: e.target.value})} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-dbu-primary outline-none transition-all" placeholder="name@dbu.edu.et (Optional)" />
-                            </div>
-                            <div>
-                                {userData.role === 'student' && (
-                                    <>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Student ID</label>
-                                        <input type="text" value={userData.studentId} onChange={e => setUserData({...userData, studentId: e.target.value})} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-dbu-primary outline-none transition-all" required placeholder="DBU1234567" />
-                                    </>
-                                )}
-                            </div>
-                        </div>
-
-                        {userData.role === 'student' && (
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">CBE Account Number</label>
-                                <input type="text" value={userData.cbeAccount} onChange={e => setUserData({...userData, cbeAccount: e.target.value})} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-dbu-primary outline-none transition-all" required placeholder="1000..." />
-                            </div>
+            {/* Main Content Area */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Recent Activity */}
+                <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div className="p-6 border-b border-slate-50 flex items-center justify-between">
+                        <h2 className="text-lg font-bold text-slate-800 flex items-center">
+                            <Activity className="w-5 h-5 mr-3 text-dbu-primary" />
+                            Recent System Activity
+                        </h2>
+                        <button className="text-sm font-bold text-dbu-primary hover:text-dbu-accent transition-colors">View All Logs</button>
+                    </div>
+                    <div className="divide-y divide-slate-50">
+                        {stats.recentActivity.length === 0 ? (
+                            <div className="p-8 text-center text-slate-400 italic">No recent activity found.</div>
+                        ) : (
+                            stats.recentActivity.map((log, idx) => (
+                                <div key={idx} className="p-4 hover:bg-slate-50/50 transition-colors flex items-start gap-4">
+                                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                                        <Clock className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm font-bold text-slate-800">{log.action.replace(/_/g, ' ').toUpperCase()}</p>
+                                            <span className="text-[10px] text-slate-400 font-medium">{new Date(log.createdAt).toLocaleString()}</span>
+                                        </div>
+                                        <p className="text-sm text-slate-500 mt-0.5">{log.details}</p>
+                                        <div className="flex items-center mt-2 text-[10px] uppercase font-black tracking-widest text-slate-400">
+                                            <span className="text-dbu-primary mr-2">Admin:</span>
+                                            {log.user?.name || 'System'}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
                         )}
-
-                        <div className="animate-in fade-in slide-in-from-top-2">
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Department</label>
-                            <select value={userData.department} onChange={e => setUserData({...userData, department: e.target.value})} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-dbu-primary outline-none" required>
-                                {departments.map(dept => (
-                                    <option key={dept._id} value={dept._id}>{dept.name} ({dept.code})</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <button type="submit" disabled={loading} className="w-full bg-dbu-primary text-white py-3 rounded-lg shadow-lg hover:bg-dbu-accent transition-all transform hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 font-bold tracking-wide">
-                            {loading ? (
-                                <span className="flex items-center justify-center">
-                                    <Activity className="animate-spin h-5 w-5 mr-2" /> Creating Account...
-                                </span>
-                            ) : `Provision ${userData.role} Access`}
-                        </button>
-                    </form>
-                </div>
-
-                {/* Create Department */}
-                <div className="bg-white rounded-xl shadow-md border border-slate-100 p-6 flex flex-col">
-                    <h3 className="text-xl font-bold border-b border-slate-100 pb-4 mb-6 flex items-center text-slate-800">
-                        <Building className="w-6 h-6 mr-3 text-dbu-primary" />
-                        Create Department
-                    </h3>
-                    <form onSubmit={handleCreateDept} className="space-y-4 flex-1 flex flex-col justify-between">
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Department Name</label>
-                                <input type="text" value={deptData.name} onChange={e => setDeptData({...deptData, name: e.target.value})} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-dbu-primary outline-none" required placeholder="Computer Science" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Department Code</label>
-                                <input type="text" value={deptData.code} onChange={e => setDeptData({...deptData, code: e.target.value})} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-dbu-primary outline-none" required placeholder="CS" />
-                            </div>
-                        </div>
-                        <button type="submit" disabled={loading} className="w-full bg-slate-700 text-white py-3 rounded-lg shadow hover:bg-slate-800 transition-all font-bold mt-4">
-                            {loading ? 'Creating...' : 'Create Department'}
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            {message && (
-                <div className={`p-4 rounded-xl shadow-lg border-2 animate-in fade-in zoom-in-95 ${message.includes('Success') ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                    <div className="flex items-center px-2">
-                        <Activity className={`w-6 h-6 mr-3 ${message.includes('Success') ? 'text-green-500' : 'text-red-500'}`} />
-                        <span className="font-bold text-lg">{message}</span>
                     </div>
                 </div>
-            )}
+
+                {/* Quick Shortcuts / Insights */}
+                <div className="space-y-6">
+                    <div className="bg-dbu-dark rounded-2xl p-6 text-white relative overflow-hidden">
+                        <Shield className="absolute -right-6 -bottom-6 w-32 h-32 opacity-10" />
+                        <h3 className="text-lg font-bold relative z-10">System Status</h3>
+                        <p className="text-dbu-light/80 text-sm mt-1 relative z-10">All modules are operating normally.</p>
+                        <div className="mt-6 flex items-center gap-2 relative z-10">
+                            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                            <span className="text-xs font-bold text-green-400">HEALTHY</span>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                        <h3 className="text-lg font-bold text-slate-800 mb-4">Quick Tasks</h3>
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => navigate('/admin/students')}
+                                className="w-full text-left p-3 rounded-xl border border-slate-100 hover:border-dbu-primary hover:bg-slate-50 transition-all text-sm font-medium text-slate-600 flex items-center"
+                            >
+                                <Users className="w-4 h-4 mr-3 text-dbu-primary" />
+                                Add New Student
+                            </button>
+                            <button
+                                onClick={() => navigate('/admin/staff')}
+                                className="w-full text-left p-3 rounded-xl border border-slate-100 hover:border-dbu-primary hover:bg-slate-50 transition-all text-sm font-medium text-slate-600 flex items-center"
+                            >
+                                <ShieldCheck className="w-4 h-4 mr-3 text-dbu-primary" />
+                                Add New Staff
+                            </button>
+                            <button
+                                onClick={() => navigate('/admin/departments')}
+                                className="w-full text-left p-3 rounded-xl border border-slate-100 hover:border-dbu-primary hover:bg-slate-50 transition-all text-sm font-medium text-slate-600 flex items-center"
+                            >
+                                <Building className="w-4 h-4 mr-3 text-dbu-primary" />
+                                Add New Department
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Department Distribution Table */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div className="p-6 border-b border-slate-50 flex items-center justify-between">
+                    <h2 className="text-lg font-bold text-slate-800 flex items-center">
+                        <PieChart className="w-5 h-5 mr-3 text-dbu-primary" />
+                        Department-Level Analytics
+                    </h2>
+                    <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-1 rounded">Organization View</span>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-slate-50 text-[10px] uppercase font-black tracking-widest text-slate-500">
+                            <tr>
+                                <th className="px-6 py-4">Department Name</th>
+                                <th className="px-6 py-4">Students</th>
+                                <th className="px-6 py-4">Advisors</th>
+                                <th className="px-6 py-4">Deans</th>
+                                <th className="px-6 py-4 text-right">Coverage</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {stats.departmentStats.length === 0 ? (
+                                <tr>
+                                    <td colSpan="5" className="px-6 py-8 text-center text-slate-400 italic">No department data available.</td>
+                                </tr>
+                            ) : (
+                                stats.departmentStats.map((dept, idx) => (
+                                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-bold text-slate-800">{dept.name}</span>
+                                                <span className="text-[10px] text-slate-400 font-mono tracking-tighter uppercase">{dept.code}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-sm font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">{dept.studentsCount}</span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-sm font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded-lg">{dept.advisorsCount}</span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-sm font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-lg">{dept.deansCount}</span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="h-1.5 w-24 bg-slate-100 rounded-full overflow-hidden ml-auto">
+                                                <div
+                                                    className="h-full bg-dbu-primary"
+                                                    style={{ width: `${Math.min(100, (dept.studentsCount / (stats.totalStudents || 1)) * 100)}%` }}
+                                                />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     );
 };
+
 export default AdminDashboard;

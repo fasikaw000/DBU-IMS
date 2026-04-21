@@ -55,6 +55,10 @@ export const uploadReport = async (req, res) => {
       return res.status(404).json({ success: false, message: 'No active internship found for this student' });
     }
 
+    if (internship.status === 'COMPLETED') {
+      return res.status(400).json({ success: false, message: 'Internship is already completed and locked. No further report submissions allowed.' });
+    }
+
     // 3. Create report
     const report = await Report.create({
       student_id: req.user.id,

@@ -5,44 +5,40 @@ import nodemailer from 'nodemailer';
  * Falls back to Ethereal (test email) if SMTP_HOST is not set.
  */
 const sendEmail = async ({ to, subject, html }) => {
-  let transporter;
+  const gmailUser = process.env.GMAIL_USER || process.env.SMTP_USER;
+  const gmailPass = process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS;
 
+  if (!gmailUser || !gmailPass) {
+    throw new Error('Gmail SMTP credentials are missing. Set GMAIL_USER and GMAIL_APP_PASSWORD.');
+  }
+
+  let transporter;
   if (process.env.SMTP_HOST) {
-    // Production SMTP (e.g. Gmail, SendGrid, university SMTP)
-    transporter = nodemailer.createTransporter({
+    transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT || '587'),
       secure: process.env.SMTP_SECURE === 'true',
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
+        user: gmailUser,
+        pass: gmailPass
       }
     });
   } else {
-    // Development fallback: Ethereal fake SMTP
-    const testAccount = await nodemailer.createTestAccount();
     transporter = nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
+      service: 'gmail',
       auth: {
-        user: testAccount.user,
-        pass: testAccount.pass
+        user: gmailUser,
+        pass: gmailPass
       }
     });
   }
 
   const info = await transporter.sendMail({
-    from: process.env.SMTP_FROM || '"DBU-IMS System" <no-reply@dbu.edu.et>',
+    from: process.env.SMTP_FROM || `"DBU-IMS System" <${gmailUser}>`,
     to,
     subject,
     html
   });
-
-  // Log preview URL in development
-  if (!process.env.SMTP_HOST) {
-    console.log(`[EMAIL] Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
-  }
 
   return info;
 };

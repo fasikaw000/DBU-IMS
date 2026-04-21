@@ -89,6 +89,10 @@ export const evaluateStudent = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Internship not found or not assigned to you' });
     }
 
+    if (internship.status === 'COMPLETED') {
+      return res.status(400).json({ success: false, message: 'This internship is already completed and locked. No further grading changes allowed.' });
+    }
+
     // Calculate total
     const total = (companyGrade * 0.30) + 
                   (documentationGrade * 0.25) + 

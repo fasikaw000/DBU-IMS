@@ -31,7 +31,7 @@ const ForgotPassword = () => {
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-dbu-dark">Forgot Password</h2>
-            <p className="text-slate-600 mt-2">Enter your username or email to receive a reset link</p>
+            <p className="text-slate-600 mt-2">Enter your username and email to receive a reset link</p>
           </div>
           {success ? (
             <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">

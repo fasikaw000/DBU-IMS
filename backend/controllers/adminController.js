@@ -1,7 +1,15 @@
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import AuditLog from '../models/AuditLog.js';
 import Department from '../models/Department.js';
+import Internship from '../models/Internship.js';
+import ValidStudentId from '../models/ValidStudentId.js';
 import bcrypt from 'bcryptjs';
+import { normalizeRole } from '../utils/roles.js';
+import xlsx from 'xlsx';
+import Staff from '../models/Staff.js';
+import Settings from '../models/Settings.js';
+import Company from '../models/Company.js';
 
 // ─────────────────────────────────────────────────────────────
 // @desc    Emergency Admin Password Reset
@@ -53,17 +61,32 @@ import { generateUsername } from '../utils/generateUsername.js';
 // ─────────────────────────────────────────────────────────────
 export const createStudent = async (req, res, next) => {
   try {
-    const { name, email, department, studentId, cbeAccount } = req.body;
+    const { name, department, studentId, year } = req.body;
 
-    if (!name || !email || !department || !studentId) {
-      return res.status(400).json({ success: false, message: 'All fields are required' });
+    if (!name || !department || !studentId || !year) {
+      return res.status(400).json({ success: false, message: 'Name, Department, Student ID, and Year are required.' });
+    }
+
+    const normalizedStudentId = studentId.toUpperCase();
+
+    // Check if Student ID already exists
+    const existingStudent = await Student.findOne({ studentId: normalizedStudentId });
+    if (existingStudent) {
+      return res.status(400).json({ success: false, message: 'Student ID has already been registered' });
     }
 
     // Generate unique DBU username
     const username = await generateUsername('student');
 
     // Make sure department exists
-    const dept = await Department.findOne({ _id: department });
+    const dept = await Department.findOne({
+      $or: [
+        { _id: mongoose.Types.ObjectId.isValid(department) ? department : null },
+        { code: department },
+        { name: department }
+      ]
+    });
+
     if (!dept) {
       return res.status(404).json({ success: false, message: 'Department not found' });
     }
@@ -71,7 +94,6 @@ export const createStudent = async (req, res, next) => {
     // Create User record
     const user = await User.create({
       name,
-      email,
       username,
       department: dept._id,
       role: 'student',
@@ -82,10 +104,19 @@ export const createStudent = async (req, res, next) => {
     const student = await Student.create({
       user: user._id,
       username,
-      studentId,
+      studentId: normalizedStudentId,
       department: dept._id,
-      cbeAccount: cbeAccount || null
+      year
     });
+
+    // Handle ValidStudentId seeding if it exists
+    const authorizedId = await ValidStudentId.findOne({ studentId: normalizedStudentId });
+    if (authorizedId) {
+      authorizedId.isRegistered = true;
+      await authorizedId.save();
+    } else {
+      await ValidStudentId.create({ studentId: normalizedStudentId, isRegistered: true });
+    }
 
     await AuditLog.create({
       user: req.user.id,
@@ -97,7 +128,7 @@ export const createStudent = async (req, res, next) => {
     res.status(201).json({
       success: true,
       message: 'Student created successfully',
-      data: { username, studentId, name }
+      data: { username, studentId, name, year }
     });
   } catch (error) {
     next(error);
@@ -111,44 +142,62 @@ export const createStudent = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 export const createStaff = async (req, res, next) => {
   try {
-    const { name, email, department, role } = req.body;
+    const { name, department, role } = req.body;
 
-    if (!name || !email || !role) {
-      return res.status(400).json({ success: false, message: 'Name, email, and role are required' });
+    if (!name || !department || !role) {
+      return res.status(400).json({ success: false, message: 'Name, Department, and Role are required.' });
     }
 
-    if (!['advisor', 'department_dean', 'college_admin'].includes(role)) {
-      return res.status(400).json({ success: false, message: 'Invalid role' });
+    const normalizedRole = normalizeRole(role);
+    if (!['advisor', 'department_dean'].includes(normalizedRole)) {
+      return res.status(400).json({ success: false, message: 'Invalid role. Only Dean and Advisor are supported for staff accounts.' });
     }
 
-    const username = await generateUsername(role);
+    // Generate unique STF username
+    const username = await generateUsername(normalizedRole);
 
-    const userObj = {
+    // Make sure department exists
+    const dept = await Department.findOne({
+      $or: [
+        { _id: mongoose.Types.ObjectId.isValid(department) ? department : null },
+        { code: department },
+        { name: department }
+      ]
+    });
+
+    if (!dept) {
+      return res.status(404).json({ success: false, message: 'Department not found' });
+    }
+
+    // Create User record
+    const user = await User.create({
       name,
-      email,
       username,
-      role,
+      department: dept._id,
+      role: normalizedRole,
       isActivated: false
-    };
+    });
 
-    if (department) {
-      const dept = await Department.findOne({ _id: department });
-      if (dept) userObj.department = dept._id;
-    }
-
-    const user = await User.create(userObj);
+    // Create corresponding Staff profile
+    const staff = await Staff.create({
+      user: user._id,
+      username,
+      fullName: name,
+      department: dept._id,
+      role: normalizedRole === 'department_dean' ? 'dean' : 'advisor'
+    });
 
     await AuditLog.create({
       user: req.user.id,
       action: 'created_staff',
-      details: `Created ${role} account with username ${username}`,
+      details: `Created staff account for ${name} with username ${username} (${role})`,
       ip: req.ip
     });
 
     res.status(201).json({
       success: true,
-      message: 'Staff created successfully',
-      data: { username, name, role }
+      message: 'Staff account created successfully',
+      data: { username, name, role: normalizedRole }
     });
   } catch (error) {
     next(error);
@@ -163,7 +212,69 @@ export const createStaff = async (req, res, next) => {
 export const getAllUsers = async (req, res, next) => {
   try {
     const users = await User.find({}).populate('department', 'name code').select('-password');
-    res.status(200).json({ success: true, data: users });
+    res.status(200).json({
+      success: true,
+      data: users.map((u) => ({ ...u.toObject(), role: normalizeRole(u.role) }))
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// @desc    Admin: Fetch all students with detailed profiles
+// @route   GET /api/admin/students
+// @access  Private (Admin)
+// ─────────────────────────────────────────────────────────────
+export const getAllStudents = async (req, res, next) => {
+  try {
+    const students = await Student.find({})
+      .populate('user', 'name email isActivated')
+      .populate('department', 'name code');
+
+    res.status(200).json({
+      success: true,
+      count: students.length,
+      data: students.map(s => ({
+        _id: s._id,
+        userId: s.user?._id,
+        name: s.user?.name,
+        email: s.user?.isActivated ? s.user?.email : null,
+        username: s.username,
+        studentId: s.studentId,
+        department: s.department,
+        year: s.year,
+        cbeAccount: s.user?.isActivated ? s.cbeAccount : null,
+        isActivated: s.user?.isActivated,
+        createdAt: s.createdAt
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAllStaff = async (req, res, next) => {
+  try {
+    const staffMembers = await Staff.find({})
+      .populate('user', 'name email isActivated')
+      .populate('department', 'name code');
+
+    res.status(200).json({
+      success: true,
+      count: staffMembers.length,
+      data: staffMembers.map(s => ({
+        _id: s._id,
+        userId: s.user?._id,
+        name: s.fullName,
+        email: s.user?.isActivated ? s.user?.email : null,
+        username: s.username,
+        department: s.department,
+        role: s.role, // 'dean' or 'advisor'
+        isActivated: s.user?.isActivated,
+        createdAt: s.createdAt
+      }))
+    });
   } catch (error) {
     next(error);
   }
@@ -176,39 +287,738 @@ export const getAllUsers = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 export const createDepartment = async (req, res, next) => {
   try {
-    const { name, code, description, dean } = req.body;
+    const { name, code, college, description, status } = req.body;
 
-    if (!name) {
-      return res.status(400).json({ success: false, message: 'Department name is required' });
+    if (!name || !code) {
+      return res.status(400).json({ success: false, message: 'Department name and code are required' });
     }
 
-    const deptObj = { name, code, description };
-    if (dean) deptObj.dean = dean; // Optional dean ID
-
-    const department = await Department.create(deptObj);
+    const department = await Department.create({
+      name,
+      code,
+      college,
+      description,
+      status: status || 'Active'
+    });
 
     await AuditLog.create({
       user: req.user.id,
-      action: 'created_department',
-      details: `Created department: ${name}`,
+      action: 'dept_created',
+      details: `Created department: ${name} (${code})`,
       ip: req.ip
     });
 
     res.status(201).json({ success: true, data: department });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({ success: false, message: 'Department name or code already exists' });
+    }
+    next(error);
+  }
+};
+
+export const getDepartments = async (req, res, next) => {
+  try {
+    const departments = await Department.find().sort({ name: 1 });
+    res.status(200).json({ success: true, count: departments.length, data: departments });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateDepartment = async (req, res, next) => {
+  try {
+    const { name, code, college, description } = req.body;
+    const department = await Department.findById(req.params.id);
+
+    if (!department) {
+      return res.status(404).json({ success: false, message: 'Department not found' });
+    }
+
+    department.name = name || department.name;
+    department.code = (code || department.code).toUpperCase();
+    department.college = college !== undefined ? college : department.college;
+    department.description = description !== undefined ? description : department.description;
+
+    await department.save();
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: 'dept_updated',
+      details: `Updated department: ${department.name}`,
+      ip: req.ip
+    });
+
+    res.status(200).json({ success: true, data: department });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({ success: false, message: 'Department name or code already exists' });
+    }
+    next(error);
+  }
+};
+
+export const toggleDepartmentStatus = async (req, res, next) => {
+  try {
+    const department = await Department.findById(req.params.id);
+
+    if (!department) {
+      return res.status(404).json({ success: false, message: 'Department not found' });
+    }
+
+    department.status = department.status === 'Active' ? 'Inactive' : 'Active';
+    await department.save();
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: 'dept_status_toggled',
+      details: `${department.status === 'Active' ? 'Activated' : 'Deactivated'} department: ${department.name}`,
+      ip: req.ip
+    });
+
+    res.status(200).json({ success: true, data: department });
+  } catch (error) {
+    next(error);
+  }
+};
+// ─────────────────────────────────────────────────────────────
+// @desc    Admin: Get Dashboard Statistics
+// @route   GET /api/admin/stats
+// @access  Private (Admin)
+// ─────────────────────────────────────────────────────────────
+export const getAdminStats = async (req, res, next) => {
+  try {
+    const totalStudents = await User.countDocuments({ role: 'student' });
+    const totalStaff = await User.countDocuments({ role: { $in: ['advisor', 'department_dean', 'college_admin'] } });
+    const totalDepartments = await Department.countDocuments();
+    const activeInternships = await Internship.countDocuments({ status: { $in: ['APPROVED', 'ONGOING', 'SUBMITTED', 'EVALUATED'] } });
+    const completedInternships = await Internship.countDocuments({ status: 'COMPLETED' });
+
+    // Aggregate Department distribution
+    const departmentStats = await Department.aggregate([
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: 'department',
+          as: 'users'
+        }
+      },
+      {
+        $project: {
+          name: 1,
+          code: 1,
+          studentsCount: {
+            $size: { $filter: { input: '$users', as: 'u', cond: { $eq: ['$$u.role', 'student'] } } }
+          },
+          advisorsCount: {
+            $size: { $filter: { input: '$users', as: 'u', cond: { $eq: ['$$u.role', 'advisor'] } } }
+          },
+          deansCount: {
+            $size: { $filter: { input: '$users', as: 'u', cond: { $eq: ['$$u.role', 'department_dean'] } } }
+          }
+        }
+      },
+      { $sort: { name: 1 } }
+    ]);
+
+    // Get recent activity from AuditLog
+    const recentActivity = await AuditLog.find()
+      .populate('user', 'name role')
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalStudents,
+        totalStaff,
+        totalDepartments,
+        activeInternships,
+        completedInternships,
+        departmentStats,
+        recentActivity
+      }
+    });
   } catch (error) {
     next(error);
   }
 };
 
 // ─────────────────────────────────────────────────────────────
-// @desc    Admin: Manage Departments (Get All)
-// @route   GET /api/admin/departments
+// @desc    Admin: Seed Student IDs
+// @route   POST /api/admin/seed-ids
 // @access  Private (Admin)
 // ─────────────────────────────────────────────────────────────
-export const getDepartments = async (req, res, next) => {
+export const seedStudentIds = async (req, res, next) => {
   try {
-    const depts = await Department.find({}).populate('dean', 'name username email');
-    res.status(200).json({ success: true, count: depts.length, data: depts });
+    const { studentIds } = req.body;
+    if (!studentIds || !Array.isArray(studentIds)) {
+      return res.status(400).json({ success: false, message: 'Invalid IDs provided' });
+    }
+
+    const normalizedIds = studentIds.map((id) => id.toUpperCase());
+    const docs = normalizedIds.map(id => ({ studentId: id }));
+    // Use insertMany with ordered: false to skip duplicates
+    try {
+      await ValidStudentId.insertMany(docs, { ordered: false });
+    } catch (err) {
+      // Ignore 11000 duplicate key error
+      if (err.code !== 11000) throw err;
+    }
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: 'seeded_ids',
+      details: `Authorized ${normalizedIds.length} student IDs`,
+      ip: req.ip
+    });
+
+    res.status(201).json({ success: true, message: 'Student IDs authorized.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// @desc    Admin: Bulk upload students via CSV/Excel
+// @route   POST /api/admin/students/bulk-upload
+// @access  Private (Admin)
+// ─────────────────────────────────────────────────────────────
+export const bulkUploadStudents = async (req, res, next) => {
+  try {
+    if (!req.file?.buffer) {
+      return res.status(400).json({ success: false, message: 'Please upload a CSV or Excel file.' });
+    }
+
+    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = xlsx.utils.sheet_to_json(firstSheet, { defval: '' });
+
+    if (!rows.length) {
+      return res.status(400).json({ success: false, message: 'Uploaded file is empty.' });
+    }
+
+    const seenStudentIds = new Set();
+    const errors = [];
+    const created = [];
+
+    for (let index = 0; index < rows.length; index += 1) {
+      const row = rows[index];
+      const rowNo = index + 2; // header row is 1
+
+      const name = String(row['Full Name'] || row.Name || row.name || '').trim();
+      const studentId = String(row['Student ID'] || row.studentId || row.student_id || '').trim().toUpperCase();
+      const departmentValue = String(row.Department || row.department || '').trim();
+      const year = String(row.Year || row.year || '').trim();
+
+      if (!name || !studentId || !departmentValue || !year) {
+        errors.push({ row: rowNo, message: 'Name, Student ID, Department, and Year are required.' });
+        continue;
+      }
+      if (!/^DBU\d{7}$/.test(studentId)) {
+        errors.push({ row: rowNo, message: 'Student ID must be in format DBU1234567.' });
+        continue;
+      }
+      if (seenStudentIds.has(studentId)) {
+        errors.push({ row: rowNo, message: 'Duplicate Student ID in upload file.' });
+        continue;
+      }
+      seenStudentIds.add(studentId);
+
+      const existingStudent = await Student.findOne({ studentId });
+      if (existingStudent) {
+        errors.push({ row: rowNo, message: 'Student ID already exists.' });
+        continue;
+      }
+
+      const department = await Department.findOne({
+        $or: [
+          { _id: mongoose.Types.ObjectId.isValid(departmentValue) ? departmentValue : null },
+          { code: departmentValue },
+          { name: departmentValue }
+        ]
+      });
+
+      if (!department) {
+        errors.push({ row: rowNo, message: `Department "${departmentValue}" not found.` });
+        continue;
+      }
+
+      try {
+        const username = await generateUsername('student');
+        const user = await User.create({
+          name,
+          username,
+          department: department._id,
+          role: 'student',
+          isActivated: false
+        });
+
+        await Student.create({
+          user: user._id,
+          username,
+          studentId,
+          department: department._id,
+          year
+        });
+
+        // Sync ValidStudentId
+        await ValidStudentId.findOneAndUpdate(
+          { studentId },
+          { isRegistered: true },
+          { upsert: true }
+        );
+
+        created.push({ row: rowNo, name, studentId, username, year });
+      } catch (error) {
+        errors.push({ row: rowNo, message: error.message || 'Failed to create student row.' });
+      }
+    }
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: 'bulk_students_uploaded',
+      details: `Bulk upload completed. Created: ${created.length}, Failed: ${errors.length}`,
+      ip: req.ip
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Bulk upload completed. Created ${created.length} student(s).`,
+      data: {
+        createdCount: created.length,
+        failedCount: errors.length,
+        created,
+        errors
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// @desc    Admin: Bulk upload staff via CSV/Excel
+// @route   POST /api/admin/staff/bulk-upload
+// @access  Private (Admin)
+// ─────────────────────────────────────────────────────────────
+export const bulkUploadStaff = async (req, res, next) => {
+  try {
+    if (!req.file?.buffer) {
+      return res.status(400).json({ success: false, message: 'Please upload a CSV or Excel file.' });
+    }
+
+    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = xlsx.utils.sheet_to_json(firstSheet, { defval: '' });
+
+    if (!rows.length) {
+      return res.status(400).json({ success: false, message: 'Uploaded file is empty.' });
+    }
+
+    const errors = [];
+    const created = [];
+
+    for (let index = 0; index < rows.length; index += 1) {
+      const row = rows[index];
+      const rowNo = index + 2;
+
+      const name = String(row['Full Name'] || row.Name || row.name || '').trim();
+      const departmentValue = String(row.Department || row.department || '').trim();
+      const roleRaw = String(row.Role || row.role || '').trim().toLowerCase();
+
+      if (!name || !departmentValue || !roleRaw) {
+        errors.push({ row: rowNo, message: 'Full Name, Department, and Role are required.' });
+        continue;
+      }
+
+      const role = normalizeRole(roleRaw);
+      if (!['advisor', 'department_dean'].includes(role)) {
+        errors.push({ row: rowNo, message: `Invalid role "${roleRaw}". Use "Dean" or "Advisor".` });
+        continue;
+      }
+
+      const department = await Department.findOne({
+        $or: [
+          { _id: mongoose.Types.ObjectId.isValid(departmentValue) ? departmentValue : null },
+          { code: departmentValue },
+          { name: departmentValue }
+        ]
+      });
+
+      if (!department) {
+        errors.push({ row: rowNo, message: `Department "${departmentValue}" not found.` });
+        continue;
+      }
+
+      try {
+        const username = await generateUsername(role);
+        const user = await User.create({
+          name,
+          username,
+          department: department._id,
+          role,
+          isActivated: false
+        });
+
+        await Staff.create({
+          user: user._id,
+          username,
+          fullName: name,
+          department: department._id,
+          role: role === 'department_dean' ? 'dean' : 'advisor'
+        });
+
+        created.push({ row: rowNo, name, username, role });
+      } catch (error) {
+        errors.push({ row: rowNo, message: error.message || 'Failed to create staff row.' });
+      }
+    }
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: 'bulk_staff_uploaded',
+      details: `Bulk staff upload completed. Created: ${created.length}, Failed: ${errors.length}`,
+      ip: req.ip
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Bulk staff upload completed. Created ${created.length} staff member(s).`,
+      data: {
+        createdCount: created.length,
+        failedCount: errors.length,
+        created,
+        errors
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// @desc    Admin: List authorized student IDs
+// @route   GET /api/admin/authorized-ids
+// @access  Private (Admin)
+// ─────────────────────────────────────────────────────────────
+export const getAuthorizedStudentIds = async (req, res, next) => {
+  try {
+    const ids = await ValidStudentId.find({}).sort({ createdAt: -1 });
+    res.status(200).json({ success: true, data: ids });
+  } catch (error) {
+    next(error);
+  }
+};
+// ─────────────────────────────────────────────────────────────
+// INTERNSHIP MANAGEMENT
+// ─────────────────────────────────────────────────────────────
+
+export const getAllInternships = async (req, res, next) => {
+  try {
+    const internships = await Internship.find({})
+      .populate({
+        path: 'student',
+        populate: { path: 'department', select: 'name code' }
+      })
+      .populate('company', 'name email location')
+      .populate('advisor_id', 'name email')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, count: internships.length, data: internships });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateInternshipStatus = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    const internship = await Internship.findById(req.params.id);
+
+    if (!internship) return res.status(404).json({ success: false, message: 'Internship not found' });
+
+    internship.status = status;
+    await internship.save();
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: 'internship_status_updated',
+      details: `Updated internship for student ${internship.student} to ${status}`,
+      ip: req.ip
+    });
+
+    res.status(200).json({ success: true, data: internship });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getInternshipDashboardStats = async (req, res, next) => {
+  try {
+    const total = await Internship.countDocuments();
+    const active = await Internship.countDocuments({ status: { $in: ['APPROVED', 'ONGOING'] } });
+    const completed = await Internship.countDocuments({ status: 'COMPLETED' });
+    const pending = await Internship.countDocuments({ status: 'PENDING_APPROVAL' });
+
+    res.status(200).json({
+      success: true,
+      data: { total, active, completed, pending }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// SYSTEM REPORTS
+// ─────────────────────────────────────────────────────────────
+
+export const getReportAnalytics = async (req, res, next) => {
+  try {
+    // 1. Student Distribution by Department
+    const distribution = await Student.aggregate([
+      { $group: { _id: '$department', count: { $sum: 1 } } },
+      { $lookup: { from: 'departments', localField: '_id', foreignField: '_id', as: 'dept' } },
+      { $unwind: '$dept' },
+      { $project: { name: '$dept.name', count: 1, _id: 0 } }
+    ]);
+
+    // 2. Internship Status Summary
+    const statusSummary = await Internship.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+
+    // 3. Advisor Workload
+    const workload = await Internship.aggregate([
+      { $match: { advisor_id: { $ne: null } } },
+      { $group: { _id: '$advisor_id', studentCount: { $sum: 1 } } },
+      { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'advisor' } },
+      { $unwind: '$advisor' },
+      { $project: { name: '$advisor.name', count: '$studentCount', _id: 0 } }
+    ]);
+
+    // 4. Grade Distribution
+    const grades = await Internship.aggregate([
+      { $match: { 'finalGrade.total': { $exists: true } } },
+      {
+        $bucket: {
+          groupBy: '$finalGrade.total',
+          boundaries: [0, 50, 60, 75, 85, 101],
+          default: 'Other',
+          output: { count: { $sum: 1 } }
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: { distribution, statusSummary, workload, grades }
+    });
+    res.status(200).json({
+      success: true,
+      data: { distribution, statusSummary, workload, grades }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// USER UPDATES & DEACTIVATION
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * @desc    Admin: Update student profile
+ * @route   PUT /api/admin/students/:id
+ */
+export const updateStudent = async (req, res, next) => {
+  try {
+    const { name, department, year } = req.body;
+    const student = await Student.findById(req.params.id);
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student profile not found' });
+    }
+
+    // Update User record
+    const user = await User.findById(student.user);
+    if (user) {
+      user.name = name || user.name;
+      if (department) {
+        const dept = await Department.findById(department);
+        if (dept) {
+          user.department = department;
+          student.department = department;
+        }
+      }
+      await user.save();
+    }
+
+    // Update Student record
+    student.year = year || student.year;
+    await student.save();
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: 'student_updated',
+      details: `Updated student ${student.studentId} (${user.name})`,
+      ip: req.ip
+    });
+
+    res.status(200).json({ success: true, message: 'Student updated successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Admin: Update staff profile
+ * @route   PUT /api/admin/staff/:id
+ */
+export const updateStaff = async (req, res, next) => {
+  try {
+    const { name, department, role } = req.body;
+    const staff = await Staff.findById(req.params.id);
+
+    if (!staff) {
+      return res.status(404).json({ success: false, message: 'Staff profile not found' });
+    }
+
+    // Update User record
+    const user = await User.findById(staff.user);
+    if (user) {
+      user.name = name || user.name;
+      if (department) {
+        const dept = await Department.findById(department);
+        if (dept) {
+          user.department = department;
+          staff.department = department;
+        }
+      }
+      if (role) {
+        const normRole = normalizeRole(role);
+        if (['advisor', 'department_dean'].includes(normRole)) {
+          user.role = normRole;
+          staff.role = normRole === 'department_dean' ? 'dean' : 'advisor';
+        }
+      }
+      await user.save();
+    }
+
+    staff.fullName = name || staff.fullName;
+    await staff.save();
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: 'staff_updated',
+      details: `Updated staff ${staff.username} (${user.name})`,
+      ip: req.ip
+    });
+
+    res.status(200).json({ success: true, message: 'Staff updated successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Admin: Deactivate/Activate ANY user
+ * @route   PATCH /api/admin/users/:id/status
+ */
+export const toggleUserStatus = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    if (user.role === 'college_admin' && user._id.toString() === req.user.id.toString()) {
+      return res.status(400).json({ success: false, message: 'You cannot deactivate your own admin account.' });
+    }
+
+    user.status = user.status === 'active' ? 'deactivated' : 'active';
+    await user.save();
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: 'user_status_toggled',
+      details: `${user.status === 'active' ? 'Activated' : 'Deactivated'} user: ${user.username}`,
+      ip: req.ip
+    });
+
+    res.status(200).json({ success: true, message: `User ${user.status === 'active' ? 'activated' : 'deactivated'} successfully` });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Admin: Delete Department (with safety check)
+ */
+export const deleteDepartment = async (req, res, next) => {
+  try {
+    const department = await Department.findById(req.params.id);
+    if (!department) return res.status(404).json({ success: false, message: 'Department not found' });
+
+    // Check if students or staff exist in this department
+    const userCount = await User.countDocuments({ department: department._id });
+
+    if (userCount > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Cannot delete department: ${userCount} registered users belong to this department. Please deactivate it instead.` 
+      });
+    }
+
+    await department.deleteOne();
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: 'dept_deleted',
+      details: `Permanently deleted empty department: ${department.name}`,
+      ip: req.ip
+    });
+
+    res.status(200).json({ success: true, message: 'Department deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// SYSTEM SETTINGS
+// ─────────────────────────────────────────────────────────────
+
+export const getSettings = async (req, res, next) => {
+  try {
+    let settings = await Settings.findOne();
+    if (!settings) {
+      settings = await Settings.create({});
+    }
+    res.status(200).json({ success: true, data: settings });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateSettings = async (req, res, next) => {
+  try {
+    let settings = await Settings.findOne();
+    if (!settings) {
+      settings = new Settings(req.body);
+    } else {
+      Object.assign(settings, req.body);
+    }
+    await settings.save();
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: 'settings_updated',
+      details: 'System-wide settings updated.',
+      ip: req.ip
+    });
+
+    res.status(200).json({ success: true, data: settings });
   } catch (error) {
     next(error);
   }

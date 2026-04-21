@@ -9,14 +9,23 @@ const departmentSchema = new mongoose.Schema({
   },
   code: {
     type: String,
+    required: [true, 'Please add a department code'],
+    unique: true,
+    trim: true,
+    uppercase: true
+  },
+  college: {
+    type: String,
     trim: true
   },
   description: {
-    type: String
+    type: String,
+    trim: true
   },
-  dean: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+  status: {
+    type: String,
+    enum: ['Active', 'Inactive'],
+    default: 'Active'
   }
 }, {
   timestamps: true

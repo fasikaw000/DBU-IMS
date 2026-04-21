@@ -1,22 +1,19 @@
 import express from 'express';
 import { 
-  createNotification, 
-  getUserNotifications, 
-  markAsRead 
+  getMyNotifications, 
+  markAsRead, 
+  markAllAsRead, 
+  deleteNotification 
 } from '../controllers/notificationController.js';
-import { protect, authorize } from '../middleware/authMiddleware.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 router.use(protect);
 
-// Admin can manually create notifications
-router.post('/', authorize('college_admin'), createNotification);
-
-// User fetches their own notifications
-router.get('/', getUserNotifications);
-
-// User marks notification as read
+router.get('/', getMyNotifications);
+router.put('/read-all', markAllAsRead);
 router.put('/:id/read', markAsRead);
+router.delete('/:id', deleteNotification);
 
 export default router;

@@ -3,7 +3,9 @@ import { protect } from '../middleware/authMiddleware.js';
 import {
   sendMessage,
   getMessages,
-  markMessageAsRead
+  markMessageAsRead,
+  getContacts,
+  getConversation
 } from '../controllers/messageController.js';
 
 const router = express.Router();
@@ -14,6 +16,8 @@ router.route('/')
   .post(sendMessage)
   .get(getMessages);
 
+router.get('/contacts', getContacts);
+router.get('/conversation/:userId', getConversation);
 router.put('/:id/read', markMessageAsRead);
 
 export default router;

@@ -1,221 +1,255 @@
 import { useState, useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../utils/api';
-import { Send, User, Search, MessageSquare, Clock, ShieldCheck, Mail } from 'lucide-react';
+import {
+    Send,
+    Search,
+    User,
+    Mail,
+    ArrowLeft,
+    Loader2,
+    MessageSquare,
+    UserCircle
+} from 'lucide-react';
 
 const Messaging = () => {
-  const { user } = useContext(AuthContext);
-  const [messages, setMessages] = useState([]);
-  const [contacts, setContacts] = useState([]);
-  const [selectedContact, setSelectedContact] = useState(null);
-  const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [search, setSearch] = useState('');
-  const chatEndRef = useRef(null);
+    const { user } = useContext(AuthContext);
+    const [contacts, setContacts] = useState([]);
+    const [selectedContact, setSelectedContact] = useState(null);
+    const [conversation, setConversation] = useState([]);
+    const [search, setSearch] = useState('');
+    const [loadingContacts, setLoadingContacts] = useState(true);
+    const [loadingConversation, setLoadingConversation] = useState(false);
+    const [messageContent, setMessageContent] = useState('');
+    const [sending, setSending] = useState(false);
+    const messagesEndRef = useRef(null);
 
-  useEffect(() => {
-    fetchMessages();
-    fetchContacts();
-  }, []);
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, selectedContact]);
+    useEffect(() => {
+        fetchContacts();
+    }, []);
 
-  const scrollToBottom = () => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+    useEffect(() => {
+        if (selectedContact) {
+            fetchConversation(selectedContact._id);
+        }
+    }, [selectedContact]);
 
-  const fetchMessages = async () => {
-    try {
-      const res = await api.get('/messages');
-      setMessages(res.data.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    useEffect(() => {
+        scrollToBottom();
+    }, [conversation]);
 
-  const fetchContacts = async () => {
-    try {
-      const res = await api.get('/admin/users');
-      const allUsers = res.data.data;
-      
-      // Filter based on role rules
-      let allowed = [];
-      if (user.role === 'student') {
-        allowed = allUsers.filter(u => ['advisor', 'department_dean'].includes(u.role));
-      } else if (user.role === 'advisor') {
-        allowed = allUsers.filter(u => ['student', 'department_dean'].includes(u.role));
-      } else if (user.role === 'department_dean') {
-        allowed = allUsers.filter(u => ['student', 'advisor', 'college_admin'].includes(u.role));
-      } else if (user.role === 'college_admin') {
-        allowed = allUsers.filter(u => u._id !== user.id && u._id !== user._id);
-      }
-      
-      setContacts(allowed);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+    const fetchContacts = async () => {
+        setLoadingContacts(true);
+        try {
+            console.log('Fetching contacts...');
+            const res = await api.get('/messages/contacts');
+            setContacts(Array.isArray(res?.data) ? res.data : []);
+            console.log('Contacts fetched:', res?.data);
+        } catch (err) {
+            console.error('Error fetching contacts:', err);
+        } finally {
+            setLoadingContacts(false);
+        }
+    };
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !selectedContact) return;
+    const fetchConversation = async (contactId) => {
+        setLoadingConversation(true);
+        try {
+            console.log(`Fetching conversation with ${contactId}...`);
+            const res = await api.get(`/messages/conversation/${contactId}`);
+            setConversation(Array.isArray(res?.data) ? res.data : []);
+            console.log('Conversation fetched:', res?.data);
+        } catch (err) {
+            console.error('Error fetching conversation:', err);
+        } finally {
+            setLoadingConversation(false);
+        }
+    };
 
-    setSending(true);
-    try {
-      await api.post('/messages', {
-        receiverId: selectedContact._id,
-        content: newMessage
-      });
-      setNewMessage('');
-      fetchMessages();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSending(false);
-    }
-  };
+    const handleSendMessage = async (e) => {
+        e.preventDefault();
+        if (!selectedContact || !messageContent.trim() || sending) return;
 
-  const filteredContacts = contacts.filter(c => 
-    c.name.toLowerCase().includes(search.toLowerCase()) || 
-    c.username.toLowerCase().includes(search.toLowerCase())
-  );
+        setSending(true);
+        try {
+            const res = await api.post('/messages', {
+                receiverId: selectedContact._id,
+                content: messageContent.trim()
+            });
 
-  const getChatWithSelected = () => {
-    if (!selectedContact) return [];
-    return messages.filter(m => 
-      (m.sender._id === selectedContact._id && m.receiver._id === (user.id || user._id)) ||
-      (m.sender._id === (user.id || user._id) && m.receiver._id === selectedContact._id)
-    ).reverse(); // API returns descending, we want ascending for chat
-  };
+            // Append new message to conversation locally for speed
+            setConversation(prev => [...prev, res.data.data]);
+            setMessageContent('');
+        } catch (err) {
+            console.error('Error sending message:', err);
+        } finally {
+            setSending(false);
+        }
+    };
 
-  if (loading) return (
-    <div className="flex h-[calc(100vh-160px)] items-center justify-center bg-white rounded-2xl shadow-sm">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-dbu-primary"></div>
-    </div>
-  );
+    const filteredContacts = contacts.filter(c =>
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.role.replace('_', ' ').toLowerCase().includes(search.toLowerCase())
+    );
 
-  return (
-    <div className="flex h-[calc(100vh-160px)] bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
-      {/* Sidebar: Contacts */}
-      <div className="w-80 border-r border-slate-100 flex flex-col bg-slate-50/50">
-        <div className="p-6 border-b border-slate-100 bg-white">
-          <h2 className="text-xl font-bold text-slate-800 mb-4">Messages</h2>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="Search contacts..." 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-dbu-primary outline-none transition-all"
-            />
-          </div>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto">
-          {filteredContacts.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-sm">No contacts found</div>
-          ) : (
-            filteredContacts.map(contact => (
-              <button 
-                key={contact._id}
-                onClick={() => setSelectedContact(contact)}
-                className={`w-full flex items-center p-4 gap-3 transition-all hover:bg-white border-b border-slate-50 ${selectedContact?._id === contact._id ? 'bg-white border-l-4 border-l-dbu-primary shadow-sm' : 'border-l-4 border-l-transparent'}`}
-              >
-                <div className="w-12 h-12 rounded-full bg-dbu-primary/10 flex items-center justify-center text-dbu-primary font-bold">
-                  {contact.name.charAt(0)}
-                </div>
-                <div className="text-left flex-1 min-w-0">
-                  <p className="font-bold text-slate-800 truncate">{contact.name}</p>
-                  <p className="text-xs text-slate-500 uppercase font-black tracking-widest opacity-60">{contact.role.replace('_', ' ')}</p>
-                </div>
-              </button>
-            ))
-          )}
-        </div>
-      </div>
+    const currentUserId = user?.id || user?._id;
 
-      {/* Main: Chat Window */}
-      <div className="flex-1 flex flex-col bg-white">
-        {selectedContact ? (
-          <>
-            {/* Chat Header */}
-            <div className="p-4 border-b border-slate-100 flex items-center gap-4 bg-white z-10 shadow-sm">
-              <div className="w-10 h-10 rounded-full bg-dbu-primary text-white flex items-center justify-center font-bold">
-                {selectedContact.name.charAt(0)}
-              </div>
-              <div>
-                <p className="font-bold text-slate-800">{selectedContact.name}</p>
-                <p className="text-xs text-green-500 font-bold flex items-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 mr-2 animate-pulse"></div>
-                  Online
-                </p>
-              </div>
-            </div>
-
-            {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/30">
-              {getChatWithSelected().length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3">
-                  <MessageSquare className="w-12 h-12 opacity-10" />
-                  <p className="text-sm">Start a conversation with {selectedContact.name}</p>
-                </div>
-              ) : (
-                getChatWithSelected().map(msg => {
-                  const isMine = msg.sender._id === (user.id || user._id);
-                  return (
-                    <div key={msg._id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[70%] p-4 rounded-2xl shadow-sm ${isMine ? 'bg-dbu-primary text-white rounded-tr-none' : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'}`}>
-                        <p className="text-sm leading-relaxed">{msg.content}</p>
-                        <p className={`text-[10px] mt-2 flex items-center ${isMine ? 'text-dbu-light/70' : 'text-slate-400'}`}>
-                          <Clock className="w-3 h-3 mr-1" />
-                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
+    return (
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden h-[calc(100vh-180px)] min-h-[600px] flex">
+            {/* Left Panel: Contacts */}
+            <div className="w-80 border-r border-slate-100 flex flex-col bg-slate-50/30">
+                <div className="p-6 border-b border-slate-100 bg-white">
+                    <h2 className="text-xl font-black text-slate-800 mb-4 flex items-center gap-2">
+                        <MessageSquare className="text-dbu-primary w-6 h-6" />
+                        Messages
+                    </h2>
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Search contacts..."
+                            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all"
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                        />
                     </div>
-                  );
-                })
-              )}
-              <div ref={chatEndRef} />
+                </div>
+
+                <div className="flex-1 overflow-y-auto">
+                    {loadingContacts ? (
+                        <div className="flex flex-col items-center justify-center p-12 gap-3">
+                            <Loader2 className="w-8 h-8 text-dbu-primary animate-spin" />
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading contacts...</p>
+                        </div>
+                    ) : filteredContacts.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center p-12 text-center gap-4 opacity-40">
+                            <UserCircle className="w-12 h-12 text-slate-300" />
+                            <p className="text-sm font-bold text-slate-500">No contacts available</p>
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-slate-50">
+                            {filteredContacts.map(c => (
+                                <button
+                                    key={c._id}
+                                    onClick={() => setSelectedContact(c)}
+                                    className={`w-full p-4 flex items-center gap-4 hover:bg-white transition-all text-left ${selectedContact?._id === c._id ? 'bg-white shadow-sm z-10' : ''}`}
+                                >
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0 transition-all ${selectedContact?._id === c._id ? 'bg-dbu-primary text-white scale-105 shadow-lg shadow-dbu-primary/30' : 'bg-slate-100 text-slate-400'}`}>
+                                        {c.name.charAt(0)}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className={`font-bold truncate ${selectedContact?._id === c._id ? 'text-dbu-primary' : 'text-slate-800'}`}>
+                                            {c.name}
+                                        </p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 truncate">
+                                            {c.role.replace('_', ' ')}
+                                        </p>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Chat Input */}
-            <form onSubmit={handleSendMessage} className="p-6 bg-white border-t border-slate-100">
-              <div className="flex gap-4">
-                <input 
-                  type="text" 
-                  placeholder="Type your message..." 
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  className="flex-1 px-6 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition-all text-sm"
-                />
-                <button 
-                  type="submit" 
-                  disabled={sending || !newMessage.trim()}
-                  className="w-12 h-12 rounded-2xl bg-dbu-primary text-white flex items-center justify-center shadow-lg shadow-dbu-primary/20 hover:bg-dbu-accent transition-all transform active:scale-90 disabled:opacity-50"
-                >
-                  <Send className="w-5 h-5" />
-                </button>
-              </div>
-            </form>
-          </>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/30 p-12 text-center">
-            <div className="w-24 h-24 bg-white rounded-3xl shadow-xl flex items-center justify-center mb-6 border border-slate-50">
-              <MessageSquare className="w-12 h-12 text-slate-200" />
+            {/* Right Panel: Conversation */}
+            <div className="flex-1 flex flex-col bg-white relative">
+                {selectedContact ? (
+                    <>
+                        {/* Conversation Header */}
+                        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-dbu-primary/10 flex items-center justify-center text-dbu-primary font-bold">
+                                    {selectedContact.name.charAt(0)}
+                                </div>
+                                <div>
+                                    <h3 className="font-black text-slate-800">{selectedContact.name}</h3>
+                                    <p className="text-[10px] font-bold text-dbu-primary uppercase tracking-tighter">{selectedContact.role.replace('_', ' ')}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Messages Area */}
+                        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
+                            {loadingConversation ? (
+                                <div className="flex flex-col items-center justify-center h-full gap-3">
+                                    <Loader2 className="w-8 h-8 text-dbu-primary animate-spin" />
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading messages...</p>
+                                </div>
+                            ) : conversation.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full text-center gap-4 opacity-40">
+                                    <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center">
+                                        <Send className="w-8 h-8 text-slate-400" />
+                                    </div>
+                                    <div>
+                                        <p className="font-black text-slate-600">Start a conversation</p>
+                                        <p className="text-xs text-slate-400">Say hello to {selectedContact.name}!</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                conversation.map((msg, idx) => {
+                                    const isMe = msg.sender._id === currentUserId || msg.sender === currentUserId;
+                                    return (
+                                        <div key={msg._id || idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                                            <div className={`max-w-[70%] group relative`}>
+                                                <div className={`px-5 py-3 rounded-3xl text-sm shadow-sm ${isMe ? 'bg-dbu-primary text-white rounded-tr-none' : 'bg-white text-slate-800 border border-slate-100 rounded-tl-none'}`}>
+                                                    <p className="leading-relaxed">{msg.content}</p>
+                                                </div>
+                                                <p className={`text-[9px] mt-1 font-bold text-slate-300 uppercase tracking-tighter ${isMe ? 'text-right' : 'text-left'}`}>
+                                                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                            <div ref={messagesEndRef} />
+                        </div>
+
+                        {/* Input Area */}
+                        <div className="p-6 border-t border-slate-100 bg-white">
+                            <form onSubmit={handleSendMessage} className="flex gap-4">
+                                <input
+                                    type="text"
+                                    placeholder="Type your message..."
+                                    className="flex-1 px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all shadow-inner"
+                                    value={messageContent}
+                                    onChange={e => setMessageContent(e.target.value)}
+                                    disabled={sending}
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={!messageContent.trim() || sending}
+                                    className="w-14 h-14 bg-dbu-primary text-white rounded-2xl flex items-center justify-center shadow-xl shadow-dbu-primary/20 hover:bg-dbu-accent hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:scale-100"
+                                >
+                                    {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                                </button>
+                            </form>
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-12 gap-6 animate-in fade-in zoom-in duration-500">
+                        <div className="w-32 h-32 rounded-full bg-slate-50 flex items-center justify-center relative">
+                            <MessageSquare className="w-16 h-16 text-slate-200" />
+                            <div className="absolute -right-2 -top-2 w-10 h-10 bg-dbu-primary rounded-2xl rotate-12 flex items-center justify-center text-white shadow-lg">
+                                <Send className="w-5 h-5 -rotate-12" />
+                            </div>
+                        </div>
+                        <div>
+                            <h3 className="text-2xl font-black text-slate-800 mb-2">Your Conversations</h3>
+                            <p className="text-slate-400 max-w-xs mx-auto text-sm leading-relaxed">
+                                Select a contact from the list to start messaging or continue your conversation.
+                            </p>
+                        </div>
+                    </div>
+                )}
             </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Select a conversation</h3>
-            <p className="text-slate-500 max-w-sm">Choose a contact from the left menu to start messaging or viewing your history.</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+        </div>
+    );
 };
 
 export default Messaging;

@@ -4,6 +4,7 @@ import Student from '../models/Student.js';
 import AuditLog from '../models/AuditLog.js';
 import jwt from 'jsonwebtoken';
 import sendEmail from '../utils/sendEmail.js';
+import { normalizeRole } from '../utils/roles.js';
 
 // Generate JWT
 const generateToken = (id, role) => {
@@ -68,7 +69,7 @@ export const loginUser = async (req, res, next) => {
     const token = generateToken(user._id, user.role);
     let studentId = undefined;
 
-    if (user.role === 'student') {
+    if (normalizeRole(user.role) === 'student') {
       const student = await Student.findOne({ user: user._id });
       studentId = student?.studentId;
     }
@@ -83,11 +84,31 @@ export const loginUser = async (req, res, next) => {
     res.status(200).json({
       success: true,
       token,
-      role: user.role,
+      role: normalizeRole(user.role),
       name: user.name,
       username: user.username,
+      email: user.email,
       studentId
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Logout user & update activity
+// @route   POST /api/auth/logout
+// @access  Private
+export const logoutUser = async (req, res, next) => {
+  try {
+    if (req.user) {
+      const user = await User.findById(req.user.id);
+      if (user) {
+        // Set last active to 10 mins ago to ensure 'offline' status in UI
+        user.lastActive = new Date(Date.now() - 10 * 60 * 1000);
+        await user.save({ validateBeforeSave: false });
+      }
+    }
+    res.status(200).json({ success: true, message: 'Logged out successfully' });
   } catch (err) {
     next(err);
   }
@@ -100,14 +121,20 @@ export const loginUser = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 export const activateAccount = async (req, res, next) => {
   try {
-    const { username, student_id, email, password, confirmPassword } = req.body;
+    const { username, student_id, email, cbeAccount, password, confirmPassword } = req.body;
+    const normalizedUsername = username?.toUpperCase();
+    const normalizedStudentId = student_id?.toUpperCase();
+    const normalizedEmail = email?.toLowerCase();
 
     // 1. Validate required fields
-    if (!username) {
+    if (!normalizedUsername) {
       return res.status(400).json({ success: false, message: 'Username is required' });
     }
+    if (!normalizedEmail) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
     if (!password || !confirmPassword) {
-      return res.status(400).json({ success: false, message: 'Password and confirmPassword are required' });
+      return res.status(400).json({ success: false, message: 'Password and confirm Password are required' });
     }
 
     // 2. Check passwords match
@@ -116,22 +143,40 @@ export const activateAccount = async (req, res, next) => {
     }
 
     // 3. Find user by username
-    const user = await User.findOne({ username });
+    const user = await User.findOne({ username: normalizedUsername });
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // 4. Check if already activated
     if (user.isActivated) {
       return res.status(400).json({ success: false, message: 'Account already activated. Please login.' });
     }
 
-    // 5. If student, verify student_id
-    if (user.role === 'student') {
-      if (!student_id) {
-        return res.status(400).json({ success: false, message: 'Student ID is required for student activation' });
+    // Check if email is already in use
+    const existingByEmail = await User.findOne({ email: normalizedEmail });
+    if (existingByEmail) {
+      return res.status(400).json({ success: false, message: 'Email is already in use by another account' });
+    }
+
+    // Role-specific validation
+    let student = null;
+    const role = normalizeRole(user.role);
+
+    if (role === 'student') {
+      if (!normalizedStudentId) {
+        return res.status(400).json({ success: false, message: 'Student ID is required' });
       }
-      const student = await Student.findOne({ user: user._id, studentId: student_id });
+      if (!cbeAccount || !/^\d{13}$/.test(cbeAccount)) {
+        return res.status(400).json({ success: false, message: 'A valid 13-digit CBE Account is required' });
+      }
+
+      // Check if CBE account is already used
+      const existingCbe = await Student.findOne({ cbeAccount });
+      if (existingCbe) {
+        return res.status(400).json({ success: false, message: 'This CBE Account is already registered in our system' });
+      }
+
+      student = await Student.findOne({ user: user._id, studentId: normalizedStudentId });
       if (!student) {
         return res.status(400).json({ success: false, message: 'Student ID does not match this account' });
       }
@@ -143,32 +188,32 @@ export const activateAccount = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character.' });
     }
 
-    if (user.email && password === user.email) {
-      return res.status(400).json({ success: false, message: 'Password cannot be the same as your email address.' });
-    }
-
-    if (password.toLowerCase() === username.toLowerCase()) {
+    if (password.toLowerCase() === normalizedUsername.toLowerCase()) {
       return res.status(400).json({ success: false, message: 'Password cannot be the same as your username.' });
     }
 
-    // 7. Hash password and activate (pre-save hook hashes it)
+    // Update User
+    user.email = normalizedEmail;
     user.password = password;
     user.isActivated = true;
-    if (email) {
-      user.email = email.toLowerCase();
-    }
     await user.save();
+
+    // Update Student if applicable
+    if (student) {
+      student.cbeAccount = cbeAccount;
+      await student.save();
+    }
 
     await AuditLog.create({
       user: user._id,
       action: 'account_activated',
-      details: `Account ${username} activated`,
+      details: `Account ${normalizedUsername} activated with email ${normalizedEmail}`,
       ip: req.ip
     });
 
     res.status(200).json({
       success: true,
-      message: 'Account activated successfully'
+      message: 'Account activated successfully. You can now login.'
     });
   } catch (err) {
     next(err);
@@ -183,12 +228,14 @@ export const activateAccount = async (req, res, next) => {
 export const forgotPassword = async (req, res, next) => {
   try {
     const { username, email } = req.body;
+    const normalizedUsername = username?.toUpperCase();
+    const normalizedEmail = email?.toLowerCase();
 
-    if (!username || !email) {
+    if (!normalizedUsername || !normalizedEmail) {
       return res.status(400).json({ success: false, message: 'Please provide both username and email' });
     }
 
-    const user = await User.findOne({ username });
+    const user = await User.findOne({ username: normalizedUsername });
     if (!user) {
       return res.status(404).json({ success: false, message: 'No user found with that username' });
     }
@@ -200,12 +247,11 @@ export const forgotPassword = async (req, res, next) => {
     if (!user.email) {
       return res.status(400).json({ success: false, message: 'No email is associated with this account. Please contact your administrator.' });
     }
-
-    if (user.email.toLowerCase() !== email.toLowerCase()) {
+    if (user.email.toLowerCase() !== normalizedEmail) {
       return res.status(400).json({ success: false, message: 'The provided email does not match our records for this account.' });
     }
 
-    // Generate token (15-minute expiry set in model method)
+    // Generate token (10-minute expiry set in model method)
     const resetToken = user.getResetPasswordToken();
     await user.save({ validateBeforeSave: false });
 
@@ -215,8 +261,8 @@ export const forgotPassword = async (req, res, next) => {
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #1e3a5f;">DBU Internship Management System</h2>
         <p>Hello <strong>${user.name}</strong>,</p>
-        <p>You requested a password reset for your account (<strong>${username}</strong>).</p>
-        <p>Click the button below to reset your password. This link expires in <strong>15 minutes</strong>.</p>
+        <p>You requested a password reset for your account (<strong>${user.username}</strong>).</p>
+        <p>Click the button below to reset your password. This link expires in <strong>10 minutes</strong>.</p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${resetUrl}" style="background-color: #1e3a5f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
             Reset My Password
@@ -233,7 +279,7 @@ export const forgotPassword = async (req, res, next) => {
       await sendEmail({ to: user.email, subject: 'DBU-IMS Password Reset Request', html });
       res.status(200).json({
         success: true,
-        message: `Password reset link sent to the email associated with account "${username}"`
+        message: `Password reset link sent to the email associated with account "${user.username}"`
       });
     } catch (emailErr) {
       // If email fails, clear the token so the user can try again

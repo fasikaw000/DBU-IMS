@@ -11,7 +11,8 @@ const validStudentIdSchema = new mongoose.Schema({
     default: false
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  collection: 'authorizedStudentIds'
 });
 
 export default mongoose.model('ValidStudentId', validStudentIdSchema);

@@ -34,11 +34,11 @@ const StudentDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       const logbooksRes = await api.get('/logbooks/my-logbooks');
-      setLogbooks(logbooksRes.data.data || []);
+      setLogbooks(logbooksRes.data || []);
       
       try {
         const internshipRes = await api.get('/internships/my-internship');
-        const data = internshipRes.data.data;
+        const data = internshipRes.data;
         setInternship(data);
         setInternshipStatus(data.status.toUpperCase()); // e.g. PENDING_APPROVAL, APPROVED, COMPLETED
       } catch (err) {

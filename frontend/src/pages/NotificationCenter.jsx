@@ -14,7 +14,7 @@ const NotificationCenter = () => {
   const fetchNotifications = async () => {
     try {
       const res = await api.get('/notifications');
-      setNotifications(res.data.data);
+      setNotifications(Array.isArray(res?.data) ? res.data : []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -71,21 +71,21 @@ const NotificationCenter = () => {
                 <div className="flex-1">
                   <div className="flex justify-between items-start mb-1">
                     <p className={`text-sm leading-relaxed ${!notif.is_read ? 'font-bold text-slate-800' : 'font-medium text-slate-500'}`}>
-                       {notif.message}
+                      {notif.message}
                     </p>
                     <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center bg-slate-50 px-2 py-1 rounded-md border border-slate-100 whitespace-nowrap ml-4">
-                       <Clock className="w-3 h-3 mr-1" />
-                       {new Date(notif.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      <Clock className="w-3 h-3 mr-1" />
+                      {new Date(notif.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     </span>
                   </div>
                   <div className="flex items-center gap-6 mt-3">
                     {notif.link && (
-                       <Link to={notif.link} className="text-[10px] font-black tracking-widest text-dbu-primary hover:text-dbu-accent transition-colors">
-                          VIEW DETAILS
-                       </Link>
+                      <Link to={notif.link} className="text-[10px] font-black tracking-widest text-dbu-primary hover:text-dbu-accent transition-colors">
+                        VIEW DETAILS
+                      </Link>
                     )}
                     {!notif.is_read && (
-                      <button 
+                      <button
                         onClick={() => handleMarkRead(notif._id)}
                         className="text-[10px] font-black tracking-widest text-slate-400 hover:text-dbu-primary flex items-center transition-colors"
                       >

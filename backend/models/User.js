@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import { normalizeRole, ROLE_VALUES } from '../utils/roles.js';
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -12,11 +13,26 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Username is required'],
     unique: true,
     uppercase: true,
-    trim: true
+    trim: true,
+    validate: {
+      validator: function (v) {
+        if (normalizeRole(this.role) === 'student') {
+          return /^DBU\d{7}$/.test(v);
+        }
+        // staff roles
+        return /^STF\d{6}$/.test(v);
+      },
+      message: 'Username format is invalid for the assigned role (Staff: STF000001, Student: DBU0000001)'
+    }
   },
   email: {
     type: String,
-    match: [/^\w+([\.-]?\w+)*@dbu\.edu\.et$/, 'Please use a valid Debre Berhan University email (@dbu.edu.et)']
+    required: false,
+    unique: true,
+    sparse: true,
+    lowercase: true,
+    trim: true,
+    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please provide a valid email address']
   },
   password: {
     type: String,
@@ -30,7 +46,8 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['student', 'advisor', 'department_dean', 'college_admin'],
+    enum: ROLE_VALUES,
+    set: normalizeRole,
     default: 'student'
   },
   isActivated: {
@@ -49,15 +66,20 @@ const userSchema = new mongoose.Schema({
     type: String
   }],
   resetPasswordToken: String,
-  resetPasswordExpire: Date
+  resetPasswordExpire: Date,
+  status: {
+    type: String,
+    enum: ['active', 'deactivated'],
+    default: 'active'
+  }
 }, {
   timestamps: true
 });
 
 // Hash password before saving (only when modified)
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
   if (!this.isModified('password') || !this.password) {
-    return next();
+    return;
   }
   const salt = await bcrypt.genSalt(10);
   const hash = await bcrypt.hash(this.password, salt);
@@ -67,7 +89,6 @@ userSchema.pre('save', async function (next) {
     this.previousPasswords = [];
   }
   this.previousPasswords.push(hash);
-  next();
 });
 
 // Helper for resetting
@@ -85,7 +106,7 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Generate secure reset token (15-minute expiry)
+// Generate secure reset token (10-minute expiry)
 userSchema.methods.getResetPasswordToken = function () {
   const resetToken = crypto.randomBytes(20).toString('hex');
 
@@ -94,7 +115,7 @@ userSchema.methods.getResetPasswordToken = function () {
     .update(resetToken)
     .digest('hex');
 
-  this.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
+  this.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
 
   return resetToken;
 };

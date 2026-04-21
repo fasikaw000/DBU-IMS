@@ -87,44 +87,44 @@ const CollegeHeadDashboard = () => {
           </h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-               <span className="text-sm font-medium text-slate-600">Approved (Active)</span>
-               <span className="text-sm font-bold text-green-600">{analytics?.activeInternships}</span>
+              <span className="text-sm font-medium text-slate-600">Approved (Active)</span>
+              <span className="text-sm font-bold text-green-600">{analytics?.activeInternships}</span>
             </div>
             <div className="w-full bg-slate-100 rounded-full h-2">
-               <div className="bg-green-500 h-2 rounded-full" style={{ width: `${(analytics?.activeInternships / analytics?.totalApplications * 100) || 0}%` }}></div>
+              <div className="bg-green-500 h-2 rounded-full" style={{ width: `${(analytics?.activeInternships / analytics?.totalApplications * 100) || 0}%` }}></div>
             </div>
 
             <div className="flex items-center justify-between">
-               <span className="text-sm font-medium text-slate-600">Pending Approval</span>
-               <span className="text-sm font-bold text-yellow-600">{analytics?.pendingInternships}</span>
+              <span className="text-sm font-medium text-slate-600">Pending Approval</span>
+              <span className="text-sm font-bold text-yellow-600">{analytics?.pendingInternships}</span>
             </div>
             <div className="w-full bg-slate-100 rounded-full h-2">
-               <div className="bg-yellow-500 h-2 rounded-full" style={{ width: `${(analytics?.pendingInternships / analytics?.totalApplications * 100) || 0}%` }}></div>
+              <div className="bg-yellow-500 h-2 rounded-full" style={{ width: `${(analytics?.pendingInternships / analytics?.totalApplications * 100) || 0}%` }}></div>
             </div>
 
             <div className="flex items-center justify-between">
-               <span className="text-sm font-medium text-slate-600">Rejected</span>
-               <span className="text-sm font-bold text-red-600">{analytics?.rejectedInternships}</span>
+              <span className="text-sm font-medium text-slate-600">Rejected</span>
+              <span className="text-sm font-bold text-red-600">{analytics?.rejectedInternships}</span>
             </div>
             <div className="w-full bg-slate-100 rounded-full h-2">
-               <div className="bg-red-500 h-2 rounded-full" style={{ width: `${(analytics?.rejectedInternships / analytics?.totalApplications * 100) || 0}%` }}></div>
+              <div className="bg-red-500 h-2 rounded-full" style={{ width: `${(analytics?.rejectedInternships / analytics?.totalApplications * 100) || 0}%` }}></div>
             </div>
           </div>
         </div>
 
         {/* Quick Actions */}
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-           <h3 className="text-lg font-semibold border-b pb-2 mb-4">Administrative Insights</h3>
-           <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4">
-              <div className="flex">
-                 <AlertCircle className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0" />
-                 <div>
-                    <p className="text-sm font-bold text-blue-900">Placement Target Progress</p>
-                    <p className="text-xs text-blue-700 mt-0.5">Currently tracking at {((analytics?.activeInternships / 100) * 100).toFixed(1)}% of total capacity based on available advisors.</p>
-                 </div>
+          <h3 className="text-lg font-semibold border-b pb-2 mb-4">Administrative Insights</h3>
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4">
+            <div className="flex">
+              <AlertCircle className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-bold text-blue-900">Placement Target Progress</p>
+                <p className="text-xs text-blue-700 mt-0.5">Currently tracking at {((analytics?.activeInternships / 100) * 100).toFixed(1)}% of total capacity based on available advisors.</p>
               </div>
-           </div>
-           <p className="text-sm text-slate-500 italic">College-wide student distribution across departments: CS (45%), SE (30%), IT (25%).</p>
+            </div>
+          </div>
+          <p className="text-sm text-slate-500 italic">College-wide student distribution across departments: CS (45%), SE (30%), IT (25%).</p>
         </div>
       </div>
     </div>

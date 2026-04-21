@@ -24,7 +24,7 @@ const AdvisorDashboard = () => {
   const fetchInternships = async () => {
     try {
       const res = await api.get('/advisor/students');
-      setInternships(res.data.data);
+      setInternships(res.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -35,7 +35,7 @@ const AdvisorDashboard = () => {
   const fetchLogbooks = async (studentId) => {
     try {
       const res = await api.get(`/logbooks/assigned-logbooks?studentId=${studentId}`);
-      setLogbooks(res.data.data);
+      setLogbooks(res.data);
     } catch (err) {
       console.error(err);
     }

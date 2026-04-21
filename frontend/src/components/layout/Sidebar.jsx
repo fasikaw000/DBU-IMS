@@ -10,7 +10,9 @@ import {
   Briefcase,
   BarChart,
   LogOut,
-  MessageSquare
+  MessageSquare,
+  ShieldCheck,
+  Settings
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -41,9 +43,13 @@ const Sidebar = () => {
       case 'college_admin':
         return [
           { name: 'Dashboard', path: '/admin-dashboard', icon: LayoutDashboard },
-          { name: 'Staff', path: '/admin/staff', icon: Users },
-          { name: 'Seed IDs', path: '/admin/seed-ids', icon: FileText },
+          { name: 'Students', path: '/admin/students', icon: Users },
+          { name: 'Staff', path: '/admin/staff', icon: ShieldCheck },
+          { name: 'Departments', path: '/admin/departments', icon: Building },
+          { name: 'Internships', path: '/admin/internships', icon: Briefcase },
+          { name: 'Reports', path: '/admin/reports', icon: BarChart },
           { name: 'Messages', path: '/messages', icon: MessageSquare },
+          { name: 'Settings', path: '/admin/settings', icon: Settings },
         ];
       default:
         return [];
@@ -91,7 +97,7 @@ const Sidebar = () => {
           className="flex items-center w-full px-4 py-3 text-sm font-medium text-red-400 hover:bg-slate-800 hover:text-red-300 rounded-lg transition-colors"
         >
           <LogOut className="mr-3 h-5 w-5" />
-          Logout
+          Sign Out
         </button>
       </div>
     </div>

@@ -12,7 +12,8 @@ const studentSchema = new mongoose.Schema({
     required: [true, 'Username is required'],
     unique: true,
     uppercase: true,
-    trim: true
+    trim: true,
+    match: [/^DBU\d{7}$/, 'Username must follow the format DBU0000001']
   },
   studentId: {
     type: String,
@@ -25,7 +26,7 @@ const studentSchema = new mongoose.Schema({
   department: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Department',
-    required: true
+    required: false
   },
   phone: {
     type: String,
@@ -34,8 +35,15 @@ const studentSchema = new mongoose.Schema({
   cbeAccount: {
     type: String,
     required: false,
+    unique: true,
+    sparse: true,
     trim: true,
     match: [/^\d{13}$/, 'CBE Account Number must be exactly 13 digits']
+  },
+  year: {
+    type: String,
+    required: [true, 'Student year is required'],
+    trim: true
   }
 }, {
   timestamps: true

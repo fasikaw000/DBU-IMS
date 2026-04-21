@@ -21,7 +21,6 @@ export const generateUsername = async (role) => {
     .lean();
 
   let nextNumber = 1;
-  const currentYearStr = new Date().getFullYear().toString().substring(2, 4); // "26"
 
   if (lastUser && lastUser.username) {
     const lastNumberStr = lastUser.username.substring(prefix.length);
@@ -29,17 +28,9 @@ export const generateUsername = async (role) => {
     if (!isNaN(lastNumber)) {
       nextNumber = lastNumber + 1;
     }
-  } else {
-    // Starting format: current 2-digit year + padded zeros + 1
-    // For DBU (7 digits total): e.g., year '26' + 5 padded digits (00001) -> 2600001
-    // For STF (6 digits total): e.g., year '26' + 4 padded digits (0001) -> 260001
-    // Actually the spec example has DBU2300001, meaning 23 is year, 00001 is incremental.
-    const zerosNeeded = digitsCount - 2;
-    const padding = '0'.repeat(zerosNeeded - 1) + '1';
-    nextNumber = parseInt(`${currentYearStr}${padding}`, 10);
   }
 
-  // Formatting back to string with exact length constraint
+  // Formatting back to string with exact length constraint (leading zeros)
   const newNumberString = nextNumber.toString().padStart(digitsCount, '0');
   
   return `${prefix}${newNumberString}`;

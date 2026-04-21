@@ -21,15 +21,15 @@ const DeptDashboard = () => {
                 api.get('/department/advisors/workload')
             ]);
             // Extract pending internships from students
-            const pending = studentRes.data.data
+            const pending = studentRes.data
               .filter(s => s.internship && (s.internship.status === 'Pending' || s.internship.status === 'Approved'))
               .map(s => s.internship);
             setInternships(pending);
-            const advisorList = advRes.data.data.map(w => w.advisor);
+            const advisorList = advRes.data.map(w => w.advisor);
             setAdvisors(advisorList);
 
             // Extract department name from the first student or advisor if available
-            const firstRecord = studentRes.data.data[0] || advRes.data.data[0];
+            const firstRecord = studentRes.data[0] || advRes.data[0];
             if (firstRecord?.department?.name) {
                 setDepartmentName(firstRecord.department.name);
             } else if (firstRecord?.department?.code) {

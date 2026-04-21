@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { normalizeRole } from '../utils/roles.js';
 
 export const protect = async (req, res, next) => {
   let token;
@@ -17,6 +18,9 @@ export const protect = async (req, res, next) => {
 
       // Get user from the token
       req.user = await User.findById(decoded.id).select('-password');
+      if (req.user) {
+        req.user.role = normalizeRole(req.user.role);
+      }
 
       return next();
     } catch (error) {
@@ -31,10 +35,12 @@ export const protect = async (req, res, next) => {
 // Grant access to specific roles
 export const authorize = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    const normalizedAllowedRoles = roles.map((role) => normalizeRole(role));
+    const normalizedUserRole = normalizeRole(req.user.role);
+    if (!normalizedAllowedRoles.includes(normalizedUserRole)) {
       return res.status(403).json({
         success: false,
-        message: `User role ${req.user.role} is not authorized to access this route`,
+        message: `User role ${normalizedUserRole} is not authorized to access this route`,
         data: null
       });
     }

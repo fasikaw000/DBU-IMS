@@ -27,6 +27,14 @@ api.interceptors.response.use(
     return response.data;
   },
   (error) => {
+    // Handle Token Expired / Unauthorized - Automatic Logout
+    if (error.response?.status === 401) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      // We don't use window.location.href here to avoid infinite loops, 
+      // AuthContext will pick up the change.
+    }
+
     // Map standard backend error JSON format or fallback to network issue
     const message = error.response?.data?.message || error.message || 'An unexpected error occurred';
     return Promise.reject(new Error(message));
