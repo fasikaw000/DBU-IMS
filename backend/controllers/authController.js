@@ -33,16 +33,29 @@ export const loginUser = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
+    // Self-heal legacy/inconsistent activation fields (e.g. isActivated=true but activationStatus="Pending")
+    const derivedActivationStatus = user.isActivated ? 'Activated' : 'Pending';
+    if (user.activationStatus !== derivedActivationStatus) {
+      user.activationStatus = derivedActivationStatus;
+      await user.save({ validateBeforeSave: false });
+    }
+
     // Check if account is locked
     if (user.lockUntil && user.lockUntil > Date.now()) {
       const remainingTime = Math.ceil((user.lockUntil - Date.now()) / 60000);
       return res.status(403).json({ success: false, message: `Account locked due to too many failed attempts. Try again in ${remainingTime} minutes.` });
     }
 
-    if (!user.isActivated) {
+    if (derivedActivationStatus !== 'Activated') {
       return res.status(401).json({
         success: false,
-        message: 'Account not activated. Please activate your account first.'
+        message: 'Please activate your account first'
+      });
+    }
+    if (user.isActive === false || user.status === 'deactivated') {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been deactivated by admin'
       });
     }
 
@@ -88,10 +101,15 @@ export const loginUser = async (req, res, next) => {
       name: user.name,
       username: user.username,
       email: user.email,
+      activationStatus: user.activationStatus || (user.isActivated ? 'Activated' : 'Pending'),
+      isActive: user.isActive !== false,
       studentId
     });
   } catch (err) {
-    next(err);
+    console.error('[loginUser] error:', err);
+    console.error('[loginUser] next type:', typeof next, 'handler arity:', loginUser.length);
+    if (typeof next === 'function') return next(err);
+    return res.status(500).json({ success: false, message: err?.message || 'Server Error' });
   }
 };
 
@@ -110,7 +128,8 @@ export const logoutUser = async (req, res, next) => {
     }
     res.status(200).json({ success: true, message: 'Logged out successfully' });
   } catch (err) {
-    next(err);
+    if (typeof next === 'function') return next(err);
+    return res.status(500).json({ success: false, message: err?.message || 'Server Error' });
   }
 };
 
@@ -121,9 +140,8 @@ export const logoutUser = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 export const activateAccount = async (req, res, next) => {
   try {
-    const { username, student_id, email, cbeAccount, password, confirmPassword } = req.body;
+    const { username, email, password, confirmPassword } = req.body;
     const normalizedUsername = username?.toUpperCase();
-    const normalizedStudentId = student_id?.toUpperCase();
     const normalizedEmail = email?.toLowerCase();
 
     // 1. Validate required fields
@@ -149,6 +167,13 @@ export const activateAccount = async (req, res, next) => {
     }
 
     if (user.isActivated) {
+      // Self-heal and ensure activated users can login immediately
+      if (user.activationStatus !== 'Activated' || user.isActive === false || user.status === 'deactivated') {
+        user.activationStatus = 'Activated';
+        user.isActive = true;
+        user.status = 'active';
+        await user.save({ validateBeforeSave: false });
+      }
       return res.status(400).json({ success: false, message: 'Account already activated. Please login.' });
     }
 
@@ -159,26 +184,12 @@ export const activateAccount = async (req, res, next) => {
     }
 
     // Role-specific validation
-    let student = null;
     const role = normalizeRole(user.role);
 
     if (role === 'Student') {
-      if (!normalizedStudentId) {
-        return res.status(400).json({ success: false, message: 'Student ID is required' });
-      }
-      if (!cbeAccount || !/^\d{13}$/.test(cbeAccount)) {
-        return res.status(400).json({ success: false, message: 'A valid 13-digit CBE Account is required' });
-      }
-
-      // Check if CBE account is already used
-      const existingCbe = await Student.findOne({ cbeAccount });
-      if (existingCbe) {
-        return res.status(400).json({ success: false, message: 'This CBE Account is already registered in our system' });
-      }
-
-      student = await Student.findOne({ user: user._id, studentId: normalizedStudentId });
+      const student = await Student.findOne({ user: user._id });
       if (!student) {
-        return res.status(400).json({ success: false, message: 'Student ID does not match this account' });
+        return res.status(400).json({ success: false, message: 'Student profile is missing for this account' });
       }
     }
 
@@ -196,13 +207,10 @@ export const activateAccount = async (req, res, next) => {
     user.email = normalizedEmail;
     user.password = password;
     user.isActivated = true;
+    user.activationStatus = 'Activated';
+    user.isActive = true;
+    user.status = 'active';
     await user.save();
-
-    // Update Student if applicable
-    if (student) {
-      student.cbeAccount = cbeAccount;
-      await student.save();
-    }
 
     await AuditLog.create({
       user: user._id,
@@ -216,7 +224,8 @@ export const activateAccount = async (req, res, next) => {
       message: 'Account activated successfully. You can now login.'
     });
   } catch (err) {
-    next(err);
+    if (typeof next === 'function') return next(err);
+    return res.status(500).json({ success: false, message: err?.message || 'Server Error' });
   }
 };
 
@@ -290,7 +299,8 @@ export const forgotPassword = async (req, res, next) => {
       return res.status(500).json({ success: false, message: 'Email could not be sent. Please try again later.' });
     }
   } catch (err) {
-    next(err);
+    if (typeof next === 'function') return next(err);
+    return res.status(500).json({ success: false, message: err?.message || 'Server Error' });
   }
 };
 
@@ -364,6 +374,7 @@ export const resetPassword = async (req, res, next) => {
       message: 'Password reset successful. You can now login with your new password.'
     });
   } catch (err) {
-    next(err);
+    if (typeof next === 'function') return next(err);
+    return res.status(500).json({ success: false, message: err?.message || 'Server Error' });
   }
 };

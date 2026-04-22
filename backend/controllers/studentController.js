@@ -3,6 +3,7 @@ import Internship from '../models/Internship.js';
 import Company from '../models/Company.js';
 import Report from '../models/Report.js';
 import Logbook from '../models/Logbook.js';
+import AuditLog from '../models/AuditLog.js';
 
 // @desc    Student proposes a company & applies for internship
 // @route   POST /api/student/apply
@@ -110,6 +111,13 @@ export const submitReport = async (req, res, next) => {
       dueDate, 
       version,
       isLatest: true
+    });
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: 'report_submitted',
+      details: `${type} report submitted (v${version})`,
+      ip: req.ip
     });
 
     res.status(201).json({ success: true, message: `${type} Report submitted (v${version})`, data: report });

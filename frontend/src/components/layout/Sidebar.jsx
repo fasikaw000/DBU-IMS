@@ -30,14 +30,14 @@ const Sidebar = () => {
       case 'Advisor':
         return [
           { name: 'Dashboard', path: '/advisor-dashboard', icon: LayoutDashboard },
-          { name: 'Students', path: '/advisor/students', icon: Users },
+          { name: 'Students', path: '/students', icon: Users },
           { name: 'Messages', path: '/messages', icon: MessageSquare },
         ];
       case 'Dean':
         return [
           { name: 'Dashboard', path: '/dept-dashboard', icon: LayoutDashboard },
-          { name: 'Companies', path: '/department/companies', icon: Building },
-          { name: 'Assignments', path: '/department/assignments', icon: Users },
+          { name: 'Companies', path: '/companies', icon: Building },
+          { name: 'Assignments', path: '/assignments', icon: Users },
           { name: 'Messages', path: '/messages', icon: MessageSquare },
         ];
       case 'Admin':

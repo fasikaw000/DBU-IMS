@@ -17,6 +17,9 @@ const Profile = () => {
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [studentProfile, setStudentProfile] = useState(null);
+  const [cbeAccount, setCbeAccount] = useState('');
+  const [savingCbe, setSavingCbe] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -29,6 +32,22 @@ const Profile = () => {
     setFullName(user?.name || '');
     setEmail(user?.email || '');
   }, [user?._id]);
+
+  useEffect(() => {
+    const fetchStudentProfile = async () => {
+      if (user?.role !== 'Student') return;
+      try {
+        const res = await api.get('/users/me/student-profile');
+        if (res?.data) {
+          setStudentProfile(res.data);
+          setCbeAccount(res.data.cbeAccount || '');
+        }
+      } catch (_err) {
+        // Keep profile usable even if student profile endpoint fails.
+      }
+    };
+    fetchStudentProfile();
+  }, [user?.role]);
 
   const displayRole = useMemo(() => user?.role || 'Unknown', [user?.role]);
 
@@ -69,6 +88,23 @@ const Profile = () => {
       setError(err.message || 'Failed to update profile');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveCbe = async (e) => {
+    if (e) e.preventDefault();
+    setSavingCbe(true);
+    setMessage('');
+    setError('');
+    try {
+      const res = await api.put('/users/me/student-profile/cbe', { cbeAccount });
+      setStudentProfile(res?.data || { cbeAccount, cbeEditable: true });
+      setCbeAccount(res?.data?.cbeAccount || cbeAccount);
+      setMessage(res?.message || 'CBE account saved successfully');
+    } catch (err) {
+      setError(err.message || 'Failed to save CBE account');
+    } finally {
+      setSavingCbe(false);
     }
   };
 
@@ -201,6 +237,33 @@ const Profile = () => {
               {displayRole}
             </p>
           </div>
+          {user?.role === 'Student' && (
+            <div className="md:col-span-2 bg-slate-50 rounded-xl p-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+                <div className="flex-1">
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400 mb-1">CBE Account Number</p>
+                  <input
+                    value={cbeAccount || ''}
+                    onChange={(e) => setCbeAccount(e.target.value.replace(/\D/g, '').slice(0, 13))}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-dbu-primary"
+                    placeholder="Enter 13-digit CBE account"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    CBE account must be exactly 13 digits
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSaveCbe}
+                  disabled={savingCbe || (cbeAccount || '').length !== 13}
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-dbu-primary text-white font-bold hover:bg-dbu-accent transition-colors disabled:opacity-50"
+                >
+                  {savingCbe ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  Save CBE
+                </button>
+              </div>
+            </div>
+          )}
           <div className="md:col-span-2 flex flex-col sm:flex-row justify-end gap-3">
             <button
               type="submit"

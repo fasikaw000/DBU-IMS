@@ -18,7 +18,9 @@ const AdminDepartments = () => {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [message, setMessage] = useState('');
+    const [messageType, setMessageType] = useState('success');
     const [search, setSearch] = useState('');
+    const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: '' });
 
     // Form States
     const [showAddForm, setShowAddForm] = useState(false);
@@ -34,6 +36,15 @@ const AdminDepartments = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+    useEffect(() => {
+        if (!message) return;
+        const timeout = setTimeout(() => {
+            setMessage('');
+            setMessageType('success');
+        }, 2500);
+        return () => clearTimeout(timeout);
+    }, [message]);
 
     const fetchData = async () => {
         try {
@@ -53,9 +64,11 @@ const AdminDepartments = () => {
         try {
             if (editingDept) {
                 await api.put(`/admin/departments/${editingDept._id}`, deptData);
+                setMessageType('success');
                 setMessage(`Success: Department updated.`);
             } else {
                 await api.post('/admin/departments', deptData);
+                setMessageType('success');
                 setMessage(`Success: Department ${deptData.name} created.`);
             }
             setDeptData({ name: '', code: '', college: '', description: '', status: 'Active' });
@@ -63,6 +76,7 @@ const AdminDepartments = () => {
             setEditingDept(null);
             fetchData();
         } catch (err) {
+            setMessageType('error');
             setMessage(`Failed: ${err.response?.data?.message || err.message}`);
         } finally {
             setActionLoading(false);
@@ -75,6 +89,7 @@ const AdminDepartments = () => {
             await api.patch(`/admin/departments/${id}`);
             fetchData();
         } catch (err) {
+            setMessageType('error');
             setMessage(`Failed: ${err.response?.data?.message || err.message}`);
         } finally {
             setActionLoading(false);
@@ -94,16 +109,23 @@ const AdminDepartments = () => {
     };
 
     const handleDelete = async (id, name) => {
-        if (!window.confirm(`Are you sure you want to PERMANENTLY delete the department "${name}"? This only works if no students or staff are registered under it.`)) return;
+        setDeleteModal({ open: true, id, name });
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteModal.id) return;
         setActionLoading(true);
         try {
-            await api.delete(`/admin/departments/${id}`);
-            setMessage(`Success: Department ${name} deleted.`);
+            await api.delete(`/admin/departments/${deleteModal.id}`);
+            setMessageType('success');
+            setMessage(`Success: Department ${deleteModal.name} deleted.`);
             fetchData();
         } catch (err) {
+            setMessageType('error');
             setMessage(`Failed: ${err.response?.data?.message || err.message}`);
         } finally {
             setActionLoading(false);
+            setDeleteModal({ open: false, id: null, name: '' });
         }
     };
     const filteredDepts = departments.filter(d =>
@@ -123,7 +145,7 @@ const AdminDepartments = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-black text-slate-800 tracking-tight">Department Management</h1>
-                    <p className="text-slate-500 text-sm">Manage departments used for user assignment, reporting, and oversight.</p>
+                    <p className="text-slate-500 text-sm">Manage academic departments for user assignment, internship coordination, and institutional reporting.</p>
                 </div>
                 <button
                     onClick={() => {
@@ -139,7 +161,7 @@ const AdminDepartments = () => {
             </div>
 
             {message && (
-                <div className={`p-4 rounded-xl font-bold text-sm ${message.includes('Success') ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                <div className={`p-4 rounded-xl font-bold text-sm ${messageType === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
                     {message}
                 </div>
             )}
@@ -307,6 +329,33 @@ const AdminDepartments = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            {deleteModal.open && (
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+                        <h3 className="text-lg font-black text-slate-800">Confirm Department Deletion</h3>
+                        <p className="text-sm text-slate-600 mt-2">
+                            Are you sure you want to permanently delete "{deleteModal.name}"? This only works if no students or staff are registered under it.
+                        </p>
+                        <div className="mt-6 flex items-center justify-end gap-3">
+                            <button
+                                type="button"
+                                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50"
+                                onClick={() => setDeleteModal({ open: false, id: null, name: '' })}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                disabled={actionLoading}
+                                className="px-4 py-2 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 disabled:opacity-60"
+                                onClick={confirmDelete}
+                            >
+                                Confirm
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

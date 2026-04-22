@@ -53,10 +53,18 @@ const internshipSchema = new mongoose.Schema({
     default: 'NOT_STARTED'
   },
   finalGrade: {
-    advisorGrade: { type: Number, min: 0, max: 100 }, // Weight: 40%
-    companyGrade: { type: Number, min: 0, max: 100 }, // Weight: 30%
-    projectGrade: { type: Number, min: 0, max: 100 }, // Weight: 30%
-    total: { type: Number, min: 0, max: 100 }
+    advisorGrade: { type: Number, min: 0, max: 100 },
+    advisorScore: { type: Number, min: 0, max: 100 },
+    companyGrade: { type: Number, min: 0, max: 100 },
+    projectGrade: { type: Number, min: 0, max: 100 },
+    documentationGrade: { type: Number, min: 0, max: 100 },
+    implementationGrade: { type: Number, min: 0, max: 100 },
+    presentationGrade: { type: Number, min: 0, max: 100 },
+    total: { type: Number, min: 0, max: 100 },
+    letterGrade: { type: String, trim: true },
+    gradePoint: { type: Number, min: 0, max: 4 },
+    status: { type: String, trim: true },
+    description: { type: String, trim: true }
   }
 }, {
   timestamps: true // Tracks exactly when the internship transitions state

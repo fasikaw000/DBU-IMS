@@ -4,6 +4,76 @@ import AuditLog from '../models/AuditLog.js';
 import Notification from '../models/Notification.js';
 import { normalizeRole } from '../utils/roles.js';
 
+const ADMIN_ROLES = ['Admin', 'college_admin', 'admin'];
+const DEAN_ROLES = ['Dean', 'department_dean', 'dean'];
+const ADVISOR_ROLES = ['Advisor', 'advisor'];
+
+const getAllowedContactIds = async (currentUser) => {
+  const Internship = (await import('../models/Internship.js')).default;
+  const Student = (await import('../models/Student.js')).default;
+  const role = normalizeRole(currentUser.role);
+  const currentUserId = currentUser._id.toString();
+  const currentDept = currentUser.department?.toString();
+  const allowedIds = new Set();
+
+  if (role === 'Admin') {
+    const staff = await User.find({
+      _id: { $ne: currentUserId },
+      role: { $in: [...DEAN_ROLES, ...ADVISOR_ROLES] },
+      isActive: { $ne: false }
+    }).select('_id');
+    staff.forEach((u) => allowedIds.add(u._id.toString()));
+  } else if (role === 'Dean') {
+    const admins = await User.find({
+      _id: { $ne: currentUserId },
+      isActive: { $ne: false },
+      role: { $in: ADMIN_ROLES }
+    }).select('_id');
+    admins.forEach((u) => allowedIds.add(u._id.toString()));
+
+    if (currentDept) {
+      const deanContacts = await User.find({
+        _id: { $ne: currentUserId },
+        isActive: { $ne: false },
+        role: { $in: ADVISOR_ROLES },
+        department: currentDept
+      }).select('_id');
+      deanContacts.forEach((u) => allowedIds.add(u._id.toString()));
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('[MessagingContacts][Dean] admins', admins.map((a) => a._id?.toString()));
+      console.debug(`[MessagingContacts][Dean] dean=${currentUserId} dept=${currentDept || 'none'} admins=${admins.length} totalAllowed=${allowedIds.size}`);
+    }
+  } else if (role === 'Advisor') {
+    const advisorInternships = await Internship.find({ advisor_id: currentUserId })
+      .populate({ path: 'student', select: 'user' })
+      .select('student');
+    advisorInternships.forEach((i) => {
+      const studentUserId = i.student?.user?.toString();
+      if (studentUserId) allowedIds.add(studentUserId);
+    });
+
+    if (currentDept) {
+      const dean = await User.findOne({
+        role: { $in: DEAN_ROLES },
+        department: currentDept,
+        isActive: { $ne: false }
+      }).select('_id');
+      if (dean?._id) allowedIds.add(dean._id.toString());
+    }
+  } else if (role === 'Student') {
+    const studentProfile = await Student.findOne({ user: currentUserId }).select('_id');
+    if (studentProfile?._id) {
+      const internship = await Internship.findOne({ student: studentProfile._id, advisor_id: { $ne: null } }).select('advisor_id');
+      if (internship?.advisor_id) allowedIds.add(internship.advisor_id.toString());
+    }
+  }
+
+  allowedIds.delete(currentUserId);
+  return allowedIds;
+};
+
 // ─────────────────────────────────────────────────────────────
 // @desc    Send a new message
 // @route   POST /api/messages
@@ -22,56 +92,20 @@ export const sendMessage = async (req, res, next) => {
     // e.g. Student cannot message College Admin.
     const receiver = await User.findById(receiverId);
     const sender = await User.findById(senderId);
+    if (!sender) {
+      return res.status(404).json({ success: false, message: 'Sender not found' });
+    }
 
     if (!receiver) {
       return res.status(404).json({ success: false, message: 'Receiver not found' });
     }
 
-    const senderRole = normalizeRole(sender.role);
-    const receiverRole = normalizeRole(receiver.role);
-
-    // --- Strict Communication Rules ---
-    let isAllowed = false;
-
-    if (senderRole === 'college_admin') {
-      // Admin: Allowed -> Everyone
-      isAllowed = true;
-    } else if (senderRole === 'department_dean') {
-      // Dept Dean: Allowed -> Students, Advisors, Admin
-      if (['student', 'advisor', 'college_admin'].includes(receiverRole)) {
-        isAllowed = true;
-      }
-    } else if (senderRole === 'advisor') {
-      // Advisor: Allowed -> Assigned Students, Dept Dean
-      if (receiverRole === 'department_dean') {
-        isAllowed = true;
-      } else if (receiverRole === 'student') {
-        // Check if student is assigned to this advisor
-        const Internship = (await import('../models/Internship.js')).default;
-        const Student = (await import('../models/Student.js')).default;
-        const studentProfile = await Student.findOne({ user: receiverId });
-        if (studentProfile) {
-          const isAssigned = await Internship.findOne({ student: studentProfile._id, advisor: senderId });
-          if (isAssigned) isAllowed = true;
-        }
-      }
-    } else if (senderRole === 'student') {
-      // Student: Allowed -> Advisor, Dept Dean
-      if (receiverRole === 'department_dean') {
-        isAllowed = true;
-      } else if (receiverRole === 'advisor') {
-        // Check if this advisor is assigned to the student
-        const Internship = (await import('../models/Internship.js')).default;
-        const Student = (await import('../models/Student.js')).default;
-        const studentProfile = await Student.findOne({ user: senderId });
-        if (studentProfile) {
-          const isAssigned = await Internship.findOne({ student: studentProfile._id, advisor: receiverId });
-          if (isAssigned) isAllowed = true;
-        }
-      }
+    if (receiver.isActive === false) {
+      return res.status(403).json({ success: false, message: 'Cannot message an inactive account.' });
     }
 
-    if (!isAllowed) {
+    const allowedIds = await getAllowedContactIds(sender);
+    if (!allowedIds.has(receiverId.toString())) {
       return res.status(403).json({ success: false, message: 'Communication with this user is restricted.' });
     }
 
@@ -152,64 +186,21 @@ export const getContacts = async (req, res, next) => {
     const user = await User.findById(senderId);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    const senderRole = normalizeRole(user.role);
+    const allowedIds = await getAllowedContactIds(user);
+    const contacts = await User.find({
+      _id: { $in: Array.from(allowedIds) },
+      isActive: { $ne: false }
+    }).select('name username role profilePhoto department');
 
-    let contacts = [];
-
-    if (senderRole === 'college_admin') {
-      // Admin: Allowed -> Everyone
-      contacts = await User.find({ _id: { $ne: senderId } }).select('name username role');
-    } else if (senderRole === 'department_dean') {
-      // Dept Dean: Allowed -> Students, Advisors, Admin
-      contacts = await User.find({
-        role: { $in: ['student', 'advisor', 'college_admin'] },
-        _id: { $ne: senderId }
-      }).select('name username role');
-    } else if (senderRole === 'advisor') {
-      // Advisor: Allowed -> Assigned Students, Dept Dean
-      const deans = await User.find({ role: 'department_dean' }).select('name username role');
-
-      const Internship = (await import('../models/Internship.js')).default;
-      const Student = (await import('../models/Student.js')).default;
-
-      const assignedInternships = await Internship.find({ advisor: senderId }).populate({
-        path: 'student',
-        populate: { path: 'user', select: 'name username role' }
-      });
-
-      const students = assignedInternships
-        .map(i => i.student && i.student.user)
-        .filter(u => u != null);
-
-      contacts = [...deans, ...students];
-    } else if (senderRole === 'student') {
-      // Student: Allowed -> Advisor, Dept Dean
-      const deans = await User.find({ role: 'department_dean' }).select('name username role');
-
-      const Internship = (await import('../models/Internship.js')).default;
-      const Student = (await import('../models/Student.js')).default;
-
-      const studentProfile = await Student.findOne({ user: senderId });
-      if (studentProfile) {
-        const assignedInternships = await Internship.find({ student: studentProfile._id }).populate({
-          path: 'advisor',
-          select: 'name username role'
-        });
-
-        const advisors = assignedInternships
-          .map(i => i.advisor)
-          .filter(u => u != null);
-
-        contacts = [...deans, ...advisors];
-      } else {
-        contacts = deans;
-      }
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('[MessagingContacts] resolved contacts', contacts.map((c) => ({
+        id: c._id?.toString(),
+        role: c.role,
+        username: c.username
+      })));
     }
 
-    // De-duplicate contacts just in case
-    const uniqueContacts = Array.from(new Map(contacts.map(c => [c._id.toString(), c])).values());
-
-    res.status(200).json({ success: true, count: uniqueContacts.length, data: uniqueContacts });
+    res.status(200).json({ success: true, count: contacts.length, data: contacts });
   } catch (error) {
     next(error);
   }

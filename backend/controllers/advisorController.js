@@ -4,7 +4,29 @@ import Report from '../models/Report.js';
 import Evaluation from '../models/Evaluation.js';
 import Logbook from '../models/Logbook.js';
 import AuditLog from '../models/AuditLog.js';
+import Settings from '../models/Settings.js';
 import { checkAndCompleteInternship } from './internshipController.js';
+
+const getDefaultGradingSystem = () => ([
+  { minScore: 90, maxScore: 100, letterGrade: 'A+', gradePoint: 4.0, status: 'Excellent', description: 'Outstanding performance' },
+  { minScore: 85, maxScore: 89, letterGrade: 'A', gradePoint: 4.0, status: 'Excellent', description: 'Excellent performance' },
+  { minScore: 80, maxScore: 84, letterGrade: 'A-', gradePoint: 3.75, status: 'Excellent', description: 'Strong and consistent performance' },
+  { minScore: 75, maxScore: 79, letterGrade: 'B+', gradePoint: 3.5, status: 'Very Good', description: 'Very good achievement' },
+  { minScore: 70, maxScore: 74, letterGrade: 'B', gradePoint: 3.0, status: 'Very Good', description: 'Good overall achievement' },
+  { minScore: 65, maxScore: 69, letterGrade: 'B-', gradePoint: 2.75, status: 'Good', description: 'Above satisfactory performance' },
+  { minScore: 60, maxScore: 64, letterGrade: 'C+', gradePoint: 2.5, status: 'Good', description: 'Satisfactory with notable gaps' },
+  { minScore: 50, maxScore: 59, letterGrade: 'C', gradePoint: 2.0, status: 'Satisfactory', description: 'Minimum satisfactory standard' },
+  { minScore: 45, maxScore: 49, letterGrade: 'C-', gradePoint: 1.75, status: 'Unsatisfactory', description: 'Below minimum expectation' },
+  { minScore: 40, maxScore: 44, letterGrade: 'D', gradePoint: 1.0, status: 'Very Poor', description: 'Very weak performance' },
+  { minScore: 30, maxScore: 39, letterGrade: 'Fx', gradePoint: 0, status: 'Fail (Re-exam)', description: 'Failed; re-exam required' },
+  { minScore: 0, maxScore: 29, letterGrade: 'F', gradePoint: 0, status: 'Fail (Repeat course)', description: 'Failed; course must be repeated' }
+]);
+
+const mapScoreToGrade = (score, gradingRules) => {
+  const numericScore = Number(score);
+  const rule = gradingRules.find((item) => numericScore >= item.minScore && numericScore <= item.maxScore);
+  return rule || null;
+};
 
 // ─────────────────────────────────────────────────────────────
 // @desc    Get advisor's assigned students
@@ -98,6 +120,16 @@ export const evaluateStudent = async (req, res, next) => {
                   (documentationGrade * 0.25) + 
                   (implementationGrade * 0.25) + 
                   (presentationGrade * 0.20);
+    const advisorScore = Number(total.toFixed(2));
+
+    const settings = await Settings.findOne().select('academicSettings.gradingSystem');
+    const gradingRules = Array.isArray(settings?.academicSettings?.gradingSystem) && settings.academicSettings.gradingSystem.length
+      ? settings.academicSettings.gradingSystem
+      : getDefaultGradingSystem();
+    const mappedGrade = mapScoreToGrade(advisorScore, gradingRules);
+    if (!mappedGrade) {
+      return res.status(400).json({ success: false, message: 'Unable to map advisor score to configured grading intervals.' });
+    }
 
     // Create an Evaluation record (matching the new weights)
     const evaluation = await Evaluation.create({
@@ -111,7 +143,11 @@ export const evaluateStudent = async (req, res, next) => {
         presentationGrade
       },
       advisorFeedback: advisorComment,
-      finalGrade: total
+      advisorScore,
+      finalGrade: advisorScore,
+      letterGrade: mappedGrade.letterGrade,
+      gradePoint: mappedGrade.gradePoint,
+      gradeStatus: mappedGrade.status
     });
 
     // Update internship with component grades and mark as graded
@@ -120,7 +156,12 @@ export const evaluateStudent = async (req, res, next) => {
       documentationGrade,
       implementationGrade,
       presentationGrade,
-      total
+      advisorScore,
+      total: advisorScore,
+      letterGrade: mappedGrade.letterGrade,
+      gradePoint: mappedGrade.gradePoint,
+      status: mappedGrade.status,
+      description: mappedGrade.description || ''
     };
     internship.status = 'GRADED';
     internship.presentationCompleted = true; // Evaluation occurs after presentation
@@ -131,8 +172,8 @@ export const evaluateStudent = async (req, res, next) => {
 
     await AuditLog.create({
       user: req.user.id,
-      action: 'student_evaluated',
-      details: `Evaluated internship ${internshipId} with final grade ${total}. Completion: ${completionStatus.success}`,
+      action: 'grade_assigned',
+      details: `Assigned final grade ${total.toFixed(2)} for internship ${internshipId}. Completion: ${completionStatus.success}`,
       ip: req.ip
     });
 

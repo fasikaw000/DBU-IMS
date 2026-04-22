@@ -61,6 +61,15 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  activationStatus: {
+    type: String,
+    enum: ['Pending', 'Activated'],
+    default: 'Pending'
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
   loginAttempts: {
     type: Number,
     required: true,
@@ -74,6 +83,14 @@ const userSchema = new mongoose.Schema({
   }],
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  pendingEmail: {
+    type: String,
+    lowercase: true,
+    trim: true,
+    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please provide a valid email address']
+  },
+  emailVerificationToken: String,
+  emailVerificationExpire: Date,
   status: {
     type: String,
     enum: ['active', 'deactivated'],
@@ -81,6 +98,27 @@ const userSchema = new mongoose.Schema({
   }
 }, {
   timestamps: true
+});
+
+userSchema.pre('save', function () {
+  // Keep legacy + new fields consistent.
+  // Source of truth precedence:
+  // - activationStatus derives from isActivated
+  // - account active state can be driven by either isActive or status (depending on what changed)
+  this.activationStatus = this.isActivated ? 'Activated' : 'Pending';
+
+  const statusWasModified = this.isModified('status');
+  const isActiveWasModified = this.isModified('isActive');
+
+  if (statusWasModified && !isActiveWasModified) {
+    this.isActive = this.status !== 'deactivated';
+  } else if (isActiveWasModified && !statusWasModified) {
+    this.status = this.isActive === false ? 'deactivated' : 'active';
+  } else {
+    // default sync (covers initial create)
+    this.isActive = this.status !== 'deactivated';
+    this.status = this.isActive === false ? 'deactivated' : 'active';
+  }
 });
 
 // Hash password before saving (only when modified)

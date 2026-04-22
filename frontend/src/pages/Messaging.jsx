@@ -22,6 +22,7 @@ const Messaging = () => {
     const [loadingConversation, setLoadingConversation] = useState(false);
     const [messageContent, setMessageContent] = useState('');
     const [sending, setSending] = useState(false);
+    const [toast, setToast] = useState(null);
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -42,15 +43,19 @@ const Messaging = () => {
         scrollToBottom();
     }, [conversation]);
 
+    useEffect(() => {
+        if (!toast) return;
+        const timeout = setTimeout(() => setToast(null), 2500);
+        return () => clearTimeout(timeout);
+    }, [toast]);
+
     const fetchContacts = async () => {
         setLoadingContacts(true);
         try {
-            console.log('Fetching contacts...');
             const res = await api.get('/messages/contacts');
             setContacts(Array.isArray(res?.data) ? res.data : []);
-            console.log('Contacts fetched:', res?.data);
         } catch (err) {
-            console.error('Error fetching contacts:', err);
+            setToast({ type: 'error', text: err.message || 'Failed to load contacts.' });
         } finally {
             setLoadingContacts(false);
         }
@@ -59,12 +64,10 @@ const Messaging = () => {
     const fetchConversation = async (contactId) => {
         setLoadingConversation(true);
         try {
-            console.log(`Fetching conversation with ${contactId}...`);
             const res = await api.get(`/messages/conversation/${contactId}`);
             setConversation(Array.isArray(res?.data) ? res.data : []);
-            console.log('Conversation fetched:', res?.data);
         } catch (err) {
-            console.error('Error fetching conversation:', err);
+            setToast({ type: 'error', text: err.message || 'Failed to load conversation.' });
         } finally {
             setLoadingConversation(false);
         }
@@ -82,18 +85,22 @@ const Messaging = () => {
             });
 
             // Append new message to conversation locally for speed
-            setConversation(prev => [...prev, res.data.data]);
+            if (res?.data) {
+                setConversation(prev => [...prev, res.data]);
+            } else {
+                await fetchConversation(selectedContact._id);
+            }
             setMessageContent('');
         } catch (err) {
-            console.error('Error sending message:', err);
+            setToast({ type: 'error', text: err.message || 'Failed to send message.' });
         } finally {
             setSending(false);
         }
     };
 
     const filteredContacts = contacts.filter(c =>
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.role.replace('_', ' ').toLowerCase().includes(search.toLowerCase())
+        (c.name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (c.username || '').toLowerCase().includes(search.toLowerCase())
     );
 
     const currentUserId = user?.id || user?._id;
@@ -109,6 +116,11 @@ const Messaging = () => {
 
     return (
         <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden h-[calc(100vh-180px)] min-h-[600px] flex">
+            {toast && (
+                <div className={`absolute top-4 right-4 z-50 px-4 py-3 rounded-xl text-sm font-bold shadow-lg transition-opacity duration-300 ${toast.type === 'error' ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-green-50 text-green-700 border border-green-100'}`}>
+                    {toast.text}
+                </div>
+            )}
             {/* Left Panel: Contacts */}
             <div className="w-80 border-r border-slate-100 flex flex-col bg-slate-50/30">
                 <div className="p-6 border-b border-slate-100 bg-white">

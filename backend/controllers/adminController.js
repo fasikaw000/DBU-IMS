@@ -54,6 +54,73 @@ export const emergencyAdminReset = async (req, res, next) => {
 import Student from '../models/Student.js';
 import { generateUsername } from '../utils/generateUsername.js';
 
+const IMPORTANT_ACTIVITY_ACTIONS = [
+  'created_student',
+  'created_staff',
+  'bulk_students_uploaded',
+  'bulk_staff_uploaded',
+  'account_activated',
+  'user_status_toggled',
+  'dept_created',
+  'advisor_assigned',
+  'report_submitted',
+  'grade_assigned',
+  'student_evaluated' // legacy grade action
+];
+
+const DEFAULT_GRADING_SYSTEM = [
+  { minScore: 90, maxScore: 100, letterGrade: 'A+', gradePoint: 4.0, status: 'Excellent', description: 'Outstanding performance' },
+  { minScore: 85, maxScore: 89, letterGrade: 'A', gradePoint: 4.0, status: 'Excellent', description: 'Excellent performance' },
+  { minScore: 80, maxScore: 84, letterGrade: 'A-', gradePoint: 3.75, status: 'Excellent', description: 'Strong and consistent performance' },
+  { minScore: 75, maxScore: 79, letterGrade: 'B+', gradePoint: 3.5, status: 'Very Good', description: 'Very good achievement' },
+  { minScore: 70, maxScore: 74, letterGrade: 'B', gradePoint: 3.0, status: 'Very Good', description: 'Good overall achievement' },
+  { minScore: 65, maxScore: 69, letterGrade: 'B-', gradePoint: 2.75, status: 'Good', description: 'Above satisfactory performance' },
+  { minScore: 60, maxScore: 64, letterGrade: 'C+', gradePoint: 2.5, status: 'Good', description: 'Satisfactory with notable gaps' },
+  { minScore: 50, maxScore: 59, letterGrade: 'C', gradePoint: 2.0, status: 'Satisfactory', description: 'Minimum satisfactory standard' },
+  { minScore: 45, maxScore: 49, letterGrade: 'C-', gradePoint: 1.75, status: 'Unsatisfactory', description: 'Below minimum expectation' },
+  { minScore: 40, maxScore: 44, letterGrade: 'D', gradePoint: 1.0, status: 'Very Poor', description: 'Very weak performance' },
+  { minScore: 30, maxScore: 39, letterGrade: 'Fx', gradePoint: 0, status: 'Fail (Re-exam)', description: 'Failed; re-exam required' },
+  { minScore: 0, maxScore: 29, letterGrade: 'F', gradePoint: 0, status: 'Fail (Repeat course)', description: 'Failed; course must be repeated' }
+];
+
+const validateGradingSystem = (rules = []) => {
+  if (!Array.isArray(rules) || rules.length === 0) {
+    return 'Grading system must contain at least one rule.';
+  }
+
+  const normalized = rules
+    .map((rule) => ({
+      minScore: Number(rule.minScore),
+      maxScore: Number(rule.maxScore)
+    }))
+    .sort((a, b) => a.minScore - b.minScore);
+
+  for (let i = 0; i < normalized.length; i += 1) {
+    const current = normalized[i];
+    if (!Number.isFinite(current.minScore) || !Number.isFinite(current.maxScore)) {
+      return 'Each grading row must include valid numeric min and max scores.';
+    }
+    if (current.minScore < 0 || current.maxScore > 100 || current.minScore > current.maxScore) {
+      return 'Grading score intervals must stay within 0-100 and min must be <= max.';
+    }
+    if (i > 0) {
+      const previous = normalized[i - 1];
+      if (current.minScore <= previous.maxScore) {
+        return 'Grading score intervals overlap. Please use non-overlapping ranges.';
+      }
+      if (current.minScore !== previous.maxScore + 1) {
+        return 'Grading intervals must be continuous and cover every score without gaps.';
+      }
+    }
+  }
+
+  if (normalized[0].minScore !== 0 || normalized[normalized.length - 1].maxScore !== 100) {
+    return 'Grading system must fully cover scores from 0 to 100.';
+  }
+
+  return null;
+};
+
 // ─────────────────────────────────────────────────────────────
 // @desc    Admin: Create a new student account
 // @route   POST /api/admin/student
@@ -97,7 +164,9 @@ export const createStudent = async (req, res, next) => {
       username,
       department: dept._id,
       role: 'student',
-      isActivated: false
+      isActivated: false,
+      activationStatus: 'Pending',
+      isActive: true
     });
 
     // Create corresponding Student profile
@@ -149,7 +218,7 @@ export const createStaff = async (req, res, next) => {
     }
 
     const normalizedRole = normalizeRole(role);
-    if (!['advisor', 'department_dean'].includes(normalizedRole)) {
+    if (!['Advisor', 'Dean'].includes(normalizedRole)) {
       return res.status(400).json({ success: false, message: 'Invalid role. Only Dean and Advisor are supported for staff accounts.' });
     }
 
@@ -175,7 +244,9 @@ export const createStaff = async (req, res, next) => {
       username,
       department: dept._id,
       role: normalizedRole,
-      isActivated: false
+      isActivated: false,
+      activationStatus: 'Pending',
+      isActive: true
     });
 
     // Create corresponding Staff profile
@@ -184,7 +255,7 @@ export const createStaff = async (req, res, next) => {
       username,
       fullName: name,
       department: dept._id,
-      role: normalizedRole === 'department_dean' ? 'dean' : 'advisor'
+      role: normalizedRole === 'Dean' ? 'dean' : 'advisor'
     });
 
     await AuditLog.create({
@@ -229,7 +300,7 @@ export const getAllUsers = async (req, res, next) => {
 export const getAllStudents = async (req, res, next) => {
   try {
     const students = await Student.find({})
-      .populate('user', 'name email isActivated')
+      .populate('user', 'name email isActivated activationStatus isActive status')
       .populate('department', 'name code');
 
     res.status(200).json({
@@ -246,6 +317,9 @@ export const getAllStudents = async (req, res, next) => {
         year: s.year,
         cbeAccount: s.user?.isActivated ? s.cbeAccount : null,
         isActivated: s.user?.isActivated,
+        activationStatus: s.user?.isActivated ? 'Activated' : 'Pending',
+        status: s.user?.status || 'active',
+        isActive: s.user?.isActive !== false,
         createdAt: s.createdAt
       }))
     });
@@ -257,7 +331,7 @@ export const getAllStudents = async (req, res, next) => {
 export const getAllStaff = async (req, res, next) => {
   try {
     const staffMembers = await Staff.find({})
-      .populate('user', 'name email isActivated')
+      .populate('user', 'name email isActivated activationStatus isActive status')
       .populate('department', 'name code');
 
     res.status(200).json({
@@ -272,6 +346,9 @@ export const getAllStaff = async (req, res, next) => {
         department: s.department,
         role: s.role, // 'dean' or 'advisor'
         isActivated: s.user?.isActivated,
+        activationStatus: s.user?.isActivated ? 'Activated' : 'Pending',
+        status: s.user?.status || 'active',
+        isActive: s.user?.isActive !== false,
         createdAt: s.createdAt
       }))
     });
@@ -388,8 +465,11 @@ export const toggleDepartmentStatus = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 export const getAdminStats = async (req, res, next) => {
   try {
-    const totalStudents = await User.countDocuments({ role: 'student' });
-    const totalStaff = await User.countDocuments({ role: { $in: ['advisor', 'department_dean', 'college_admin'] } });
+    const totalStudents = await User.countDocuments({ role: 'Student' });
+    const totalAdmins = await User.countDocuments({ role: { $in: ['Admin', 'admin', 'college_admin'] } });
+    const totalDeans = await User.countDocuments({ role: 'Dean' });
+    const totalAdvisors = await User.countDocuments({ role: 'Advisor' });
+    const totalStaff = totalDeans + totalAdvisors;
     const totalDepartments = await Department.countDocuments();
     const activeInternships = await Internship.countDocuments({ status: { $in: ['APPROVED', 'ONGOING', 'SUBMITTED', 'EVALUATED'] } });
     const completedInternships = await Internship.countDocuments({ status: 'COMPLETED' });
@@ -409,13 +489,13 @@ export const getAdminStats = async (req, res, next) => {
           name: 1,
           code: 1,
           studentsCount: {
-            $size: { $filter: { input: '$users', as: 'u', cond: { $eq: ['$$u.role', 'student'] } } }
+            $size: { $filter: { input: '$users', as: 'u', cond: { $eq: ['$$u.role', 'Student'] } } }
           },
           advisorsCount: {
-            $size: { $filter: { input: '$users', as: 'u', cond: { $eq: ['$$u.role', 'advisor'] } } }
+            $size: { $filter: { input: '$users', as: 'u', cond: { $eq: ['$$u.role', 'Advisor'] } } }
           },
           deansCount: {
-            $size: { $filter: { input: '$users', as: 'u', cond: { $eq: ['$$u.role', 'department_dean'] } } }
+            $size: { $filter: { input: '$users', as: 'u', cond: { $eq: ['$$u.role', 'Dean'] } } }
           }
         }
       },
@@ -423,7 +503,9 @@ export const getAdminStats = async (req, res, next) => {
     ]);
 
     // Get recent activity from AuditLog
-    const recentActivity = await AuditLog.find()
+    const recentActivity = await AuditLog.find({
+      action: { $in: IMPORTANT_ACTIVITY_ACTIONS }
+    })
       .populate('user', 'name role')
       .sort({ createdAt: -1 })
       .limit(3);
@@ -432,6 +514,9 @@ export const getAdminStats = async (req, res, next) => {
       success: true,
       data: {
         totalStudents,
+        totalAdmins,
+        totalDeans,
+        totalAdvisors,
         totalStaff,
         totalDepartments,
         activeInternships,
@@ -552,7 +637,9 @@ export const bulkUploadStudents = async (req, res, next) => {
           username,
           department: department._id,
           role: 'student',
-          isActivated: false
+          isActivated: false,
+          activationStatus: 'Pending',
+          isActive: true
         });
 
         await Student.create({
@@ -634,7 +721,7 @@ export const bulkUploadStaff = async (req, res, next) => {
       }
 
       const role = normalizeRole(roleRaw);
-      if (!['advisor', 'department_dean'].includes(role)) {
+      if (!['Advisor', 'Dean'].includes(role)) {
         errors.push({ row: rowNo, message: `Invalid role "${roleRaw}". Use "Dean" or "Advisor".` });
         continue;
       }
@@ -659,7 +746,9 @@ export const bulkUploadStaff = async (req, res, next) => {
           username,
           department: department._id,
           role,
-          isActivated: false
+          isActivated: false,
+          activationStatus: 'Pending',
+          isActive: true
         });
 
         await Staff.create({
@@ -667,7 +756,7 @@ export const bulkUploadStaff = async (req, res, next) => {
           username,
           fullName: name,
           department: department._id,
-          role: role === 'department_dean' ? 'dean' : 'advisor'
+          role: role === 'Dean' ? 'dean' : 'advisor'
         });
 
         created.push({ row: rowNo, name, username, role });
@@ -899,9 +988,9 @@ export const updateStaff = async (req, res, next) => {
       }
       if (role) {
         const normRole = normalizeRole(role);
-        if (['advisor', 'department_dean'].includes(normRole)) {
+        if (['Advisor', 'Dean'].includes(normRole)) {
           user.role = normRole;
-          staff.role = normRole === 'department_dean' ? 'dean' : 'advisor';
+          staff.role = normRole === 'Dean' ? 'dean' : 'advisor';
         }
       }
       await user.save();
@@ -932,11 +1021,12 @@ export const toggleUserStatus = async (req, res, next) => {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    if (user.role === 'college_admin' && user._id.toString() === req.user.id.toString()) {
+    if (normalizeRole(user.role) === 'Admin' && user._id.toString() === req.user.id.toString()) {
       return res.status(400).json({ success: false, message: 'You cannot deactivate your own admin account.' });
     }
 
-    user.status = user.status === 'active' ? 'deactivated' : 'active';
+    user.isActive = user.isActive === false;
+    user.status = user.isActive ? 'active' : 'deactivated';
     await user.save();
 
     await AuditLog.create({
@@ -946,7 +1036,16 @@ export const toggleUserStatus = async (req, res, next) => {
       ip: req.ip
     });
 
-    res.status(200).json({ success: true, message: `User ${user.status === 'active' ? 'activated' : 'deactivated'} successfully` });
+    res.status(200).json({
+      success: true,
+      message: `User ${user.status === 'active' ? 'activated' : 'deactivated'} successfully`,
+      data: {
+        _id: user._id,
+        status: user.status,
+        activationStatus: user.activationStatus || (user.isActivated ? 'Activated' : 'Pending'),
+        isActive: user.isActive !== false
+      }
+    });
   } catch (error) {
     next(error);
   }
@@ -995,6 +1094,24 @@ export const getSettings = async (req, res, next) => {
     if (!settings) {
       settings = await Settings.create({});
     }
+
+    // One-time compatibility migration: old default duration 3 -> new default 2.
+    if (settings?.academicSettings?.defaultInternshipDurationMonths === 3) {
+      settings.academicSettings.defaultInternshipDurationMonths = 2;
+      await settings.save();
+    }
+
+    // Ensure a valid fallback if the value is missing/invalid in older records.
+    if (!Number.isFinite(settings?.academicSettings?.defaultInternshipDurationMonths)) {
+      settings.academicSettings.defaultInternshipDurationMonths = 2;
+      await settings.save();
+    }
+
+    if (!Array.isArray(settings?.academicSettings?.gradingSystem) || settings.academicSettings.gradingSystem.length === 0) {
+      settings.academicSettings.gradingSystem = DEFAULT_GRADING_SYSTEM;
+      await settings.save();
+    }
+
     res.status(200).json({ success: true, data: settings });
   } catch (error) {
     next(error);
@@ -1009,6 +1126,21 @@ export const updateSettings = async (req, res, next) => {
     } else {
       Object.assign(settings, req.body);
     }
+
+    // Backend default/fallback: when duration is omitted, keep/set default to 2.
+    const duration = Number(settings?.academicSettings?.defaultInternshipDurationMonths) || 2;
+    settings.academicSettings = settings.academicSettings || {};
+    settings.academicSettings.defaultInternshipDurationMonths = duration;
+
+    if (!Array.isArray(settings.academicSettings.gradingSystem) || settings.academicSettings.gradingSystem.length === 0) {
+      settings.academicSettings.gradingSystem = DEFAULT_GRADING_SYSTEM;
+    }
+
+    const gradingValidationError = validateGradingSystem(settings.academicSettings.gradingSystem);
+    if (gradingValidationError) {
+      return res.status(400).json({ success: false, message: gradingValidationError });
+    }
+
     await settings.save();
 
     await AuditLog.create({
@@ -1034,14 +1166,20 @@ export const getLogs = async (req, res, next) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const search = req.query.search || '';
+    const includeAll = req.query.includeAll === 'true';
     
     // Construct search filter
-    const searchFilter = search ? {
-      $or: [
-        { action: { $regex: search, $options: 'i' } },
-        { details: { $regex: search, $options: 'i' } }
-      ]
-    } : {};
+    const searchFilter = {
+      ...(includeAll ? {} : { action: { $in: IMPORTANT_ACTIVITY_ACTIONS } }),
+      ...(search
+        ? {
+            $or: [
+              { action: { $regex: search, $options: 'i' } },
+              { details: { $regex: search, $options: 'i' } }
+            ]
+          }
+        : {})
+    };
 
     const totalLogs = await AuditLog.countDocuments(searchFilter);
     const totalPages = Math.ceil(totalLogs / limit) || 1;

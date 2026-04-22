@@ -45,7 +45,7 @@ const NotificationCenter = () => {
             <Bell className="w-6 h-6 mr-2 text-dbu-primary" />
             Notification Center
           </h2>
-          <p className="text-slate-500">Stay updated on your internship applications, reports, and evaluations.</p>
+          <p className="text-slate-500">Stay updated on key system activities and role-specific actions.</p>
         </div>
         <div className="text-sm font-bold text-dbu-primary bg-dbu-light px-4 py-2 rounded-full border border-dbu-primary/20">
           {notifications.filter(n => !n.is_read).length} Unread Updates

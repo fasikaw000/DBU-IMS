@@ -55,6 +55,10 @@ const AdminSettings = () => {
     </div>
   );
 
+  const gradingRows = Array.isArray(settings?.academicSettings?.gradingSystem)
+    ? settings.academicSettings.gradingSystem
+    : [];
+
   const TabButton = ({ id, label, icon: Icon }) => (
     <button
       onClick={() => setActiveTab(id)}
@@ -146,33 +150,101 @@ const AdminSettings = () => {
                   <h3 className="text-lg font-black text-slate-800 border-b border-slate-50 pb-4">Internship Academic Settings</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Default Duration (Months)</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Default Internship Duration (Months)</label>
                       <input
                         type="number"
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary"
-                        value={settings.academicSettings.defaultInternshipDurationMonths}
-                        onChange={(e) => setSettings({ ...settings, academicSettings: { ...settings.academicSettings, defaultInternshipDurationMonths: parseInt(e.target.value) } })}
+                        value={settings?.academicSettings?.defaultInternshipDurationMonths ?? 2}
+                        onChange={(e) => setSettings({ ...settings, academicSettings: { ...settings.academicSettings, defaultInternshipDurationMonths: parseInt(e.target.value, 10) || 2 } })}
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {['A', 'B', 'C', 'Pass'].map((grade) => (
-                      <div key={grade} className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Min Score for {grade}</label>
-                        <input
-                          type="number"
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold outline-none focus:ring-2 focus:ring-dbu-primary"
-                          value={settings.academicSettings.gradingScale[grade]}
-                          onChange={(e) => setSettings({
-                            ...settings,
-                            academicSettings: {
-                              ...settings.academicSettings,
-                              gradingScale: { ...settings.academicSettings.gradingScale, [grade]: parseInt(e.target.value) }
-                            }
-                          })}
-                        />
-                      </div>
-                    ))}
+                  <div className="rounded-2xl border border-slate-100 overflow-hidden">
+                    <div className="grid grid-cols-12 bg-slate-50 text-[10px] uppercase tracking-widest font-black text-slate-500">
+                      <div className="col-span-3 px-4 py-3">Score Range</div>
+                      <div className="col-span-2 px-4 py-3">Letter Grade</div>
+                      <div className="col-span-2 px-4 py-3">Grade Point</div>
+                      <div className="col-span-2 px-4 py-3">Status</div>
+                      <div className="col-span-3 px-4 py-3">Description</div>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                      {gradingRows.map((row, index) => (
+                        <div key={`${row.letterGrade}-${index}`} className="grid grid-cols-12 bg-white">
+                          <div className="col-span-3 px-4 py-3 flex items-center gap-2">
+                            <input
+                              type="number"
+                              className="w-20 px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-dbu-primary"
+                              value={row.minScore}
+                              onChange={(e) => {
+                                const next = [...gradingRows];
+                                next[index] = { ...row, minScore: parseInt(e.target.value, 10) || 0 };
+                                setSettings({ ...settings, academicSettings: { ...settings.academicSettings, gradingSystem: next } });
+                              }}
+                            />
+                            <span className="text-slate-400">to</span>
+                            <input
+                              type="number"
+                              className="w-20 px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-dbu-primary"
+                              value={row.maxScore}
+                              onChange={(e) => {
+                                const next = [...gradingRows];
+                                next[index] = { ...row, maxScore: parseInt(e.target.value, 10) || 0 };
+                                setSettings({ ...settings, academicSettings: { ...settings.academicSettings, gradingSystem: next } });
+                              }}
+                            />
+                          </div>
+                          <div className="col-span-2 px-4 py-3">
+                            <input
+                              type="text"
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold outline-none focus:ring-2 focus:ring-dbu-primary"
+                              value={row.letterGrade}
+                              onChange={(e) => {
+                                const next = [...gradingRows];
+                                next[index] = { ...row, letterGrade: e.target.value };
+                                setSettings({ ...settings, academicSettings: { ...settings.academicSettings, gradingSystem: next } });
+                              }}
+                            />
+                          </div>
+                          <div className="col-span-2 px-4 py-3">
+                            <input
+                              type="number"
+                              step="0.01"
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-dbu-primary"
+                              value={row.gradePoint}
+                              onChange={(e) => {
+                                const next = [...gradingRows];
+                                next[index] = { ...row, gradePoint: parseFloat(e.target.value) || 0 };
+                                setSettings({ ...settings, academicSettings: { ...settings.academicSettings, gradingSystem: next } });
+                              }}
+                            />
+                          </div>
+                          <div className="col-span-2 px-4 py-3">
+                            <input
+                              type="text"
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-dbu-primary"
+                              value={row.status}
+                              onChange={(e) => {
+                                const next = [...gradingRows];
+                                next[index] = { ...row, status: e.target.value };
+                                setSettings({ ...settings, academicSettings: { ...settings.academicSettings, gradingSystem: next } });
+                              }}
+                            />
+                          </div>
+                          <div className="col-span-3 px-4 py-3">
+                            <input
+                              type="text"
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-dbu-primary"
+                              value={row.description || ''}
+                              onChange={(e) => {
+                                const next = [...gradingRows];
+                                next[index] = { ...row, description: e.target.value };
+                                setSettings({ ...settings, academicSettings: { ...settings.academicSettings, gradingSystem: next } });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}

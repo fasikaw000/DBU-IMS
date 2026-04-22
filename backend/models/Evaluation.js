@@ -4,16 +4,32 @@ const evaluationSchema = new mongoose.Schema({
   internship_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Internship',
-    required: true,
-    unique: true
+    required: false,
+    unique: true,
+    sparse: true
+  },
+  internship: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Internship',
+    required: false
+  },
+  student: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Student',
+    required: false
+  },
+  advisor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false
   },
   supervisor_name: {
     type: String,
-    required: true
+    required: false
   },
   supervisor_email: {
     type: String,
-    required: true
+    required: false
   },
   company_rating: {
     type: Number,
@@ -28,6 +44,39 @@ const evaluationSchema = new mongoose.Schema({
     max: 5
   },
   comments: {
+    type: String,
+    trim: true
+  },
+  scores: {
+    companyGrade: { type: Number, min: 0, max: 100 },
+    documentationGrade: { type: Number, min: 0, max: 100 },
+    implementationGrade: { type: Number, min: 0, max: 100 },
+    presentationGrade: { type: Number, min: 0, max: 100 }
+  },
+  advisorFeedback: {
+    type: String,
+    trim: true
+  },
+  advisorScore: {
+    type: Number,
+    min: 0,
+    max: 100
+  },
+  finalGrade: {
+    type: Number,
+    min: 0,
+    max: 100
+  },
+  letterGrade: {
+    type: String,
+    trim: true
+  },
+  gradePoint: {
+    type: Number,
+    min: 0,
+    max: 4
+  },
+  gradeStatus: {
     type: String,
     trim: true
   },

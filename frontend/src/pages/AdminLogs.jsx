@@ -37,12 +37,28 @@ const AdminLogs = () => {
     fetchLogs();
   }, [page, searchTerm]);
 
+  const actionLabels = {
+    created_student: 'User Created (Student)',
+    created_staff: 'User Created (Staff)',
+    bulk_students_uploaded: 'Users Created (Students Bulk Upload)',
+    bulk_staff_uploaded: 'Users Created (Staff Bulk Upload)',
+    account_activated: 'Account Activated',
+    user_status_toggled: 'User Status Changed',
+    dept_created: 'Department Created',
+    dept_updated: 'Department Updated',
+    advisor_assigned: 'Student Assigned To Advisor',
+    report_submitted: 'Report Submitted',
+    report_reviewed: 'Report Reviewed',
+    grade_assigned: 'Grade Assigned',
+    student_evaluated: 'Grade Assigned'
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">Audit Logs</h1>
-          <p className="text-slate-500 text-sm">System activity records for security, compliance, and troubleshooting.</p>
+          <p className="text-slate-500 text-sm">Meaningful system activity only (creation, activation, status, department, assignment, reports, grades).</p>
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -84,7 +100,7 @@ const AdminLogs = () => {
                   <tr key={log._id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <span className="px-2 py-1 rounded bg-slate-100 text-[10px] font-black text-slate-600 uppercase">
-                        {log.action.replace(/_/g, ' ')}
+                        {(actionLabels[log.action] || log.action.replace(/_/g, ' ')).toUpperCase()}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-slate-600">{log.details}</td>

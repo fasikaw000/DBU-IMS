@@ -18,6 +18,9 @@ const AdminDashboard = () => {
     const navigate = useNavigate();
     const [stats, setStats] = useState({
         totalStudents: 0,
+        totalAdmins: 0,
+        totalDeans: 0,
+        totalAdvisors: 0,
         totalStaff: 0,
         totalDepartments: 0,
         activeInternships: 0,
@@ -34,6 +37,9 @@ const AdminDashboard = () => {
                 const payload = res?.data || {};
                 setStats({
                     totalStudents: payload.totalStudents ?? 0,
+                    totalAdmins: payload.totalAdmins ?? 0,
+                    totalDeans: payload.totalDeans ?? 0,
+                    totalAdvisors: payload.totalAdvisors ?? 0,
                     totalStaff: payload.totalStaff ?? 0,
                     totalDepartments: payload.totalDepartments ?? 0,
                     activeInternships: payload.activeInternships ?? 0,
@@ -50,8 +56,27 @@ const AdminDashboard = () => {
         fetchStats();
     }, []);
 
+    const actionLabels = {
+        created_student: 'User Created (Student)',
+        created_staff: 'User Created (Staff)',
+        bulk_students_uploaded: 'Users Created (Students Bulk Upload)',
+        bulk_staff_uploaded: 'Users Created (Staff Bulk Upload)',
+        account_activated: 'Account Activated',
+        user_status_toggled: 'User Status Changed',
+        dept_created: 'Department Created',
+        dept_updated: 'Department Updated',
+        advisor_assigned: 'Student Assigned To Advisor',
+        report_submitted: 'Report Submitted',
+        report_reviewed: 'Report Reviewed',
+        grade_assigned: 'Grade Assigned',
+        student_evaluated: 'Grade Assigned'
+    };
+
     const statCards = [
         { title: 'Total Students', value: stats.totalStudents, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+        { title: 'Total Admins', value: stats.totalAdmins, icon: ShieldCheck, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+        { title: 'Total Deans', value: stats.totalDeans, icon: Shield, color: 'text-amber-600', bg: 'bg-amber-50' },
+        { title: 'Total Advisors', value: stats.totalAdvisors, icon: Shield, color: 'text-violet-600', bg: 'bg-violet-50' },
         { title: 'Total Staff', value: stats.totalStaff, icon: Shield, color: 'text-purple-600', bg: 'bg-purple-50' },
         { title: 'Total Departments', value: stats.totalDepartments, icon: Building, color: 'text-orange-600', bg: 'bg-orange-50' },
         { title: 'Active Internships', value: stats.activeInternships, icon: Briefcase, color: 'text-green-600', bg: 'bg-green-50' },
@@ -129,7 +154,7 @@ const AdminDashboard = () => {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between">
-                                                <p className="text-sm font-bold text-slate-800">{actionStr.replace(/_/g, ' ').toUpperCase()}</p>
+                                                <p className="text-sm font-bold text-slate-800">{actionLabels[actionStr] || actionStr.replace(/_/g, ' ').toUpperCase()}</p>
                                                 <span className="text-[10px] text-slate-400 font-medium">{new Date(log.createdAt).toLocaleString()}</span>
                                             </div>
                                             <p className="text-sm text-slate-500 mt-0.5">{log.details}</p>

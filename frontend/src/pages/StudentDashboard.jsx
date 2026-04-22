@@ -23,7 +23,7 @@ const StudentDashboard = () => {
   const [tasksCompleted, setTasksCompleted] = useState('');
   const [problemsFaced, setProblemsFaced] = useState('');
   const [phone, setPhone] = useState(user?.phone || '');
-  const [cbeAccount, setCbeAccount] = useState(user?.cbeAccount || '');
+  const [cbeAccount, setCbeAccount] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -33,6 +33,17 @@ const StudentDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
+      try {
+        const profileRes = await api.get('/users/me/student-profile');
+        if (profileRes?.data?.cbeAccount) {
+          setCbeAccount(profileRes.data.cbeAccount);
+        } else {
+          setCbeAccount('');
+        }
+      } catch (_err) {
+        setCbeAccount('');
+      }
+
       const logbooksRes = await api.get('/logbooks/my-logbooks');
       setLogbooks(logbooksRes.data || []);
       
@@ -218,10 +229,10 @@ const StudentDashboard = () => {
                     <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">CBE Account Number</label>
                     <input 
                       type="text" 
-                      value={cbeAccount} 
-                      onChange={(e) => setCbeAccount(e.target.value)} 
+                      value={cbeAccount || ''} 
+                      onChange={(e) => setCbeAccount(e.target.value.replace(/\D/g, '').slice(0, 13))} 
                       className="w-full px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-dbu-primary outline-none" 
-                      placeholder="e.g. 100034567890"
+                      placeholder="Enter 13-digit CBE account"
                     />
                   </div>
                   <div>

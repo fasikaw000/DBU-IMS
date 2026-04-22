@@ -10,9 +10,14 @@ import AdminDashboard from './pages/AdminDashboard';
 import CollegeHeadDashboard from './pages/CollegeHeadDashboard';
 import SupervisorDashboard from './pages/SupervisorDashboard';
 import ReportUpload from './pages/ReportUpload';
+import CompaniesPage from './pages/CompaniesPage';
+import AssignmentsPage from './pages/AssignmentsPage';
+import AdvisorStudentsPage from './pages/AdvisorStudentsPage';
+import NotFound from './pages/NotFound';
 import ActivateAccount from './pages/ActivateAccount';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import VerifyEmail from './pages/VerifyEmail';
 import Messaging from './pages/Messaging';
 import AdminStudents from './pages/AdminStudents';
 import AdminStaff from './pages/AdminStaff';
@@ -31,6 +36,7 @@ function App() {
       <Route path="/activate" element={<ActivateAccount />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
+      <Route path="/verify-email/:token" element={<VerifyEmail />} />
 
       {/* Role Protected Routes Wrapped in Standard Layout */}
       <Route element={<DashboardLayout />}>
@@ -41,11 +47,13 @@ function App() {
 
         <Route element={<ProtectedRoute allowedRoles={['Advisor']} />}>
           <Route path="/advisor-dashboard" element={<AdvisorDashboard />} />
-          <Route path="/advisor/students" element={<AdvisorDashboard />} />
+          <Route path="/students" element={<AdvisorStudentsPage />} />
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={['Dean']} />}>
           <Route path="/dept-dashboard" element={<DeptDashboard />} />
+          <Route path="/companies" element={<CompaniesPage />} />
+          <Route path="/assignments" element={<AssignmentsPage />} />
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
@@ -69,7 +77,7 @@ function App() {
       </Route>
 
       {/* Fallback */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

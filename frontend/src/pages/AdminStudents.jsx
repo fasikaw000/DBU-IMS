@@ -9,6 +9,7 @@ const AdminStudents = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('success');
   const [search, setSearch] = useState('');
   const [idSeed, setIdSeed] = useState('');
   const [uploadFile, setUploadFile] = useState(null);
@@ -17,14 +18,14 @@ const AdminStudents = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [statusModal, setStatusModal] = useState({ open: false, userId: null });
   
   // Registration Form State
   const [newStudent, setNewStudent] = useState({
     name: '',
     studentId: '',
     department: '',
-    year: '',
-    role: ''
+    year: ''
   });
 
   // Edit Form State
@@ -37,6 +38,15 @@ const AdminStudents = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!message) return;
+    const timeout = setTimeout(() => {
+      setMessage('');
+      setMessageType('success');
+    }, 2500);
+    return () => clearTimeout(timeout);
+  }, [message]);
 
   const fetchData = async () => {
     try {
@@ -61,17 +71,18 @@ const AdminStudents = () => {
     setMessage('');
     try {
       await api.post('/admin/student', newStudent);
+      setMessageType('success');
       setMessage(`Success: Student ${newStudent.name} registered.`);
       setShowAddModal(false);
       setNewStudent({
         name: '',
         studentId: '',
         department: '',
-        year: '',
-        role: ''
+        year: ''
       });
       await fetchData();
     } catch (err) {
+      setMessageType('error');
       setMessage(`Failed: ${err.response?.data?.message || err.message}`);
     } finally {
       setActionLoading(false);
@@ -94,10 +105,12 @@ const AdminStudents = () => {
     setMessage('');
     try {
       await api.put(`/admin/students/${editingStudent._id}`, editForm);
+      setMessageType('success');
       setMessage(`Success: Student ${editForm.name} updated.`);
       setShowEditModal(false);
       await fetchData();
     } catch (err) {
+      setMessageType('error');
       setMessage(`Failed: ${err.response?.data?.message || err.message}`);
     } finally {
       setActionLoading(false);
@@ -105,21 +118,29 @@ const AdminStudents = () => {
   };
 
   const handleToggleStatus = async (userId) => {
-    if (!window.confirm('Are you sure you want to change this user status?')) return;
+    setStatusModal({ open: true, userId });
+  };
+
+  const confirmToggleStatus = async () => {
+    if (!statusModal.userId) return;
     setActionLoading(true);
     try {
-      await api.patch(`/admin/users/${userId}/status`);
+      await api.patch(`/admin/users/${statusModal.userId}/status`);
       await fetchData();
+      setMessageType('success');
       setMessage('Success: User status updated.');
     } catch (err) {
+      setMessageType('error');
       setMessage(`Failed: ${err.response?.data?.message || err.message}`);
     } finally {
       setActionLoading(false);
+      setStatusModal({ open: false, userId: null });
     }
   };
 
   const printRecords = (data, titleSuffix) => {
     if (!data || data.length === 0) {
+      setMessageType('error');
       setMessage('Failed: No data available to print.');
       return;
     }
@@ -194,6 +215,7 @@ const AdminStudents = () => {
 
   const handlePrintSelected = () => {
     if (selectedIds.length === 0) {
+      setMessageType('error');
       setMessage('Failed: Please select at least one record to print.');
       return;
     }
@@ -225,14 +247,17 @@ const AdminStudents = () => {
         .map((id) => id.trim())
         .filter((id) => id);
       if (studentIds.length === 0) {
+        setMessageType('error');
         setMessage('Failed: Please enter at least one student ID.');
         return;
       }
       await api.post('/admin/seed-ids', { studentIds });
+      setMessageType('success');
       setMessage('Success: Student IDs authorized.');
       setIdSeed('');
       await fetchData();
     } catch (err) {
+      setMessageType('error');
       setMessage(`Failed: ${err.message}`);
     } finally {
       setActionLoading(false);
@@ -246,6 +271,7 @@ const AdminStudents = () => {
     setUploadSummary(null);
     try {
       if (!uploadFile) {
+        setMessageType('error');
         setMessage('Failed: Please choose a CSV or Excel file first.');
         return;
       }
@@ -257,11 +283,13 @@ const AdminStudents = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
+      setMessageType('success');
       setMessage(`Success: ${res?.message || 'Students uploaded.'}`);
       setUploadSummary(res?.data || null);
       setUploadFile(null);
       await fetchData();
     } catch (err) {
+      setMessageType('error');
       setMessage(`Failed: ${err.message}`);
     } finally {
       setActionLoading(false);
@@ -326,7 +354,7 @@ const AdminStudents = () => {
       </div>
 
       {message && (
-        <div className={`p-4 rounded-xl font-bold text-sm ${message.startsWith('Success') ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+        <div className={`p-4 rounded-xl font-bold text-sm transition-opacity duration-300 ${messageType === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
           {message}
         </div>
       )}
@@ -349,7 +377,6 @@ const AdminStudents = () => {
             <table className="w-full text-left">
               <thead className="bg-slate-50 text-[10px] uppercase font-black tracking-widest text-slate-500">
                 <tr>
-                <tr>
                   <th className="px-4 py-4 w-10">
                     <input 
                       type="checkbox" 
@@ -361,21 +388,21 @@ const AdminStudents = () => {
                   <th className="px-6 py-4">Student (Full Name)</th>
                   <th className="px-6 py-4">Student ID</th>
                   <th className="px-6 py-4">Username</th>
+                  <th className="px-6 py-4">CBE Account</th>
                   <th className="px-6 py-4">Department</th>
                   <th className="px-6 py-4">Year</th>
                   <th className="px-4 py-4 text-center">Status</th>
                   <th className="px-4 py-4 text-right">Actions</th>
                 </tr>
-                </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="px-6 py-8 text-center text-slate-400 italic">No students found.</td>
+                    <td colSpan="8" className="px-6 py-8 text-center text-slate-400 italic">No students found.</td>
                   </tr>
                 ) : (
                   filteredStudents.map((student) => (
-                    <tr key={student._id} className={`${selectedIds.includes(student._id) ? 'bg-blue-50/50' : 'hover:bg-slate-50/50'} transition-colors ${student.status === 'deactivated' ? 'opacity-60 grayscale-[0.5]' : ''}`}>
+                    <tr key={student._id} className={`${selectedIds.includes(student._id) ? 'bg-blue-50/50' : 'hover:bg-slate-50/50'} transition-colors ${student.isActive === false ? 'opacity-60 grayscale-[0.5]' : ''}`}>
                       <td className="px-4 py-4">
                          <input 
                           type="checkbox" 
@@ -387,24 +414,26 @@ const AdminStudents = () => {
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
                           <span className="text-sm font-bold text-slate-800">{student.name}</span>
-                          <span className="text-[10px] text-slate-400 font-mono italic">UID: {student._id.slice(-6)}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-[10px] font-mono text-slate-100 bg-dbu-primary px-1.5 py-0.5 rounded">{student.studentId}</span>
                       </td>
                       <td className="px-6 py-4 text-sm font-mono text-slate-600">{student.username}</td>
+                      <td className="px-6 py-4 text-sm font-mono text-slate-600">{student.cbeAccount || 'N/A'}</td>
                       <td className="px-6 py-4 text-sm text-slate-600 font-medium">{student.department?.code || 'N/A'}</td>
                       <td className="px-6 py-4 text-sm text-slate-600 font-bold">{student.year}</td>
                       <td className="px-4 py-4 text-center">
                         <div className="flex flex-col items-center gap-1">
-                          {student.isActivated ? (
-                            <span className="bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded">Activated</span>
+                          {student.activationStatus === 'Activated' ? (
+                            <span className="bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded">Activation: Activated</span>
                           ) : (
-                            <span className="bg-orange-50 text-orange-500 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded">Pending</span>
+                            <span className="bg-orange-50 text-orange-500 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded">Activation: Pending</span>
                           )}
-                          {student.status === 'deactivated' && (
-                            <span className="bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded mt-1 border border-red-100">Deactivated</span>
+                          {student.isActive === false ? (
+                            <span className="bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded mt-1 border border-red-100">Account: Inactive</span>
+                          ) : (
+                            <span className="bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded mt-1 border border-blue-100">Account: Active</span>
                           )}
                         </div>
                       </td>
@@ -419,10 +448,10 @@ const AdminStudents = () => {
                           </button>
                           <button 
                             onClick={() => handleToggleStatus(student.userId)}
-                            className={`p-2 rounded-lg transition-all ${student.status === 'active' ? 'text-slate-400 hover:text-red-500 hover:bg-red-50' : 'text-red-500 hover:text-green-500 hover:bg-green-50'}`}
-                            title={student.status === 'active' ? 'Deactivate User' : 'Activate User'}
+                            className={`p-2 rounded-lg transition-all ${student.isActive !== false ? 'text-slate-400 hover:text-red-500 hover:bg-red-50' : 'text-red-500 hover:text-green-500 hover:bg-green-50'}`}
+                            title={student.isActive !== false ? 'Deactivate User' : 'Activate User'}
                           >
-                            {student.status === 'active' ? <Shield className="w-4 h-4" /> : <ShieldOff className="w-4 h-4" />}
+                            {student.isActive !== false ? <Shield className="w-4 h-4" /> : <ShieldOff className="w-4 h-4" />}
                           </button>
                         </div>
                       </td>
@@ -553,21 +582,6 @@ const AdminStudents = () => {
                   </select>
                 </div>
 
-                <div className="col-span-2">
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Role</label>
-                  <select
-                    value={newStudent.role}
-                    onChange={(e) => setNewStudent({ ...newStudent, role: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all"
-                    required
-                  >
-                    <option value="" disabled>Select role</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Advisor">Advisor</option>
-                    <option value="Dean">Dean</option>
-                    <option value="Student">Student</option>
-                  </select>
-                </div>
               </div>
 
               <div className="flex items-center gap-3 pt-4">
@@ -678,6 +692,31 @@ const AdminStudents = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {statusModal.open && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <h3 className="text-lg font-black text-slate-800">Confirm Status Change</h3>
+            <p className="text-sm text-slate-600 mt-2">Are you sure you want to change this user status?</p>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50"
+                onClick={() => setStatusModal({ open: false, userId: null })}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={actionLoading}
+                className="px-4 py-2 rounded-xl bg-dbu-primary text-white font-bold hover:bg-dbu-accent disabled:opacity-60"
+                onClick={confirmToggleStatus}
+              >
+                Confirm
+              </button>
+            </div>
           </div>
         </div>
       )}

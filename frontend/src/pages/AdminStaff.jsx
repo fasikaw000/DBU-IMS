@@ -22,6 +22,7 @@ const AdminStaff = () => {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [message, setMessage] = useState('');
+    const [messageType, setMessageType] = useState('success');
     const [search, setSearch] = useState('');
 
     // Form States
@@ -31,6 +32,7 @@ const AdminStaff = () => {
     const [editingStaff, setEditingStaff] = useState(null);
     const [uploadFile, setUploadFile] = useState(null);
     const [uploadSummary, setUploadSummary] = useState(null);
+    const [statusModal, setStatusModal] = useState({ open: false, userId: null });
     const [staffData, setStaffData] = useState({
         name: '',
         role: '',
@@ -47,14 +49,17 @@ const AdminStaff = () => {
         fetchData();
     }, []);
 
+    useEffect(() => {
+        if (!message) return;
+        const timeout = setTimeout(() => {
+            setMessage('');
+            setMessageType('success');
+        }, 2500);
+        return () => clearTimeout(timeout);
+    }, [message]);
+
     const fetchData = async () => {
         try {
-            const [staffRes, deptsRes] = await Promise.all([
-                api.get('/staff'), // Wait, I see 'api.get('/admin/staff')' earlier. I'll check the base URL.
-                api.get('/departments')
-            ].map(p => p.catch(e => { console.error(e); return { data: [] }; })));
-
-            // Actually I should stick to the pattern used in the component
             const resStaff = await api.get('/admin/staff');
             const resDepts = await api.get('/admin/departments');
 
@@ -77,11 +82,13 @@ const AdminStaff = () => {
         setMessage('');
         try {
             await api.post('/admin/staff', staffData);
+            setMessageType('success');
             setMessage(`Success: Staff account created.`);
             setStaffData({ name: '', role: '', department: departments[0]?._id || '' });
             setShowAddForm(false);
             fetchData();
         } catch (err) {
+            setMessageType('error');
             setMessage(`Failed: ${err.response?.data?.message || err.message}`);
         } finally {
             setActionLoading(false);
@@ -104,10 +111,12 @@ const AdminStaff = () => {
         setMessage('');
         try {
             await api.put(`/admin/staff/${editingStaff._id}`, editData);
+            setMessageType('success');
             setMessage(`Success: Staff member ${editData.name} updated.`);
             setShowEditForm(false);
             fetchData();
         } catch (err) {
+            setMessageType('error');
             setMessage(`Failed: ${err.response?.data?.message || err.message}`);
         } finally {
             setActionLoading(false);
@@ -115,22 +124,30 @@ const AdminStaff = () => {
     };
 
     const handleToggleStatus = async (userId) => {
-        if (!window.confirm('Are you sure you want to change this staff member status?')) return;
+        setStatusModal({ open: true, userId });
+    };
+
+    const confirmToggleStatus = async () => {
+        if (!statusModal.userId) return;
         setActionLoading(true);
         try {
-            await api.patch(`/admin/users/${userId}/status`);
+            await api.patch(`/admin/users/${statusModal.userId}/status`);
             fetchData();
+            setMessageType('success');
             setMessage('Success: Staff status updated.');
         } catch (err) {
+            setMessageType('error');
             setMessage(`Failed: ${err.response?.data?.message || err.message}`);
         } finally {
             setActionLoading(false);
+            setStatusModal({ open: false, userId: null });
         }
     };
 
     const handleBulkUpload = async (e) => {
         e.preventDefault();
         if (!uploadFile) {
+            setMessageType('error');
             setMessage('Failed: Please select a file first.');
             return;
         }
@@ -143,11 +160,13 @@ const AdminStaff = () => {
             const res = await api.post('/admin/staff/bulk-upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
+            setMessageType('success');
             setMessage(`Success: Bulk upload completed.`);
             setUploadSummary(res.data);
             setUploadFile(null);
             fetchData();
         } catch (err) {
+            setMessageType('error');
             setMessage(`Failed: ${err.response?.data?.message || err.message}`);
         } finally {
             setActionLoading(false);
@@ -156,6 +175,7 @@ const AdminStaff = () => {
 
     const printRecords = (data, titleSuffix) => {
         if (!data || data.length === 0) {
+            setMessageType('error');
             setMessage('Failed: No data available to print.');
             return;
         }
@@ -228,6 +248,7 @@ const AdminStaff = () => {
 
     const handlePrintSelected = () => {
         if (selectedIds.length === 0) {
+            setMessageType('error');
             setMessage('Failed: Please select at least one record to print.');
             return;
         }
@@ -266,7 +287,7 @@ const AdminStaff = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-black text-slate-800 tracking-tight">Staff Management</h1>
-                    <p className="text-slate-500 text-sm">Manage staff accounts, roles, and access status across the system.</p>
+                    <p className="text-slate-500 text-sm">Manage staff accounts, assign roles, and control access permissions within the internship management system.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
@@ -302,7 +323,7 @@ const AdminStaff = () => {
             </div>
 
             {message && (
-                <div className={`p-4 rounded-xl font-bold text-sm ${message.includes('Success') ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                <div className={`p-4 rounded-xl font-bold text-sm transition-opacity duration-300 ${messageType === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
                     {message}
                 </div>
             )}
@@ -348,7 +369,7 @@ const AdminStaff = () => {
                                         <td colSpan="7" className="px-6 py-8 text-center text-slate-400 italic">No staff members found.</td>
                                     </tr>
                                 ) : (filteredStaff.map((staff) => (
-                                    <tr key={staff._id} className={`${selectedIds.includes(staff._id) ? 'bg-blue-50/50' : 'hover:bg-slate-50/50'} transition-colors ${staff.status === 'deactivated' ? 'opacity-60 grayscale-[0.5]' : ''}`}>
+                                    <tr key={staff._id} className={`${selectedIds.includes(staff._id) ? 'bg-blue-50/50' : 'hover:bg-slate-50/50'} transition-colors ${staff.isActive === false ? 'opacity-60 grayscale-[0.5]' : ''}`}>
                                         <td className="px-4 py-4">
                                             <input
                                                 type="checkbox"
@@ -367,17 +388,19 @@ const AdminStaff = () => {
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <div className="flex flex-col items-center gap-1">
-                                                {staff.isActivated ? (
+                                                {staff.activationStatus === 'Activated' ? (
                                                     <span className="bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded inline-flex items-center">
-                                                        <ShieldCheck className="w-3 h-3 mr-1" /> Active
+                                                        Activation: Activated
                                                     </span>
                                                 ) : (
                                                     <span className="bg-orange-50 text-orange-500 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded inline-flex items-center">
-                                                        Pending
+                                                        Activation: Pending
                                                     </span>
                                                 )}
-                                                {staff.status === 'deactivated' && (
-                                                    <span className="bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded mt-1 border border-red-100">Deactivated</span>
+                                                {staff.isActive === false ? (
+                                                    <span className="bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded mt-1 border border-red-100">Account: Inactive</span>
+                                                ) : (
+                                                    <span className="bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded mt-1 border border-blue-100">Account: Active</span>
                                                 )}
                                             </div>
                                         </td>
@@ -392,10 +415,10 @@ const AdminStaff = () => {
                                                 </button>
                                                 <button
                                                     onClick={() => handleToggleStatus(staff.userId)}
-                                                    className={`p-2 rounded-lg transition-all ${staff.status === 'active' ? 'text-slate-400 hover:text-red-500 hover:bg-red-50' : 'text-red-500 hover:text-green-500 hover:bg-green-50'}`}
-                                                    title={staff.status === 'active' ? 'Deactivate User' : 'Activate User'}
+                                                    className={`p-2 rounded-lg transition-all ${staff.isActive !== false ? 'text-slate-400 hover:text-red-500 hover:bg-red-50' : 'text-red-500 hover:text-green-500 hover:bg-green-50'}`}
+                                                    title={staff.isActive !== false ? 'Deactivate User' : 'Activate User'}
                                                 >
-                                                    {staff.status === 'active' ? <Shield className="w-4 h-4" /> : <ShieldOff className="w-4 h-4" />}
+                                                    {staff.isActive !== false ? <Shield className="w-4 h-4" /> : <ShieldOff className="w-4 h-4" />}
                                                 </button>
                                             </div>
                                         </td>
@@ -503,10 +526,8 @@ const AdminStaff = () => {
                                         required
                                     >
                                         <option value="" disabled>Select role</option>
-                                        <option value="Admin">Admin</option>
                                         <option value="Advisor">Advisor</option>
-                                        <option value="Dean">Dean</option>
-                                        <option value="Student">Student</option>
+                                        <option value="Dean">Department Dean</option>
                                     </select>
                                 </div>
                             </div>
@@ -616,6 +637,31 @@ const AdminStaff = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            {statusModal.open && (
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+                        <h3 className="text-lg font-black text-slate-800">Confirm Status Change</h3>
+                        <p className="text-sm text-slate-600 mt-2">Are you sure you want to change this user status?</p>
+                        <div className="mt-6 flex items-center justify-end gap-3">
+                            <button
+                                type="button"
+                                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50"
+                                onClick={() => setStatusModal({ open: false, userId: null })}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                disabled={actionLoading}
+                                className="px-4 py-2 rounded-xl bg-dbu-primary text-white font-bold hover:bg-dbu-accent disabled:opacity-60"
+                                onClick={confirmToggleStatus}
+                            >
+                                Confirm
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

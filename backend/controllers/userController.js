@@ -1,5 +1,8 @@
 import User from '../models/User.js';
 import AuditLog from '../models/AuditLog.js';
+import Student from '../models/Student.js';
+import sendEmail from '../utils/sendEmail.js';
+import crypto from 'crypto';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -7,7 +10,14 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
-    res.status(200).json({ success: true, data: user });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    let studentProfile = null;
+    if (user.role === 'Student') {
+      studentProfile = await Student.findOne({ user: user._id }).select('studentId cbeAccount');
+    }
+    res.status(200).json({ success: true, data: { ...user.toObject(), studentProfile } });
   } catch (err) {
     next(err);
   }
@@ -16,6 +26,10 @@ export const getMe = async (req, res, next) => {
 export const updateMe = async (req, res, next) => {
   try {
     const { name, email } = req.body;
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
 
     const updates = {};
     if (typeof name === 'string') {
@@ -32,14 +46,48 @@ export const updateMe = async (req, res, next) => {
         return res.status(400).json({ success: false, message: 'Please provide a valid email address' });
       }
 
-      const existing = await User.findOne({ email: normalized });
+      const existing = await User.findOne({
+        $or: [{ email: normalized }, { pendingEmail: normalized }]
+      });
       if (existing && existing._id.toString() !== req.user.id.toString()) {
         return res.status(400).json({ success: false, message: 'Email is already in use' });
       }
-      updates.email = normalized;
+
+      if (normalized !== (user.email || '').toLowerCase()) {
+        const verifyToken = crypto.randomBytes(20).toString('hex');
+        const hashedToken = crypto.createHash('sha256').update(verifyToken).digest('hex');
+        user.pendingEmail = normalized;
+        user.emailVerificationToken = hashedToken;
+        user.emailVerificationExpire = Date.now() + 30 * 60 * 1000;
+        const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email/${verifyToken}`;
+        await sendEmail({
+          to: normalized,
+          subject: 'DBU-IMS Email Verification',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #1e3a5f;">DBU Internship Management System</h2>
+              <p>Hello <strong>${user.name}</strong>,</p>
+              <p>Click the button below to verify your new email address for your account (<strong>${user.username}</strong>).</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${verifyUrl}" style="background-color: #1e3a5f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                  Verify Email
+                </a>
+              </div>
+              <p>If the button doesn't work, use this link: <a href="${verifyUrl}">${verifyUrl}</a></p>
+              <p style="color: #999; font-size: 12px;">This link expires in 30 minutes.</p>
+            </div>
+          `
+        });
+      }
     }
 
-    const user = await User.findByIdAndUpdate(req.user.id, { $set: updates }, { new: true, runValidators: true }).select('-password');
+    Object.assign(user, updates);
+    await user.save();
+
+    let studentProfile = null;
+    if (user.role === 'Student') {
+      studentProfile = await Student.findOne({ user: user._id }).select('studentId cbeAccount');
+    }
 
     await AuditLog.create({
       user: req.user.id,
@@ -48,7 +96,118 @@ export const updateMe = async (req, res, next) => {
       ip: req.ip
     });
 
-    res.status(200).json({ success: true, message: 'Profile updated', data: user });
+    if (typeof email === 'string' && email.trim() !== '' && user.pendingEmail && user.pendingEmail === email.trim().toLowerCase()) {
+      return res.status(200).json({
+        success: true,
+        message: 'Profile updated. Please verify your new email from the link sent to your inbox.',
+        data: { ...user.toObject(), studentProfile }
+      });
+    }
+    res.status(200).json({ success: true, message: 'Profile updated', data: { ...user.toObject(), studentProfile } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const verifyEmailChange = async (req, res, next) => {
+  try {
+    const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+    const user = await User.findOne({
+      emailVerificationToken: hashedToken,
+      emailVerificationExpire: { $gt: Date.now() }
+    });
+
+    if (!user || !user.pendingEmail) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired verification link' });
+    }
+
+    const existing = await User.findOne({ email: user.pendingEmail });
+    if (existing && existing._id.toString() !== user._id.toString()) {
+      return res.status(400).json({ success: false, message: 'Email is already in use by another account' });
+    }
+
+    user.email = user.pendingEmail;
+    user.pendingEmail = undefined;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpire = undefined;
+    await user.save();
+
+    await AuditLog.create({
+      user: user._id,
+      action: 'email_verified',
+      details: `User verified and updated email to ${user.email}`,
+      ip: req.ip
+    });
+
+    res.status(200).json({ success: true, message: 'Email verified successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getMyStudentProfile = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id).select('role');
+    if (!user || user.role !== 'Student') {
+      return res.status(403).json({ success: false, message: 'Only students can access student profile details' });
+    }
+    const student = await Student.findOne({ user: req.user.id }).select('studentId cbeAccount');
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student profile not found' });
+    }
+    res.status(200).json({
+      success: true,
+      data: {
+        studentId: student.studentId,
+        cbeAccount: student.cbeAccount || '',
+        cbeEditable: true
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateMyCbeAccount = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id).select('role');
+    if (!user || user.role !== 'Student') {
+      return res.status(403).json({ success: false, message: 'Only students can update CBE account' });
+    }
+    const cbeAccount = String(req.body.cbeAccount || '').trim();
+    if (!/^\d{13}$/.test(cbeAccount)) {
+      return res.status(400).json({ success: false, message: 'CBE Account Number must be exactly 13 digits' });
+    }
+    const student = await Student.findOne({ user: req.user.id });
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student profile not found' });
+    }
+    const existing = await Student.findOne({ cbeAccount });
+    if (existing && existing._id.toString() !== student._id.toString()) {
+      return res.status(400).json({ success: false, message: 'This CBE account is already registered' });
+    }
+    const previousCbe = student.cbeAccount || null;
+    student.cbeAccount = cbeAccount;
+    await student.save();
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: previousCbe ? 'cbe_account_updated' : 'cbe_account_added',
+      details: previousCbe
+        ? `Student updated CBE account from ${previousCbe} to ${cbeAccount}`
+        : `Student added CBE account: ${cbeAccount}`,
+      ip: req.ip
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'CBE account saved successfully',
+      data: {
+        studentId: student.studentId,
+        cbeAccount: student.cbeAccount,
+        cbeEditable: true
+      }
+    });
   } catch (err) {
     next(err);
   }

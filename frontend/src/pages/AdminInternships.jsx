@@ -21,10 +21,17 @@ const AdminInternships = () => {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('ALL');
   const [selectedInternship, setSelectedInternship] = useState(null);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timeout = setTimeout(() => setToast(null), 2500);
+    return () => clearTimeout(timeout);
+  }, [toast]);
 
   const fetchData = async () => {
     try {
@@ -45,11 +52,12 @@ const AdminInternships = () => {
     try {
       await api.patch(`/admin/internships/${id}/status`, { status: newStatus });
       fetchData();
+      setToast({ type: 'success', text: 'Internship status updated successfully.' });
       if (selectedInternship?._id === id) {
         setSelectedInternship(prev => ({ ...prev, status: newStatus }));
       }
     } catch (err) {
-      alert("Failed to update status");
+      setToast({ type: 'error', text: err.response?.data?.message || err.message || 'Failed to update status.' });
     }
   };
 
@@ -71,6 +79,11 @@ const AdminInternships = () => {
 
   return (
     <div className="space-y-6">
+      {toast && (
+        <div className={`p-4 rounded-xl font-bold text-sm ${toast.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+          {toast.text}
+        </div>
+      )}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">Internship Management</h1>

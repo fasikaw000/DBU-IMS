@@ -5,11 +5,9 @@ import api from '../utils/api';
 
 const ActivateAccount = () => {
   const [username, setUsername] = useState('');
-  const [studentId, setStudentId] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [cbeAccount, setCbeAccount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -32,9 +30,7 @@ const ActivateAccount = () => {
     try {
       await api.post('/auth/activate', {
         username,
-        student_id: studentId,
         email,
-        cbeAccount,
         password,
         confirmPassword
       });
@@ -90,44 +86,17 @@ const ActivateAccount = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">ID (Students only)</label>
-                <input
-                  type="text"
-                  placeholder="Enter your ID"
-                  className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary text-sm"
-                  value={studentId}
-                  onChange={(e) => setStudentId(e.target.value.toUpperCase())}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
                 <input
                   type="email"
                   required
-                  placeholder="Enter your personal/institutional email"
+                  placeholder="Enter your email"
                   className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary text-sm"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
                 <p className="mt-1 text-[10px] text-slate-400">Used for password recovery and notifications.</p>
               </div>
-
-              {username.toUpperCase().startsWith('DBU') && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">CBE Account Number</label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={13}
-                    placeholder="Enter your 13-digit CBE account"
-                    className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary text-sm"
-                    value={cbeAccount}
-                    onChange={(e) => setCbeAccount(e.target.value.replace(/\D/g, ''))}
-                  />
-                  <p className="mt-1 text-[10px] text-slate-400">Required for internship allowance processing.</p>
-                </div>
-              )}
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Create Password</label>

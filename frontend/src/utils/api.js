@@ -11,7 +11,7 @@ const api = axios.create({
 // Add a request interceptor to inject the JWT token automatically
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -29,15 +29,16 @@ api.interceptors.response.use(
   (error) => {
     // Handle Token Expired / Unauthorized - Automatic Logout
     if (error.response?.status === 401) {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
+      sessionStorage.removeItem('user');
+      sessionStorage.removeItem('token');
       // We don't use window.location.href here to avoid infinite loops, 
       // AuthContext will pick up the change.
     }
 
     // Map standard backend error JSON format or fallback to network issue
     const message = error.response?.data?.message || error.message || 'An unexpected error occurred';
-    return Promise.reject(new Error(message));
+    error.message = message;
+    return Promise.reject(error);
   }
 );
 

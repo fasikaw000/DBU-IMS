@@ -2,6 +2,21 @@ import { useContext } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
+const getDefaultRouteByRole = (role) => {
+  switch (role) {
+    case 'Admin':
+      return '/admin-dashboard';
+    case 'Dean':
+      return '/dept-dashboard';
+    case 'Advisor':
+      return '/advisor-dashboard';
+    case 'Student':
+      return '/student-dashboard';
+    default:
+      return '/login';
+  }
+};
+
 // Protects routes and checks if role is authorized
 const ProtectedRoute = ({ allowedRoles }) => {
   const { user, loading } = useContext(AuthContext);
@@ -21,8 +36,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
 
   // Not authorized
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-     // Redirect to a generic unauthorized route or force back to login
-    return <Navigate to="/login" replace />; // In production, route to a 403 page
+    return <Navigate to={getDefaultRouteByRole(user.role)} replace />;
   }
 
   return <Outlet />;
