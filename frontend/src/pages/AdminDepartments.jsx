@@ -21,6 +21,7 @@ const AdminDepartments = () => {
     const [messageType, setMessageType] = useState('success');
     const [search, setSearch] = useState('');
     const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: '' });
+    const [errors, setErrors] = useState({});
 
     // Form States
     const [showAddForm, setShowAddForm] = useState(false);
@@ -59,6 +60,21 @@ const AdminDepartments = () => {
 
     const handleCreateDept = async (e) => {
         e.preventDefault();
+        setErrors({});
+
+        // Validation
+        let newErrors = {};
+        if (!deptData.name) newErrors.name = "Required";
+        if (!deptData.code) newErrors.code = "Required";
+        if (!deptData.college) newErrors.college = "Required";
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            setMessageType('error');
+            setMessage("Please fill out all required fields");
+            return;
+        }
+
         setActionLoading(true);
         setMessage('');
         try {
@@ -248,7 +264,7 @@ const AdminDepartments = () => {
                                 {editingDept ? 'Update department details.' : 'Manual account creation for departments.'}
                             </p>
                         </div>
-                        
+
                         <form onSubmit={handleCreateDept} className="p-8 space-y-5">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="col-span-2">
@@ -257,22 +273,22 @@ const AdminDepartments = () => {
                                         type="text"
                                         placeholder="e.g. Computer Science"
                                         value={deptData.name}
-                                        onChange={e => setDeptData({ ...deptData, name: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all"
-                                        required
+                                        onChange={e => { setDeptData({ ...deptData, name: e.target.value }); setErrors({ ...errors, name: null }); }}
+                                        className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all ${errors.name ? 'border-red-500' : 'border-slate-200'}`}
                                     />
+                                    {errors.name && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.name}</p>}
                                 </div>
-                                
+
                                 <div>
                                     <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Department Code</label>
                                     <input
                                         type="text"
                                         placeholder="e.g. CS"
                                         value={deptData.code}
-                                        onChange={e => setDeptData({ ...deptData, code: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all"
-                                        required
+                                        onChange={e => { setDeptData({ ...deptData, code: e.target.value }); setErrors({ ...errors, code: null }); }}
+                                        className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all ${errors.code ? 'border-red-500' : 'border-slate-200'}`}
                                     />
+                                    {errors.code && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.code}</p>}
                                 </div>
 
                                 <div>
@@ -281,9 +297,10 @@ const AdminDepartments = () => {
                                         type="text"
                                         placeholder="e.g. College of Computing"
                                         value={deptData.college}
-                                        onChange={e => setDeptData({ ...deptData, college: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all"
+                                        onChange={e => { setDeptData({ ...deptData, college: e.target.value }); setErrors({ ...errors, college: null }); }}
+                                        className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all ${errors.college ? 'border-red-500' : 'border-slate-200'}`}
                                     />
+                                    {errors.college && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.college}</p>}
                                 </div>
 
                                 <div className="col-span-2">
@@ -296,17 +313,17 @@ const AdminDepartments = () => {
                                     />
                                 </div>
 
-                                    <div className="col-span-2">
-                                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Status</label>
-                                        <select
-                                            value={deptData.status}
-                                            onChange={e => setDeptData({ ...deptData, status: e.target.value })}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all cursor-pointer"
-                                        >
-                                            <option value="Active">Active</option>
-                                            <option value="Inactive">Inactive</option>
-                                        </select>
-                                    </div>
+                                <div className="col-span-2">
+                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Status</label>
+                                    <select
+                                        value={deptData.status}
+                                        onChange={e => setDeptData({ ...deptData, status: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all cursor-pointer"
+                                    >
+                                        <option value="Active">Active</option>
+                                        <option value="Inactive">Inactive</option>
+                                    </select>
+                                </div>
                             </div>
 
                             <div className="flex items-center gap-3 pt-4">

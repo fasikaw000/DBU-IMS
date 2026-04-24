@@ -28,7 +28,7 @@ const Messaging = () => {
     const [loadingConversation, setLoadingConversation] = useState(false);
     const [messageContent, setMessageContent] = useState('');
     const [sending, setSending] = useState(false);
-    
+
     // Communication Modal State
     const [showCommModal, setShowCommModal] = useState(false);
     const [commType, setCommType] = useState('broadcast'); // broadcast, group
@@ -40,6 +40,7 @@ const Messaging = () => {
         internshipStatus: 'all'
     });
     const [commLoading, setCommLoading] = useState(false);
+    const [errors, setErrors] = useState({});
 
     const [toast, setToast] = useState(null);
     const messagesEndRef = useRef(null);
@@ -61,7 +62,7 @@ const Messaging = () => {
 
                 const params = new URLSearchParams(location.search);
                 const targetUserId = params.get('userId');
-                
+
                 if (targetUserId) {
                     const contact = contactsList.find(c => String(c._id) === String(targetUserId));
                     if (contact) setSelectedContact(contact);
@@ -76,7 +77,7 @@ const Messaging = () => {
 
         const intervalId = setInterval(() => fetchContacts(true), 10000);
         return () => clearInterval(intervalId);
-    }, []);
+    }, [location.search]); // Added location.search to dependency array
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -106,7 +107,10 @@ const Messaging = () => {
             const res = await api.get('/messages/contacts');
             setContacts(Array.isArray(res?.data) ? res.data : []);
         } catch (err) {
-            if (!isBackground) setToast({ type: 'error', text: 'Failed to refresh contacts.' });
+            if (!isBackground) {
+                setToast({ type: 'error', text: 'Failed to refresh contacts.' });
+                setTimeout(() => setToast(null), 3000);
+            }
         }
     };
 
@@ -119,7 +123,10 @@ const Messaging = () => {
                 await api.put(`/messages/conversation/${contactId}/read`);
             }
         } catch (err) {
-            if (!isBackground) setToast({ type: 'error', text: 'Failed to load conversation.' });
+            if (!isBackground) {
+                setToast({ type: 'error', text: 'Failed to load conversation.' });
+                setTimeout(() => setToast(null), 3000);
+            }
         } finally {
             if (!isBackground) setLoadingConversation(false);
         }
@@ -153,6 +160,7 @@ const Messaging = () => {
             }
         } catch (err) {
             setToast({ type: 'error', text: 'Failed to send message.' });
+            setTimeout(() => setToast(null), 3000);
         } finally {
             setSending(false);
         }
@@ -160,7 +168,20 @@ const Messaging = () => {
 
     const handleSendCommunication = async (e) => {
         e.preventDefault();
-        if (!commContent.trim() || commLoading) return;
+        setErrors({});
+
+        // Validation
+        let newErrors = {};
+        if (!commTitle.trim()) newErrors.title = "Required";
+        if (!commContent.trim()) newErrors.content = "Required";
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            setToast({ type: 'error', text: 'Please fill out all required fields.' });
+            return;
+        }
+
+        if (commLoading) return;
 
         setCommLoading(true);
         try {
@@ -172,18 +193,22 @@ const Messaging = () => {
             };
 
             const res = await api.post('/communication/send', payload);
-            if (res.success) {
-                setToast({ type: 'success', text: res.message });
-                setShowCommModal(false);
-                setCommTitle('');
-                setCommContent('');
-            }
+            setToast({ type: 'success', text: res.data?.message || 'Message sent successfully.' });
+            setShowCommModal(false);
+            setCommTitle('');
+            setCommContent('');
         } catch (err) {
-            setToast({ type: 'error', text: err.message || 'Failed to send communication.' });
+            setToast({ type: 'error', text: err.response?.data?.message || err.message || 'Failed to send communication.' });
         } finally {
             setCommLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (!toast) return;
+        const timer = setTimeout(() => setToast(null), 2500);
+        return () => clearTimeout(timer);
+    }, [toast]);
 
     const filteredContacts = contacts.filter(c =>
         (c.name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -215,7 +240,7 @@ const Messaging = () => {
                             Chat
                         </h2>
                         {canBroadcast && (
-                            <button 
+                            <button
                                 onClick={() => setShowCommModal(true)}
                                 className="p-2 rounded-xl bg-dbu-primary/10 text-dbu-primary hover:bg-dbu-primary hover:text-white transition-all shadow-sm"
                                 title="Broadcast / Group Message"
@@ -369,14 +394,14 @@ const Messaging = () => {
 
                         <form onSubmit={handleSendCommunication} className="p-8 space-y-6">
                             <div className="flex p-1 bg-slate-50 rounded-2xl border border-slate-100">
-                                <button 
+                                <button
                                     type="button"
                                     onClick={() => setCommType('broadcast')}
                                     className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${commType === 'broadcast' ? 'bg-white shadow-md text-dbu-primary' : 'text-slate-400 hover:text-slate-600'}`}
                                 >
                                     Broadcast All
                                 </button>
-                                <button 
+                                <button
                                     type="button"
                                     onClick={() => setCommType('group')}
                                     className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${commType === 'group' ? 'bg-white shadow-md text-dbu-primary' : 'text-slate-400 hover:text-slate-600'}`}
@@ -388,25 +413,25 @@ const Messaging = () => {
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Title</label>
-                                    <input 
+                                    <input
                                         type="text"
                                         placeholder="e.g. Important Update"
-                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary"
+                                        className={`w-full px-5 py-3 bg-slate-50 border rounded-2xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all ${errors.title ? 'border-red-500' : 'border-slate-100'}`}
                                         value={commTitle}
-                                        onChange={e => setCommTitle(e.target.value)}
-                                        required
+                                        onChange={e => { setCommTitle(e.target.value); setErrors({ ...errors, title: null }); }}
                                     />
+                                    {errors.title && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.title}</p>}
                                 </div>
 
                                 <div>
                                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Content</label>
-                                    <textarea 
+                                    <textarea
                                         placeholder="Type your announcement here..."
-                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-3xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary h-32 resize-none"
+                                        className={`w-full px-5 py-4 bg-slate-50 border rounded-3xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary h-32 resize-none transition-all ${errors.content ? 'border-red-500' : 'border-slate-100'}`}
                                         value={commContent}
-                                        onChange={e => setCommContent(e.target.value)}
-                                        required
+                                        onChange={e => { setCommContent(e.target.value); setErrors({ ...errors, content: null }); }}
                                     />
+                                    {errors.content && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.content}</p>}
                                 </div>
 
                                 {commType === 'group' && (
@@ -415,22 +440,22 @@ const Messaging = () => {
                                             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Filter Target Students</p>
                                             <Filter className="w-3 h-3 text-slate-400" />
                                         </div>
-                                        
+
                                         <div className="grid grid-cols-2 gap-3">
                                             <label className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100 cursor-pointer hover:border-dbu-primary/30 transition-all">
-                                                <input 
-                                                    type="checkbox" 
+                                                <input
+                                                    type="checkbox"
                                                     checked={!commFilters.hasCbe}
-                                                    onChange={e => setCommFilters({...commFilters, hasCbe: !e.target.checked})}
+                                                    onChange={e => setCommFilters({ ...commFilters, hasCbe: !e.target.checked })}
                                                     className="w-4 h-4 rounded text-dbu-primary focus:ring-dbu-primary"
                                                 />
                                                 <span className="text-[10px] font-bold text-slate-600">No CBE Account</span>
                                             </label>
                                             <label className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100 cursor-pointer hover:border-dbu-primary/30 transition-all">
-                                                <input 
-                                                    type="checkbox" 
+                                                <input
+                                                    type="checkbox"
                                                     checked={!commFilters.isActivated}
-                                                    onChange={e => setCommFilters({...commFilters, isActivated: !e.target.checked})}
+                                                    onChange={e => setCommFilters({ ...commFilters, isActivated: !e.target.checked })}
                                                     className="w-4 h-4 rounded text-dbu-primary focus:ring-dbu-primary"
                                                 />
                                                 <span className="text-[10px] font-bold text-slate-600">Not Activated</span>
@@ -439,10 +464,10 @@ const Messaging = () => {
 
                                         <div>
                                             <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Internship Status</label>
-                                            <select 
+                                            <select
                                                 className="w-full bg-white border border-slate-100 rounded-xl px-4 py-2 text-[10px] font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary"
                                                 value={commFilters.internshipStatus}
-                                                onChange={e => setCommFilters({...commFilters, internshipStatus: e.target.value})}
+                                                onChange={e => setCommFilters({ ...commFilters, internshipStatus: e.target.value })}
                                             >
                                                 <option value="all">All Students</option>
                                                 <option value="not_applied">Not Applied Yet</option>
@@ -460,7 +485,7 @@ const Messaging = () => {
                                 className="w-full py-4 bg-dbu-primary text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl hover:bg-dbu-accent transition-all flex items-center justify-center gap-3"
                             >
                                 {commLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                                Send Communication
+                                Send
                             </button>
                         </form>
                     </div>

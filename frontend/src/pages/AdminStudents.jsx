@@ -19,7 +19,8 @@ const AdminStudents = () => {
   const [editingStudent, setEditingStudent] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [statusModal, setStatusModal] = useState({ open: false, userId: null });
-  
+  const [errors, setErrors] = useState({});
+
   // Print Modal State
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printFields, setPrintFields] = useState({
@@ -81,6 +82,22 @@ const AdminStudents = () => {
 
   const handleRegisterStudent = async (e) => {
     e.preventDefault();
+    setErrors({});
+    
+    // Validation
+    let newErrors = {};
+    if (!newStudent.name) newErrors.name = "Required";
+    if (!newStudent.studentId) newErrors.studentId = "Required";
+    if (!newStudent.department) newErrors.department = "Required";
+    if (!newStudent.year) newErrors.year = "Required";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setMessageType('error');
+      setMessage("Please fill out all required fields");
+      return;
+    }
+
     setActionLoading(true);
     setMessage('');
     try {
@@ -153,14 +170,14 @@ const AdminStudents = () => {
 
     const activeFields = Object.keys(printFields).filter(f => printFields[f]);
     const fieldLabels = {
-        name: 'Full Name',
-        studentId: 'Student ID',
-        username: 'Username',
-        department: 'Department',
-        year: 'Year',
-        cbeAccount: 'CBE Account',
-        email: 'Email',
-        phone: 'Phone'
+      name: 'Full Name',
+      studentId: 'Student ID',
+      username: 'Username',
+      department: 'Department',
+      year: 'Year',
+      cbeAccount: 'CBE Account',
+      email: 'Email',
+      phone: 'Phone'
     };
 
     const printWindow = window.open('', '_blank');
@@ -199,15 +216,15 @@ const AdminStudents = () => {
               ${data.map(s => `
                 <tr>
                   ${activeFields.map(f => {
-                    let val = '';
-                    if (f === 'department') val = s.department?.name || s.department?.code || 'N/A';
-                    else if (f === 'cbeAccount') val = s.cbeAccount || 'N/A';
-                    else if (f === 'phone') val = s.phoneNumber || 'N/A';
-                    else val = s[f] || 'N/A';
-                    
-                    const isMono = ['studentId', 'username', 'cbeAccount', 'phone'].includes(f);
-                    return `<td class="${isMono ? 'mono' : ''}">${val}</td>`;
-                  }).join('')}
+      let val = '';
+      if (f === 'department') val = s.department?.name || s.department?.code || 'N/A';
+      else if (f === 'cbeAccount') val = s.cbeAccount || 'N/A';
+      else if (f === 'phone') val = s.phoneNumber || 'N/A';
+      else val = s[f] || 'N/A';
+
+      const isMono = ['studentId', 'username', 'cbeAccount', 'phone'].includes(f);
+      return `<td class="${isMono ? 'mono' : ''}">${val}</td>`;
+    }).join('')}
                 </tr>
               `).join('')}
             </tbody>
@@ -230,9 +247,9 @@ const AdminStudents = () => {
     else if (type === 'selected') data = students.filter(s => selectedIds.includes(s._id));
 
     if (data.length === 0) {
-        setMessageType('error');
-        setMessage('No data to print.');
-        return;
+      setMessageType('error');
+      setMessage('No data to print.');
+      return;
     }
     setPrintData(data);
     setShowPrintModal(true);
@@ -292,25 +309,25 @@ const AdminStudents = () => {
             <UserPlus className="w-5 h-5 mr-2" />
             Add Student
           </button>
-          
+
           <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-xl shadow-sm">
             <button
-                onClick={() => handleOpenPrintModal('all')}
-                className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tight text-slate-600 hover:bg-slate-50 transition-all border-r border-slate-100"
+              onClick={() => handleOpenPrintModal('all')}
+              className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tight text-slate-600 hover:bg-slate-50 transition-all border-r border-slate-100"
             >
-                Print All
+              Print All
             </button>
             <button
-                onClick={() => handleOpenPrintModal('filtered')}
-                className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tight text-dbu-primary hover:bg-slate-50 transition-all border-r border-slate-100"
+              onClick={() => handleOpenPrintModal('filtered')}
+              className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tight text-dbu-primary hover:bg-slate-50 transition-all border-r border-slate-100"
             >
-                Print Filtered
+              Print Filtered
             </button>
             <button
-                onClick={() => handleOpenPrintModal('selected')}
-                className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tight text-orange-600 hover:bg-slate-50 transition-all"
+              onClick={() => handleOpenPrintModal('selected')}
+              className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tight text-orange-600 hover:bg-slate-50 transition-all"
             >
-                Print Selected ({selectedIds.length})
+              Print Selected ({selectedIds.length})
             </button>
           </div>
         </div>
@@ -338,20 +355,24 @@ const AdminStudents = () => {
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-slate-50 text-[10px] uppercase font-black tracking-widest text-slate-500">
+              <thead className="bg-slate-50 text-[10px] uppercase font-black tracking-widest text-slate-500 border-b border-slate-100">
                 <tr>
                   <th className="px-4 py-4 w-10">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className="rounded border-slate-300 text-dbu-primary focus:ring-dbu-primary cursor-pointer"
                       checked={selectedIds.length > 0 && selectedIds.length === filteredStudents.length}
                       onChange={toggleSelectAll}
                     />
                   </th>
-                  <th className="px-6 py-4">Student</th>
+                  <th className="px-6 py-4">Full Name</th>
+                  <th className="px-6 py-4">Email</th>
                   <th className="px-6 py-4">Student ID</th>
                   <th className="px-6 py-4">Username</th>
+                  <th className="px-6 py-4">Department</th>
+                  <th className="px-6 py-4 text-center">Year</th>
                   <th className="px-6 py-4">Phone</th>
+                  <th className="px-6 py-4">CBE Account</th>
                   <th className="px-6 py-4 text-center">Status</th>
                   <th className="px-4 py-4 text-right">Actions</th>
                 </tr>
@@ -360,33 +381,51 @@ const AdminStudents = () => {
                 {filteredStudents.map((student) => (
                   <tr key={student._id} className={`${selectedIds.includes(student._id) ? 'bg-blue-50/30' : 'hover:bg-slate-50/50'} transition-colors ${student.isActive === false ? 'opacity-50' : ''}`}>
                     <td className="px-4 py-4">
-                        <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="rounded border-slate-300 text-dbu-primary focus:ring-dbu-primary cursor-pointer"
                         checked={selectedIds.includes(student._id)}
                         onChange={() => toggleSelect(student._id)}
                       />
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-slate-800">{student.name}</span>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">{student.email || 'No Email'}</span>
-                      </div>
-                    </td>
+                    <td className="px-6 py-4 text-sm font-bold text-slate-800 whitespace-nowrap">{student.name}</td>
+                    <td className="px-6 py-4 text-[10px] font-bold text-slate-500">{student.email || 'N/A'}</td>
                     <td className="px-6 py-4 text-[10px] font-mono font-bold text-slate-600">{student.studentId}</td>
                     <td className="px-6 py-4 text-[10px] font-mono text-slate-500">{student.username}</td>
-                    <td className="px-6 py-4 text-[10px] font-mono font-bold text-dbu-primary">{student.cbeAccount || 'N/A'}</td>
-                    <td className="px-6 py-4 text-[10px] font-bold text-slate-600">{student.phoneNumber || 'N/A'}</td>
-                    <td className="px-6 py-4 text-[10px] font-black text-slate-600">{student.department?.code || 'N/A'}</td>
-                    <td className="px-4 py-4 text-center">
-                      <div className={`text-[8px] font-black uppercase px-2 py-1 rounded-full border inline-block ${student.isActivated ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
-                        {student.isActivated ? 'Activated' : 'Pending'}
+                    <td className="px-6 py-4 text-[10px] font-black text-slate-600">{student.department?.code || student.department?.name || 'N/A'}</td>
+                    <td className="px-6 py-4 text-center text-[10px] font-bold text-slate-500">{student.year || 'N/A'}</td>
+                    <td className="px-6 py-4 text-[10px] font-bold text-slate-600">{student.phoneNumber || student.phone || 'N/A'}</td>
+                    <td className="px-6 py-4 text-[10px] font-mono font-bold text-dbu-primary bg-slate-50/50 px-2 py-1 rounded">
+                      {student.studentProfile?.cbeAccount || student.cbeAccount || 'Not provided'}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        {student.isActivated ? (
+                          <span className="bg-emerald-50 text-emerald-600 text-[8px] font-black uppercase px-2 py-1 rounded-full border border-emerald-100 whitespace-nowrap">Activated</span>
+                        ) : (
+                          <span className="bg-amber-50 text-amber-600 text-[8px] font-black uppercase px-2 py-1 rounded-full border border-amber-100 whitespace-nowrap">Pending</span>
+                        )}
+                        {student.isActive === false ? (
+                          <span className="bg-red-50 text-red-600 text-[8px] font-black uppercase px-2 py-1 rounded-full border border-red-100">Inactive</span>
+                        ) : (
+                          <span className="bg-blue-50 text-blue-600 text-[8px] font-black uppercase px-2 py-1 rounded-full border border-blue-100">Active</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => handleEditStudent(student)} className="p-2 text-slate-400 hover:text-dbu-primary hover:bg-dbu-primary/5 rounded-lg"><Edit className="w-4 h-4" /></button>
-                        <button onClick={() => handleToggleStatus(student.userId)} className={`p-2 rounded-lg ${student.isActive !== false ? 'text-slate-400 hover:text-red-500' : 'text-red-500'}`}>
+                        <button 
+                          onClick={() => handleEditStudent(student)} 
+                          className="p-2 text-slate-400 hover:text-dbu-primary hover:bg-dbu-primary/10 rounded-lg transition-all cursor-pointer hover:scale-110"
+                          title="Edit Student"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleToggleStatus(student.userId)} 
+                          className={`p-2 rounded-lg transition-all cursor-pointer hover:scale-110 ${student.isActive !== false ? 'text-slate-400 hover:text-red-500 hover:bg-red-50' : 'text-red-500 hover:text-green-500 hover:bg-green-50'}`}
+                          title={student.isActive !== false ? 'Deactivate User' : 'Activate User'}
+                        >
                           {student.isActive !== false ? <Shield className="w-4 h-4" /> : <ShieldOff className="w-4 h-4" />}
                         </button>
                       </div>
@@ -401,8 +440,8 @@ const AdminStudents = () => {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col gap-6 h-fit">
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
             <h3 className="text-sm font-black text-slate-800 mb-3 flex items-center gap-2">
-                <Upload className="w-4 h-4 text-dbu-primary" />
-                Bulk Upload
+              <Upload className="w-4 h-4 text-dbu-primary" />
+              Bulk Upload
             </h3>
             <form onSubmit={handleBulkUpload} className="space-y-3">
               <input type="file" accept=".csv,.xlsx" onChange={(e) => setUploadFile(e.target.files?.[0] || null)} className="text-[10px] w-full" />
@@ -417,96 +456,110 @@ const AdminStudents = () => {
       {/* Print Settings Modal */}
       {showPrintModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className="bg-slate-50 p-6 border-b border-slate-100 flex items-center justify-between">
-                    <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                        <Printer className="w-5 h-5 text-dbu-primary" />
-                        Print Credentials
-                    </h3>
-                    <button onClick={() => setShowPrintModal(false)} className="p-2 hover:bg-slate-200 rounded-xl"><X className="w-4 h-4" /></button>
-                </div>
-                <div className="p-8 space-y-6">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Select fields to include in print:</p>
-                    <div className="grid grid-cols-2 gap-3">
-                        {Object.keys(printFields).map(field => (
-                            <label key={field} className={`flex items-center gap-3 p-3 rounded-2xl border cursor-pointer transition-all ${printFields[field] ? 'bg-dbu-primary/5 border-dbu-primary' : 'border-slate-100 hover:border-slate-200'}`}>
-                                <input 
-                                    type="checkbox" 
-                                    checked={printFields[field]}
-                                    onChange={(e) => setPrintFields({...printFields, [field]: e.target.checked})}
-                                    className="w-4 h-4 rounded text-dbu-primary focus:ring-dbu-primary"
-                                />
-                                <span className="text-[10px] font-black uppercase tracking-tighter text-slate-600">
-                                    {field.replace(/([A-Z])/g, ' $1').trim()}
-                                </span>
-                            </label>
-                        ))}
-                    </div>
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                        <p className="text-[10px] font-bold text-slate-400">Total Records to Print: <span className="text-slate-800">{printData.length}</span></p>
-                    </div>
-                    <button 
-                        onClick={printRecords}
-                        className="w-full py-4 bg-dbu-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-dbu-primary/20 hover:bg-dbu-accent transition-all"
-                    >
-                        Generate Document
-                    </button>
-                </div>
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-slate-50 p-6 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                <Printer className="w-5 h-5 text-dbu-primary" />
+                Print Credentials
+              </h3>
+              <button onClick={() => setShowPrintModal(false)} className="p-2 hover:bg-slate-200 rounded-xl"><X className="w-4 h-4" /></button>
             </div>
+            <div className="p-8 space-y-6">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Select fields to include in print:</p>
+              <div className="grid grid-cols-2 gap-3">
+                {Object.keys(printFields).map(field => (
+                  <label key={field} className={`flex items-center gap-3 p-3 rounded-2xl border cursor-pointer transition-all ${printFields[field] ? 'bg-dbu-primary/5 border-dbu-primary' : 'border-slate-100 hover:border-slate-200'}`}>
+                    <input
+                      type="checkbox"
+                      checked={printFields[field]}
+                      onChange={(e) => setPrintFields({ ...printFields, [field]: e.target.checked })}
+                      className="w-4 h-4 rounded text-dbu-primary focus:ring-dbu-primary"
+                    />
+                    <span className="text-[10px] font-black uppercase tracking-tighter text-slate-600">
+                      {field.replace(/([A-Z])/g, ' $1').trim()}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <p className="text-[10px] font-bold text-slate-400">Total Records to Print: <span className="text-slate-800">{printData.length}</span></p>
+              </div>
+              <button
+                onClick={printRecords}
+                className="w-full py-4 bg-dbu-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-dbu-primary/20 hover:bg-dbu-accent transition-all"
+              >
+                Generate Document
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Other Modals... (Add/Edit shortened for brevity in this tool call, but I will ensure they are preserved or updated if needed) */}
       {showAddModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
-                <div className="bg-dbu-primary p-6 text-white"><h3 className="text-xl font-black">Add New Student</h3></div>
-                <form onSubmit={handleRegisterStudent} className="p-8 space-y-4">
-                    <input type="text" placeholder="Full Name" value={newStudent.name} onChange={e => setNewStudent({...newStudent, name: e.target.value})} className="w-full p-3 border rounded-xl" required />
-                    <input type="text" placeholder="Student ID" value={newStudent.studentId} onChange={e => setNewStudent({...newStudent, studentId: e.target.value})} className="w-full p-3 border rounded-xl" required />
-                    <select value={newStudent.department} onChange={e => setNewStudent({...newStudent, department: e.target.value})} className="w-full p-3 border rounded-xl" required>
-                        <option value="">Select Dept</option>
-                        {departments.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
-                    </select>
-                    <input type="text" placeholder="Year" value={newStudent.year} onChange={e => setNewStudent({...newStudent, year: e.target.value})} className="w-full p-3 border rounded-xl" required />
-                    <div className="flex gap-3 pt-4">
-                        <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 p-3 border rounded-xl font-bold">Cancel</button>
-                        <button type="submit" className="flex-[2] p-3 bg-dbu-primary text-white rounded-xl font-bold">Register</button>
-                    </div>
-                </form>
-            </div>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="bg-dbu-primary p-6 text-white"><h3 className="text-xl font-black">Add New Student</h3></div>
+            <form onSubmit={handleRegisterStudent} className="p-8 space-y-4">
+              <div className="space-y-1">
+                <input type="text" placeholder="Full Name" value={newStudent.name} onChange={e => { setNewStudent({ ...newStudent, name: e.target.value }); setErrors({ ...errors, name: null }); }} className={`w-full p-3 border rounded-xl ${errors.name ? 'border-red-500' : ''}`} />
+                {errors.name && <p className="text-red-500 text-[10px] font-bold ml-1">{errors.name}</p>}
+              </div>
+              <div className="space-y-1">
+                <input type="text" placeholder="Student ID" value={newStudent.studentId} onChange={e => { setNewStudent({ ...newStudent, studentId: e.target.value }); setErrors({ ...errors, studentId: null }); }} className={`w-full p-3 border rounded-xl ${errors.studentId ? 'border-red-500' : ''}`} />
+                {errors.studentId && <p className="text-red-500 text-[10px] font-bold ml-1">{errors.studentId}</p>}
+              </div>
+              <div className="space-y-1">
+                <select value={newStudent.department} onChange={e => { setNewStudent({ ...newStudent, department: e.target.value }); setErrors({ ...errors, department: null }); }} className={`w-full p-3 border rounded-xl ${errors.department ? 'border-red-500' : ''}`}>
+                  <option value="">Select Dept</option>
+                  {departments.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
+                </select>
+                {errors.department && <p className="text-red-500 text-[10px] font-bold ml-1">{errors.department}</p>}
+              </div>
+              <div className="space-y-1">
+                <input type="text" placeholder="Year" value={newStudent.year} onChange={e => { setNewStudent({ ...newStudent, year: e.target.value }); setErrors({ ...errors, year: null }); }} className={`w-full p-3 border rounded-xl ${errors.year ? 'border-red-500' : ''}`} />
+                {errors.year && <p className="text-red-500 text-[10px] font-bold ml-1">{errors.year}</p>}
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 p-3 border rounded-xl font-bold">Cancel</button>
+                <button type="submit" disabled={actionLoading} className="flex-[2] p-3 bg-dbu-primary text-white rounded-xl font-bold">
+                  {actionLoading ? 'Registering...' : 'Register'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
       {showEditModal && editingStudent && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
-                <div className="bg-dbu-primary p-6 text-white"><h3 className="text-xl font-black">Edit Student</h3></div>
-                <form onSubmit={handleUpdateStudent} className="p-8 space-y-4">
-                    <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full p-3 border rounded-xl" required />
-                    <select value={editForm.department} onChange={e => setEditForm({...editForm, department: e.target.value})} className="w-full p-3 border rounded-xl" required>
-                        {departments.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
-                    </select>
-                    <input type="text" value={editForm.year} onChange={e => setEditForm({...editForm, year: e.target.value})} className="w-full p-3 border rounded-xl" required />
-                    <div className="flex gap-3 pt-4">
-                        <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 p-3 border rounded-xl font-bold">Cancel</button>
-                        <button type="submit" className="flex-[2] p-3 bg-dbu-primary text-white rounded-xl font-bold">Update</button>
-                    </div>
-                </form>
-            </div>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="bg-dbu-primary p-6 text-white"><h3 className="text-xl font-black">Edit Student</h3></div>
+            <form onSubmit={handleUpdateStudent} className="p-8 space-y-4">
+              <input type="text" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="w-full p-3 border rounded-xl" required />
+              <select value={editForm.department} onChange={e => setEditForm({ ...editForm, department: e.target.value })} className="w-full p-3 border rounded-xl" required>
+                {departments.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
+              </select>
+              <input type="text" value={editForm.year} onChange={e => setEditForm({ ...editForm, year: e.target.value })} className="w-full p-3 border rounded-xl" required />
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 p-3 border rounded-xl font-bold">Cancel</button>
+                <button type="submit" className="flex-[2] p-3 bg-dbu-primary text-white rounded-xl font-bold">Update</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
       {statusModal.open && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center">
-                <h3 className="text-lg font-black text-slate-800 mb-2">Change User Status?</h3>
-                <p className="text-sm text-slate-500 mb-6">This will enable/disable account access.</p>
-                <div className="flex gap-3">
-                    <button onClick={() => setStatusModal({open:false, userId:null})} className="flex-1 py-3 border rounded-xl font-bold">No</button>
-                    <button onClick={confirmToggleStatus} className="flex-1 py-3 bg-dbu-primary text-white rounded-xl font-bold">Yes, Change</button>
-                </div>
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center">
+            <h3 className="text-lg font-black text-slate-800 mb-2">Change User Status?</h3>
+            <p className="text-sm text-slate-500 mb-6">This will enable/disable account access.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setStatusModal({ open: false, userId: null })} className="flex-1 py-3 border rounded-xl font-bold">No</button>
+              <button onClick={confirmToggleStatus} className="flex-1 py-3 bg-dbu-primary text-white rounded-xl font-bold">Yes, Change</button>
             </div>
+          </div>
         </div>
       )}
     </div>

@@ -3,6 +3,7 @@ import AuditLog from '../models/AuditLog.js';
 import Student from '../models/Student.js';
 import sendEmail from '../utils/sendEmail.js';
 import crypto from 'crypto';
+import { normalizeRole } from '../utils/roles.js';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -13,11 +14,13 @@ export const getMe = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
+    let studentId = null;
     let studentProfile = null;
-    if (user.role === 'Student') {
+    if (normalizeRole(user.role) === 'Student') {
       studentProfile = await Student.findOne({ user: user._id }).select('studentId cbeAccount');
+      if (studentProfile) studentId = studentProfile.studentId;
     }
-    res.status(200).json({ success: true, data: { ...user.toObject(), studentProfile } });
+    res.status(200).json({ success: true, data: { ...user.toObject(), studentProfile, studentId } });
   } catch (err) {
     next(err);
   }

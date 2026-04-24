@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
-import { 
-    FileText, 
-    UploadCloud, 
-    Clock, 
-    CheckCircle, 
-    XCircle, 
-    AlertCircle, 
+import {
+    FileText,
+    UploadCloud,
+    Clock,
+    CheckCircle,
+    XCircle,
+    AlertCircle,
     History,
     Calendar,
     ArrowRight,
@@ -21,12 +21,13 @@ const ReportsPage = () => {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [message, setMessage] = useState(null);
-    
+
     // Upload Form State
     const [showUpload, setShowUpload] = useState(false);
     const [type, setType] = useState('WEEKLY');
     const [dueDate, setDueDate] = useState('');
     const [fileUrl, setFileUrl] = useState('');
+    const [selectedFile, setSelectedFile] = useState(null);
 
     useEffect(() => {
         fetchReports();
@@ -43,25 +44,40 @@ const ReportsPage = () => {
         }
     };
 
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSelectedFile(file);
+            setFileUrl(file.name); // Just to show the filename for now
+        }
+    };
+
     const handleUpload = async (e) => {
         e.preventDefault();
+        if (!selectedFile) {
+            setMessage({ type: 'error', text: 'Please select a file first.' });
+            return;
+        }
+
         setSubmitting(true);
         setMessage(null);
         try {
-            // Fake cloudinary URL for now as per previous implementation logic
-            const fakeUrl = `https://cloudinary.com/dbu-ims/rep_${Math.random().toString(36).substring(7)}.pdf`;
-            
-            const res = await api.post('/student/reports', {
-                type,
-                fileUrl: fileUrl || fakeUrl,
-                dueDate
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('type', type);
+            formData.append('dueDate', dueDate);
+
+            const res = await api.post('/student/reports', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
-            
-            setMessage({ 
-                type: 'success', 
-                text: `${type} Report (v${res.data.version}) submitted successfully! ${res.data.isLate ? 'Flagged as LATE submission.' : ''}` 
+
+            setMessage({
+                type: 'success',
+                text: `${type} Report (v${res.data.version}) submitted successfully! ${res.data.isLate ? 'Flagged as LATE submission.' : ''}`
             });
             setShowUpload(false);
+            setSelectedFile(null);
+            setFileUrl('');
             fetchReports();
         } catch (err) {
             setMessage({ type: 'error', text: err.response?.data?.message || 'Upload failed' });
@@ -94,7 +110,7 @@ const ReportsPage = () => {
                         Upload weekly, monthly, and final internship reports.
                     </p>
                 </div>
-                <button 
+                <button
                     onClick={() => setShowUpload(true)}
                     className="px-6 py-4 bg-dbu-primary text-white rounded-2xl font-black text-[10px] tracking-widest hover:bg-dbu-accent transition shadow-xl flex items-center gap-2"
                 >
@@ -104,9 +120,8 @@ const ReportsPage = () => {
             </div>
 
             {message && (
-                <div className={`p-4 rounded-2xl border flex items-center gap-3 ${
-                    message.type === 'error' ? 'bg-red-50 border-red-100 text-red-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'
-                }`}>
+                <div className={`p-4 rounded-2xl border flex items-center gap-3 ${message.type === 'error' ? 'bg-red-50 border-red-100 text-red-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'
+                    }`}>
                     {message.type === 'error' ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
                     <p className="font-bold text-sm">{message.text}</p>
                 </div>
@@ -124,7 +139,7 @@ const ReportsPage = () => {
                             <div className="space-y-4">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Report Type</label>
-                                    <select 
+                                    <select
                                         className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold appearance-none"
                                         value={type}
                                         onChange={(e) => setType(e.target.value)}
@@ -136,7 +151,7 @@ const ReportsPage = () => {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Assigned Due Date</label>
-                                    <input 
+                                    <input
                                         required
                                         type="date"
                                         className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none text-sm font-bold"
@@ -145,15 +160,35 @@ const ReportsPage = () => {
                                     />
                                     <p className="text-[9px] text-slate-400 ml-1 italic">* Submissions past this date will be flagged as LATE automatically.</p>
                                 </div>
-                                <div className="p-10 border-2 border-dashed border-slate-200 rounded-2xl text-center bg-slate-50/30 group hover:border-dbu-primary transition-colors cursor-pointer">
-                                    <UploadCloud className="w-10 h-10 text-slate-200 mx-auto mb-3 group-hover:text-dbu-primary transition-colors" />
-                                    <p className="text-xs font-bold text-slate-400 group-hover:text-dbu-primary">Click to select PDF or DOCX file</p>
-                                    <p className="text-[10px] text-slate-300 mt-1">Maximum file size: 10MB</p>
+                                <div 
+                                    onClick={() => document.getElementById('reportFile').click()}
+                                    className={`p-10 border-2 border-dashed rounded-2xl text-center group transition-all cursor-pointer ${selectedFile ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-slate-50/30 hover:border-dbu-primary'}`}
+                                >
+                                    <input 
+                                        id="reportFile"
+                                        type="file"
+                                        className="hidden"
+                                        accept=".pdf,.doc,.docx"
+                                        onChange={handleFileChange}
+                                    />
+                                    {selectedFile ? (
+                                        <>
+                                            <CheckCircle className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
+                                            <p className="text-xs font-black text-emerald-600 truncate px-4">{selectedFile.name}</p>
+                                            <p className="text-[10px] text-emerald-400 mt-1">File selected - Click to change</p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <UploadCloud className="w-10 h-10 text-slate-200 mx-auto mb-3 group-hover:text-dbu-primary transition-colors" />
+                                            <p className="text-xs font-bold text-slate-400 group-hover:text-dbu-primary">Click to select PDF or DOCX file</p>
+                                            <p className="text-[10px] text-slate-300 mt-1">Maximum file size: 10MB</p>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                             <button disabled={submitting} type="submit" className="w-full py-5 bg-dbu-primary text-white rounded-2xl font-black tracking-widest text-xs hover:bg-dbu-accent transition shadow-xl flex items-center justify-center gap-3">
                                 {submitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                                UPLOAD REPORT (V{ (reports.filter(r => r.type === type).length || 0) + 1 })
+                                UPLOAD REPORT (V{(reports.filter(r => r.type === type).length || 0) + 1})
                             </button>
                         </form>
                     </div>
@@ -193,11 +228,10 @@ const ReportsPage = () => {
                                                     {new Date(report.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
                                                 </h3>
                                             </div>
-                                            <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border ${
-                                                report.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                report.status === 'Revision Required' ? 'bg-red-50 text-red-600 border-red-100' :
-                                                'bg-amber-50 text-amber-600 border-amber-100'
-                                            }`}>
+                                            <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border ${report.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                    report.status === 'Revision Required' ? 'bg-red-50 text-red-600 border-red-100' :
+                                                        'bg-amber-50 text-amber-600 border-amber-100'
+                                                }`}>
                                                 {report.status}
                                             </div>
                                         </div>
@@ -217,9 +251,9 @@ const ReportsPage = () => {
                                             </div>
 
                                             <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                                                <a 
-                                                    href={`http://localhost:5001${report.fileUrl}`} 
-                                                    target="_blank" 
+                                                <a
+                                                    href={`http://localhost:5001${report.fileUrl}`}
+                                                    target="_blank"
                                                     rel="noreferrer"
                                                     className="flex items-center gap-2 text-dbu-primary text-[10px] font-black tracking-widest hover:underline"
                                                 >

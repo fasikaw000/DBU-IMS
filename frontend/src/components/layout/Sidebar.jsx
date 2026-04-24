@@ -36,6 +36,7 @@ const Sidebar = () => {
       case 'Dean':
         return [
           { name: 'Dashboard', path: '/dept-dashboard', icon: LayoutDashboard },
+          { name: 'Students', path: '/dean/students', icon: Users },
           { name: 'Companies', path: '/companies', icon: Building },
           { name: 'Assignments', path: '/assignments', icon: Users },
           { name: 'Messages', path: '/messages', icon: MessageSquare },
@@ -60,10 +61,10 @@ const Sidebar = () => {
     <div className="flex flex-col w-64 bg-dbu-dark min-h-screen text-white border-r border-slate-700 fixed left-0 top-0">
       <div className="flex items-center px-4 h-24 border-b border-slate-700 mt-2 bg-slate-900/50">
         <div className="h-14 w-20 rounded-xl overflow-hidden mr-3 flex items-center justify-center">
-          <img 
-            src="/dbu.png" 
-            alt="Logo" 
-            className="w-full h-full scale-[1.05] object-contain" 
+          <img
+            src="/dbu.png"
+            alt="Logo"
+            className="w-full h-full scale-[1.05] object-contain"
           />
         </div>
         <h1 className="text-xl font-bold tracking-wider text-dbu-light leading-tight">

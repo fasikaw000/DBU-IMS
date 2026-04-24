@@ -17,7 +17,10 @@ import {
     X,
     Filter,
     ChevronRight,
-    ArrowLeft
+    ArrowLeft,
+    MessageSquare,
+    Send,
+    Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -98,63 +101,21 @@ const DeptDashboard = () => {
         }
     };
 
-    const handlePrint = () => {
-        const activeFields = Object.keys(printFields).filter(f => printFields[f]);
-        const fieldLabels = {
-            name: 'Student Name',
-            studentId: 'Student ID',
-            username: 'Username',
-            year: 'Year',
-            cbeAccount: 'CBE Account',
-            phone: 'Phone Number',
-            status: 'Placement Status'
-        };
+    useEffect(() => {
+        if (!message) return;
+        const timer = setTimeout(() => setMessage(null), 2500);
+        return () => clearTimeout(timer);
+    }, [message]);
 
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-            <html>
-                <head>
-                    <title>Department Records - ${departmentName}</title>
-                    <style>
-                        body { font-family: sans-serif; padding: 40px; }
-                        h1 { color: #1e3a8a; text-align: center; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                        th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 11px; }
-                        th { background: #f8fafc; }
-                    </style>
-                </head>
-                <body>
-                    <h1>${departmentName} - Student Records</h1>
-                    <p>Generated: ${new Date().toLocaleString()}</p>
-                    <table>
-                        <thead>
-                            <tr>${activeFields.map(f => `<th>${fieldLabels[f]}</th>`).join('')}</tr>
-                        </thead>
-                        <tbody>
-                            ${students.map(s => `
-                                <tr>
-                                    ${activeFields.map(f => {
-            if (f === 'name') return `<td>${s.user?.name}</td>`;
-            if (f === 'status') return `<td>${s.internship?.status || 'NOT APPLIED'}</td>`;
-            if (f === 'phone') return `<td>${s.phone || 'N/A'}</td>`;
-            return `<td>${s[f] || 'N/A'}</td>`;
-        }).join('')}
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </body>
-            </html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
-        setShowPrintModal(false);
-    };
+    const handleExportCSV = null; // Removed - use Students page
 
-    const filteredStudents = students.filter(s =>
-        s.user?.name.toLowerCase().includes(search.toLowerCase()) ||
-        s.studentId.toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredStudents = students.filter(s => {
+        if (!s) return false;
+        const nameStr = s.user?.name || '';
+        const idStr = s.studentId || '';
+        const searchStr = search.toLowerCase();
+        return String(nameStr).toLowerCase().includes(searchStr) || String(idStr).toLowerCase().includes(searchStr);
+    });
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -178,20 +139,6 @@ const DeptDashboard = () => {
                 </div>
 
                 <div className="flex items-center gap-3 relative z-10">
-                    <button
-                        onClick={() => navigate('/messages')}
-                        className="bg-dbu-primary text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-dbu-primary/20 hover:bg-dbu-accent transition-all flex items-center gap-2"
-                    >
-                        <Megaphone className="w-4 h-4" />
-                        Communicate
-                    </button>
-                    <button
-                        onClick={() => setShowPrintModal(true)}
-                        className="bg-white text-slate-700 border border-slate-200 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"
-                    >
-                        <Printer className="w-4 h-4" />
-                        Print Records
-                    </button>
                 </div>
             </div>
 
@@ -227,10 +174,10 @@ const DeptDashboard = () => {
                         Pending Approvals
                     </button>
                     <button
-                        onClick={() => setView('students')}
-                        className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${view === 'students' ? 'bg-dbu-primary text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
+                        onClick={() => navigate('/dean/students')}
+                        className="px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-slate-400 hover:text-slate-600 hover:bg-slate-50"
                     >
-                        All Students
+                        View All Students
                     </button>
                 </div>
 
@@ -350,29 +297,7 @@ const DeptDashboard = () => {
                 )}
             </div>
 
-            {/* Print Modal */}
-            {showPrintModal && (
-                <>
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100]" onClick={() => setShowPrintModal(false)} />
-                    <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl z-[101] overflow-hidden border border-slate-100 animate-in zoom-in-95">
-                        <div className="p-8 bg-slate-800 text-white flex justify-between items-center">
-                            <h3 className="text-xl font-black flex items-center gap-2"><Printer className="w-5 h-5" /> Export Department Data</h3>
-                            <button onClick={() => setShowPrintModal(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all"><X className="w-5 h-5" /></button>
-                        </div>
-                        <div className="p-8 space-y-6">
-                            <div className="grid grid-cols-2 gap-3">
-                                {Object.keys(printFields).map(f => (
-                                    <label key={f} className={`flex items-center gap-3 p-3 rounded-2xl border cursor-pointer transition-all ${printFields[f] ? 'bg-dbu-primary/5 border-dbu-primary' : 'border-slate-100'}`}>
-                                        <input type="checkbox" checked={printFields[f]} onChange={e => setPrintFields({ ...printFields, [f]: e.target.checked })} className="w-4 h-4 rounded text-dbu-primary" />
-                                        <span className="text-[10px] font-black uppercase tracking-tighter text-slate-600">{f.replace(/([A-Z])/g, ' $1')}</span>
-                                    </label>
-                                ))}
-                            </div>
-                            <button onClick={handlePrint} className="w-full py-4 bg-dbu-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-dbu-primary/20 hover:bg-dbu-accent transition-all">Generate Print View</button>
-                        </div>
-                    </div>
-                </>
-            )}
+            {/* Print Modal Removed */}
         </div>
     );
 };

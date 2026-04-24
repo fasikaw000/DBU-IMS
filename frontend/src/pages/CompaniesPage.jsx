@@ -34,15 +34,22 @@ const CompaniesPage = () => {
     });
     const [submitting, setSubmitting] = useState(false);
     const [message, setMessage] = useState(null);
+    const [statusFilter, setStatusFilter] = useState('all'); // all, active, inactive
+    const [allStudents, setAllStudents] = useState([]);
+    const [viewingStudentsFor, setViewingStudentsFor] = useState(null);
 
     useEffect(() => {
-        fetchCompanies();
+        fetchData();
     }, []);
 
-    const fetchCompanies = async () => {
+    const fetchData = async () => {
         try {
-            const res = await api.get('/department/companies');
-            setCompanies(res.data);
+            const [compRes, studRes] = await Promise.all([
+                api.get('/department/companies'),
+                api.get('/department/students')
+            ]);
+            setCompanies(compRes.data);
+            setAllStudents(studRes.data);
         } catch (err) {
             console.error(err);
         } finally {
@@ -53,7 +60,7 @@ const CompaniesPage = () => {
     const handleToggleStatus = async (id) => {
         try {
             await api.patch(`/department/companies/${id}/status`);
-            fetchCompanies();
+            fetchData();
         } catch (err) {
             console.error(err);
         }
@@ -63,7 +70,7 @@ const CompaniesPage = () => {
         if (!window.confirm('Are you sure you want to remove this company?')) return;
         try {
             await api.delete(`/department/companies/${id}`);
-            fetchCompanies();
+            fetchData();
         } catch (err) {
             console.error(err);
         }
@@ -84,9 +91,10 @@ const CompaniesPage = () => {
             setIsModalOpen(false);
             setEditingCompany(null);
             setFormData({ name: '', location: '', industry: '', contactPerson: '', email: '', phone: '', description: '' });
-            fetchCompanies();
+            fetchData();
         } catch (err) {
             setMessage({ type: 'error', text: err.response?.data?.message || 'Something went wrong' });
+            setTimeout(() => setMessage(null), 3000);
         } finally {
             setSubmitting(false);
         }
@@ -106,11 +114,13 @@ const CompaniesPage = () => {
         setIsModalOpen(true);
     };
 
-    const filteredCompanies = companies.filter(c =>
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.industry.toLowerCase().includes(search.toLowerCase()) ||
-        c.location.toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredCompanies = companies.filter(c => {
+        const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
+            c.industry.toLowerCase().includes(search.toLowerCase()) ||
+            c.location.toLowerCase().includes(search.toLowerCase());
+        const matchesStatus = statusFilter === 'all' ? true : statusFilter === 'active' ? c.isActive : !c.isActive;
+        return matchesSearch && matchesStatus;
+    });
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center">
@@ -153,6 +163,17 @@ const CompaniesPage = () => {
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
+                </div>
+                <div className="relative md:w-48">
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm font-bold text-slate-600 appearance-none"
+                    >
+                        <option value="all">All Status</option>
+                        <option value="active">Active Placements</option>
+                        <option value="inactive">Deactivated</option>
+                    </select>
                 </div>
             </div>
 
@@ -220,6 +241,16 @@ const CompaniesPage = () => {
                                     <span className="text-xs font-medium">{company.phone || 'No phone'}</span>
                                 </div>
                             </div>
+
+                            <div className="mt-4 pt-4 border-t border-slate-100">
+                                <button
+                                    onClick={() => setViewingStudentsFor(company)}
+                                    className="w-full py-2 bg-slate-50 text-dbu-primary rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-dbu-primary hover:text-white transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Users size={14} />
+                                    View Assigned Students
+                                </button>
+                            </div>
                         </div>
                     ))
                 )}
@@ -238,7 +269,14 @@ const CompaniesPage = () => {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                        {message && isModalOpen && (
+                            <div className={`m-6 p-4 rounded-xl border flex items-center gap-3 ${message.type === 'error' ? 'bg-red-50 border-red-100 text-red-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
+                                {message.type === 'error' ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
+                                <p className="font-bold text-sm">{message.text}</p>
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSubmit} className={`${message ? 'px-8 pb-8 pt-2' : 'p-8'} space-y-6`}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Company Name</label>
@@ -326,6 +364,57 @@ const CompaniesPage = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* View Students Modal */}
+            {viewingStudentsFor && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-[2.5rem] w-full max-w-3xl overflow-hidden shadow-2xl animate-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+                        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-800 text-white">
+                            <div>
+                                <h2 className="text-xl font-black tracking-tight flex items-center gap-2">
+                                    <Users size={20} /> Students at {viewingStudentsFor.name}
+                                </h2>
+                                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-1">Active Placements</p>
+                            </div>
+                            <button onClick={() => setViewingStudentsFor(null)} className="p-2 hover:bg-white/10 rounded-xl transition">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-8 overflow-y-auto flex-1">
+                            {(() => {
+                                const assigned = allStudents.filter(s => s.internship?.companyId === viewingStudentsFor._id || s.internship?.company?.name === viewingStudentsFor.name || s.internship?.companyName === viewingStudentsFor.name);
+                                if (assigned.length === 0) {
+                                    return (
+                                        <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                                            <p className="text-slate-400 font-bold text-sm">No students assigned to this company currently.</p>
+                                        </div>
+                                    );
+                                }
+                                return (
+                                    <div className="space-y-4">
+                                        {assigned.map(s => (
+                                            <div key={s._id} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-md transition">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 bg-dbu-primary/10 rounded-xl flex items-center justify-center text-dbu-primary font-black">
+                                                        {s.user?.name?.charAt(0) || 'S'}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-black text-slate-800">{s.user?.name}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase">{s.studentId}</p>
+                                                    </div>
+                                                </div>
+                                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${s.internship?.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                                                    {s.internship?.status || 'Unknown'}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })()}
+                        </div>
                     </div>
                 </div>
             )}

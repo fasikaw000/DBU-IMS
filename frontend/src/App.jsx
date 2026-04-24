@@ -27,6 +27,7 @@ import { AdminInternships, AdminReports, AdminSettings } from './pages/AdminModu
 import Profile from './pages/Profile';
 import AccountSettings from './pages/AccountSettings';
 import NotificationCenter from './pages/NotificationCenter';
+import DeanStudents from './pages/DeanStudents';
 
 function App() {
   return (
@@ -52,6 +53,7 @@ function App() {
 
         <Route element={<ProtectedRoute allowedRoles={['Dean']} />}>
           <Route path="/dept-dashboard" element={<DeptDashboard />} />
+          <Route path="/dean/students" element={<DeanStudents />} />
           <Route path="/companies" element={<CompaniesPage />} />
           <Route path="/assignments" element={<AssignmentsPage />} />
         </Route>

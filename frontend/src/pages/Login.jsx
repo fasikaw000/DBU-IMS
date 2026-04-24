@@ -8,6 +8,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState('');
+  const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
 
   const { login, error } = useContext(AuthContext);
@@ -15,8 +16,20 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setErrors({});
     setLocalError('');
+
+    let newErrors = {};
+    if (!username) newErrors.username = "Please fill out all required fields";
+    if (!password) newErrors.password = "Please fill out all required fields";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setLocalError("Please fill out all required fields");
+      return;
+    }
+
+    setLoading(true);
     try {
       const userData = await login(username, password);
       switch (userData.role) {
@@ -73,12 +86,12 @@ const Login = () => {
               <input
                 id="username"
                 type="text"
-                required
                 placeholder="Enter your username"
-                className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary text-sm"
+                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary text-sm ${errors.username ? 'border-red-500' : 'border-slate-300'}`}
                 value={username}
-                onChange={(e) => setUsername(e.target.value.toUpperCase())}
+                onChange={(e) => { setUsername(e.target.value.toUpperCase()); setErrors({ ...errors, username: null }); }}
               />
+              {errors.username && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.username}</p>}
             </div>
 
             <div>
@@ -92,11 +105,10 @@ const Login = () => {
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  required
                   placeholder="Enter your password"
-                  className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary text-sm pr-10"
+                  className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary text-sm pr-10 ${errors.password ? 'border-red-500' : 'border-slate-300'}`}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); setErrors({ ...errors, password: null }); }}
                 />
                 <button
                   type="button"
@@ -106,6 +118,7 @@ const Login = () => {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              {errors.password && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.password}</p>}
             </div>
 
             <div className="pt-2">

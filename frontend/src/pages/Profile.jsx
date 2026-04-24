@@ -12,7 +12,9 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [message, setMessage] = useState('');
+  const [passwordMessage, setPasswordMessage] = useState('');
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const [fullName, setFullName] = useState('');
@@ -26,8 +28,25 @@ const Profile = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
-  const [passwordMessage, setPasswordMessage] = useState('');
   const [passwordError, setPasswordError] = useState('');
+
+  useEffect(() => {
+    if (!message && !error) return;
+    const timer = setTimeout(() => {
+      setMessage('');
+      setError('');
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [message, error]);
+
+  useEffect(() => {
+    if (!passwordMessage && !passwordError) return;
+    const timer = setTimeout(() => {
+      setPasswordMessage('');
+      setPasswordError('');
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [passwordMessage, passwordError]);
 
   useEffect(() => {
     setFullName(user?.name || '');
@@ -61,6 +80,20 @@ const Profile = () => {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
+    setErrors({});
+    
+    // Validation
+    let newErrors = {};
+    if (!fullName.trim()) newErrors.fullName = "Please fill out all required fields";
+    if (!email.trim()) newErrors.email = "Please fill out all required fields";
+    if (!phoneNumber.trim()) newErrors.phoneNumber = "Please fill out all required fields";
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setError("Please fill out all required fields");
+      return;
+    }
+
     setSaving(true);
     setMessage('');
     setError('');
@@ -70,7 +103,10 @@ const Profile = () => {
         email,
         phoneNumber
       });
-      if (res?.data) setUser(res.data);
+      if (res?.data) {
+        setUser(res.data);
+        // Persist to session storage via setUser is already handled in AuthContext
+      }
       setMessage(res?.message || 'Profile updated successfully');
     } catch (err) {
       setError(err.message || 'Failed to update profile');
@@ -81,6 +117,11 @@ const Profile = () => {
 
   const handleSaveCbe = async (e) => {
     if (e) e.preventDefault();
+    if (!cbeAccount || cbeAccount.length !== 13) {
+      setError("CBE Account must be 13 digits");
+      setErrors({ ...errors, cbeAccount: "Must be 13 digits" });
+      return;
+    }
     setSavingCbe(true);
     setMessage('');
     setError('');
@@ -89,6 +130,10 @@ const Profile = () => {
       setStudentProfile(res?.data || { cbeAccount, cbeEditable: true });
       setCbeAccount(res?.data?.cbeAccount || cbeAccount);
       setMessage(res?.message || 'CBE account updated');
+      
+      // Update global user state with latest data
+      const updatedUserRes = await api.get('/users/me');
+      if (updatedUserRes?.data) setUser(updatedUserRes.data);
     } catch (err) {
       setError(err.message || 'Failed to save CBE account');
     } finally {
@@ -124,6 +169,7 @@ const Profile = () => {
         confirmNewPassword
       });
       setShowPasswordModal(false);
+      setPasswordMessage('Password changed successfully');
       setMessage('Password changed successfully');
       setCurrentPassword('');
       setNewPassword('');
@@ -221,11 +267,12 @@ const Profile = () => {
                     <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       value={fullName}
-                      onChange={e => setFullName(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary"
+                      onChange={e => { setFullName(e.target.value); setErrors({ ...errors, fullName: null }); }}
+                      className={`w-full pl-12 pr-4 py-3 bg-slate-50 border rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary ${errors.fullName ? 'border-red-500' : 'border-slate-100'}`}
                       placeholder="Your Full Name"
                     />
                   </div>
+                  {errors.fullName && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.fullName}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -234,12 +281,13 @@ const Profile = () => {
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary"
+                      onChange={e => { setEmail(e.target.value); setErrors({ ...errors, email: null }); }}
+                      className={`w-full pl-12 pr-4 py-3 bg-slate-50 border rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary ${errors.email ? 'border-red-500' : 'border-slate-100'}`}
                       placeholder="name@example.com"
                       type="email"
                     />
                   </div>
+                  {errors.email && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.email}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -248,12 +296,13 @@ const Profile = () => {
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       value={phoneNumber}
-                      onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 15))}
-                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary"
+                      onChange={e => { setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 15)); setErrors({ ...errors, phoneNumber: null }); }}
+                      className={`w-full pl-12 pr-4 py-3 bg-slate-50 border rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary ${errors.phoneNumber ? 'border-red-500' : 'border-slate-100'}`}
                       placeholder="Enter your phone number"
                       type="tel"
                     />
                   </div>
+                  {errors.phoneNumber && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.phoneNumber}</p>}
                 </div>
 
                 {user?.role === 'Student' && (
@@ -263,11 +312,12 @@ const Profile = () => {
                       <Landmark className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input
                         value={cbeAccount}
-                        onChange={e => setCbeAccount(e.target.value.replace(/\D/g, '').slice(0, 13))}
-                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary font-mono"
+                        onChange={e => { setCbeAccount(e.target.value.replace(/\D/g, '').slice(0, 13)); setErrors({ ...errors, cbeAccount: null }); }}
+                        className={`w-full pl-12 pr-4 py-3 bg-slate-50 border rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary font-mono ${errors.cbeAccount ? 'border-red-500' : 'border-slate-100'}`}
                         placeholder="1000XXXXXXXXX"
                       />
                     </div>
+                    {errors.cbeAccount && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.cbeAccount}</p>}
                   </div>
                 )}
               </div>

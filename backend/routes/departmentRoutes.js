@@ -18,19 +18,19 @@ import {
 const router = express.Router();
 
 router.use(protect);
-router.use(authorize('Dean'));
+// router.use(authorize('Dean')); // Moved down for specific routes
 
-router.get('/students', getDepartmentStudents);
-router.get('/advisors/workload', getAdvisorWorkload);
-router.get('/stats', getDepartmentStats);
-router.put('/internship/:internshipId', processInternshipApp);
-router.put('/internship/:internshipId/advisor', assignAdvisor);
+router.get('/students', authorize('Dean'), getDepartmentStudents);
+router.get('/advisors/workload', authorize('Dean'), getAdvisorWorkload);
+router.get('/stats', authorize('Dean'), getDepartmentStats);
+router.put('/internship/:internshipId', authorize('Dean'), processInternshipApp);
+router.put('/internship/:internshipId/advisor', authorize('Dean'), assignAdvisor);
 
 // Companies management
-router.get('/companies', getCompanies);
-router.post('/companies', createCompany);
-router.put('/companies/:id', updateCompany);
-router.patch('/companies/:id/status', toggleCompanyStatus);
-router.delete('/companies/:id', deleteCompany);
+router.get('/companies', authorize('Dean', 'Student'), getCompanies);
+router.post('/companies', authorize('Dean'), createCompany);
+router.put('/companies/:id', authorize('Dean'), updateCompany);
+router.patch('/companies/:id/status', authorize('Dean'), toggleCompanyStatus);
+router.delete('/companies/:id', authorize('Dean'), deleteCompany);
 
 export default router;

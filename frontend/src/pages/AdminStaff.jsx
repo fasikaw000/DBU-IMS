@@ -44,6 +44,7 @@ const AdminStaff = () => {
         role: '',
         department: ''
     });
+    const [errors, setErrors] = useState({});
 
     useEffect(() => {
         fetchData();
@@ -78,6 +79,21 @@ const AdminStaff = () => {
 
     const handleCreateStaff = async (e) => {
         e.preventDefault();
+        setErrors({});
+
+        // Validation
+        let newErrors = {};
+        if (!staffData.name) newErrors.name = "Required";
+        if (!staffData.role) newErrors.role = "Required";
+        if (!staffData.department) newErrors.department = "Required";
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            setMessageType('error');
+            setMessage("Please fill out all required fields");
+            return;
+        }
+
         setActionLoading(true);
         setMessage('');
         try {
@@ -485,19 +501,18 @@ const AdminStaff = () => {
                                         type="text"
                                         placeholder="Enter staff's full name"
                                         value={staffData.name}
-                                        onChange={e => setStaffData({ ...staffData, name: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all"
-                                        required
+                                        onChange={e => { setStaffData({ ...staffData, name: e.target.value }); setErrors({ ...errors, name: null }); }}
+                                        className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all ${errors.name ? 'border-red-500' : 'border-slate-200'}`}
                                     />
+                                    {errors.name && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.name}</p>}
                                 </div>
 
                                 <div className="col-span-2">
                                     <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Department</label>
                                     <select
                                         value={staffData.department}
-                                        onChange={e => setStaffData({ ...staffData, department: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all"
-                                        required
+                                        onChange={e => { setStaffData({ ...staffData, department: e.target.value }); setErrors({ ...errors, department: null }); }}
+                                        className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all ${errors.department ? 'border-red-500' : 'border-slate-200'}`}
                                     >
                                         <option value="" disabled>Select Department</option>
                                         {departments.length > 0 ? (
@@ -505,30 +520,23 @@ const AdminStaff = () => {
                                                 .filter(d => d.status === 'Active')
                                                 .sort((a, b) => a.name.localeCompare(b.name))
                                                 .map(dept => <option key={dept._id} value={dept._id}>{dept.name} ({dept.code})</option>)
-                                        ) : (
-                                            <>
-                                                <option value="Computer Science">Computer Science</option>
-                                                <option value="Data Science">Data Science</option>
-                                                <option value="Information Systems">Information Systems</option>
-                                                <option value="Information Technology">Information Technology</option>
-                                                <option value="Software Engineering">Software Engineering</option>
-                                            </>
-                                        )}
+                                        ) : null}
                                     </select>
+                                    {errors.department && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.department}</p>}
                                 </div>
 
                                 <div className="col-span-2">
                                     <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Role</label>
                                     <select
                                         value={staffData.role}
-                                        onChange={e => setStaffData({ ...staffData, role: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all"
-                                        required
+                                        onChange={e => { setStaffData({ ...staffData, role: e.target.value }); setErrors({ ...errors, role: null }); }}
+                                        className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all ${errors.role ? 'border-red-500' : 'border-slate-200'}`}
                                     >
                                         <option value="" disabled>Select role</option>
                                         <option value="Advisor">Advisor</option>
                                         <option value="Dean">Department Dean</option>
                                     </select>
+                                    {errors.role && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.role}</p>}
                                 </div>
                             </div>
 
