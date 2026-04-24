@@ -36,17 +36,14 @@ const reportSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  approved: {
-    type: Boolean,
-    default: null // null = pending, true = approved, false = rejected
+  status: {
+    type: String,
+    enum: ['Pending', 'Approved', 'Revision Required'],
+    default: 'Pending'
   },
   feedback: {
-    comment: String,
-    advisor: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    },
-    dateAdded: Date
+    type: String,
+    default: ''
   }
 }, {
   timestamps: true

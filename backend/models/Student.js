@@ -30,7 +30,8 @@ const studentSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    required: false
+    required: false,
+    match: [/^\d{10,15}$/, 'Phone number must be between 10 and 15 digits']
   },
   cbeAccount: {
     type: String,

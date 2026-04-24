@@ -34,8 +34,8 @@ const Topbar = () => {
 
   useEffect(() => {
     fetchNotifications();
-    // Poll for new notifications every 60 seconds
-    const interval = setInterval(fetchNotifications, 60000);
+    // Poll for new notifications every 3 seconds for real-time feel
+    const interval = setInterval(fetchNotifications, 10000); // Poll every 10s instead of 3s
     return () => clearInterval(interval);
   }, []);
 
@@ -102,11 +102,21 @@ const Topbar = () => {
                       No notifications yet.
                     </div>
                   ) : (
-                    notifications.map((notif) => (
+                    notifications.slice(0, 3).map((notif) => (
                       <div
                         key={notif._id}
                         className={`p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors cursor-pointer relative ${!notif.is_read ? 'bg-dbu-primary/[0.02]' : ''}`}
-                        onClick={() => {
+                        onClick={async () => {
+                          if (!notif.is_read) {
+                            try {
+                              await api.put(`/notifications/${notif._id}/read`);
+                              // Optimistically update local state
+                              setNotifications(prev => prev.map(n => n._id === notif._id ? { ...n, is_read: true } : n));
+                              setUnreadCount(prev => Math.max(0, prev - 1));
+                            } catch (err) {
+                              console.error("Error marking notification as read", err);
+                            }
+                          }
                           if (notif.link) navigate(notif.link);
                           setShowNotifications(false);
                         }}
@@ -116,7 +126,7 @@ const Topbar = () => {
                           {notif.message}
                         </p>
                         <span className="text-[10px] text-slate-400 mt-2 block font-medium">
-                          {new Date(notif.created_at).toLocaleString()}
+                          {new Date(notif.created_at || notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                     ))

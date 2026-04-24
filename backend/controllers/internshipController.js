@@ -10,15 +10,22 @@ import User from '../models/User.js';
 export const applyInternship = async (req, res) => {
   try {
     const {
-      company_name,
+      companyName, company_name,
       location,
       field,
-      supervisor_name,
-      supervisor_email,
-      supervisor_phone,
-      start_date,
-      end_date
+      supervisorName, supervisor_name,
+      supervisorEmail, supervisor_email,
+      supervisorPhone, supervisor_phone,
+      startDate, start_date,
+      endDate, end_date
     } = req.body;
+
+    const finalCompanyName = companyName || company_name;
+    const finalSupervisorName = supervisorName || supervisor_name;
+    const finalSupervisorEmail = supervisorEmail || supervisor_email;
+    const finalSupervisorPhone = supervisorPhone || supervisor_phone;
+    const finalStartDate = startDate || start_date;
+    const finalEndDate = endDate || end_date;
 
     // 1. Find the student record for the logged-in user
     const student = await Student.findOne({ user: req.user._id || req.user.id });
@@ -43,7 +50,7 @@ export const applyInternship = async (req, res) => {
 
     // 3. Create Company first (Pending status)
     const company = await Company.create({
-      name: company_name,
+      name: finalCompanyName,
       location,
       industry: field, // Use field as a placeholder for industry if not provided
       createdByStudent: true,
@@ -55,11 +62,11 @@ export const applyInternship = async (req, res) => {
       student: student._id,
       company: company._id,
       field,
-      startDate: start_date,
-      endDate: end_date,
-      companySupervisorName: supervisor_name,
-      companySupervisorEmail: supervisor_email,
-      companySupervisorPhone: supervisor_phone,
+      startDate: finalStartDate,
+      endDate: finalEndDate,
+      companySupervisorName: finalSupervisorName,
+      companySupervisorEmail: finalSupervisorEmail,
+      companySupervisorPhone: finalSupervisorPhone,
       status: 'PENDING_APPROVAL' 
     });
 
@@ -68,6 +75,19 @@ export const applyInternship = async (req, res) => {
       message: 'Internship application submitted successfully',
       data: internship
     });
+
+    // Notify Dean of the department
+    if (student.department) {
+      const dean = await User.findOne({ role: 'Dean', department: student.department });
+      if (dean) {
+        await notify(
+          dean._id,
+          'new_internship_application',
+          `New internship application from ${req.user.name}.`,
+          '/dean/dashboard'
+        );
+      }
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({
@@ -77,6 +97,7 @@ export const applyInternship = async (req, res) => {
     });
   }
 };
+
 
 // @desc    Approve internship
 // @route   PUT /api/internships/:id/approve

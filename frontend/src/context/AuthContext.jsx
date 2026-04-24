@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     verifyUser();
-  }, [user]);
+  }, []); // Run once on mount
 
   // Standardized Login Function
   const login = async (username, password) => {

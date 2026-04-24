@@ -40,6 +40,14 @@ export const updateMe = async (req, res, next) => {
       updates.name = trimmed;
     }
 
+    if (req.body.phoneNumber !== undefined) {
+      const phone = String(req.body.phoneNumber || '').trim();
+      if (phone && !/^\d{10,15}$/.test(phone)) {
+        return res.status(400).json({ success: false, message: 'Phone number must be between 10 and 15 digits' });
+      }
+      updates.phoneNumber = phone;
+    }
+
     if (typeof email === 'string' && email.trim() !== '') {
       const normalized = email.trim().toLowerCase();
       if (!emailRegex.test(normalized)) {

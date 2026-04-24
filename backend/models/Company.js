@@ -14,6 +14,22 @@ const companySchema = new mongoose.Schema({
     type: String,
     required: [true, 'Industry type is required']
   },
+  contactPerson: {
+    type: String
+  },
+  email: {
+    type: String
+  },
+  phone: {
+    type: String
+  },
+  description: {
+    type: String
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
   approvalStatus: {
     type: String,
     enum: ['PENDING', 'APPROVED', 'REJECTED'],

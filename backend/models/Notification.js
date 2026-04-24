@@ -6,6 +6,11 @@ const notificationSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  sender: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
   type: {
     type: String,
     enum: ['internship_approved', 'report_submitted', 'evaluation_submitted', 'advisor_assigned', 'info', 'FEEDBACK', 'new_message'],

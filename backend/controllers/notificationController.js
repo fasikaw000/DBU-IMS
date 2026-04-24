@@ -2,7 +2,10 @@ import Notification from '../models/Notification.js';
 
 export const getMyNotifications = async (req, res, next) => {
   try {
-    const notifications = await Notification.find({ user: req.user.id }).sort({ createdAt: -1 }).limit(20);
+    const notifications = await Notification.find({ user: req.user.id })
+      .populate('sender', 'name username role')
+      .sort({ createdAt: -1 })
+      .limit(20);
     res.status(200).json({ success: true, count: notifications.length, data: notifications });
   } catch (error) { next(error); }
 };
@@ -32,8 +35,8 @@ export const deleteNotification = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-export const notify = async (userId, type, message, link = "") => {
+export const notify = async (userId, type, message, link = "", sender = null) => {
   try {
-    return await Notification.create({ user: userId, type, message, link });
+    return await Notification.create({ user: userId, sender, type, message, link });
   } catch (error) { console.error(error); return null; }
 };

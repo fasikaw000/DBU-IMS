@@ -38,13 +38,84 @@ export const getAssignedStudents = async (req, res, next) => {
     const advisorId = req.user.id;
 
     // Find all internships assigned to this advisor
-    const internships = await Internship.find({ advisor: advisorId })
+    const internships = await Internship.find({ 
+      $or: [{ advisor: advisorId }, { advisor_id: advisorId }] 
+    })
       .populate({
         path: 'student',
-        populate: { path: 'user', select: 'name email username isActivated' }
-      });
+        populate: { path: 'user', select: 'name email username isActivated phoneNumber' }
+      })
+      .populate('company');
 
-    res.status(200).json({ success: true, count: internships.length, data: internships });
+    // For each internship, let's get report status counts
+    const data = await Promise.all(internships.map(async (intern) => {
+       const reports = await Report.find({ internship: intern._id });
+       return {
+         ...intern.toObject(),
+         reportCounts: {
+           total: reports.length,
+           pending: reports.filter(r => r.status === 'Pending').length,
+           approved: reports.filter(r => r.status === 'Approved').length
+         }
+       };
+    }));
+
+    res.status(200).json({ success: true, count: internships.length, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// @desc    Get Advisor Stats
+// @route   GET /api/advisor/stats
+// @access  Private (Advisor)
+// ─────────────────────────────────────────────────────────────
+export const getAdvisorStats = async (req, res, next) => {
+  try {
+    const advisorId = req.user.id;
+
+    const internships = await Internship.find({ 
+      $or: [{ advisor: advisorId }, { advisor_id: advisorId }] 
+    });
+    
+    const studentUserIds = internships.map(i => i.student);
+
+    const activeInternships = internships.filter(i => i.status === 'ACTIVE' || i.status === 'APPROVED').length;
+    
+    const reports = await Report.find({ 
+      internship: { $in: internships.map(i => i._id) } 
+    });
+    
+    const pendingReports = reports.filter(r => r.status === 'Pending').length;
+
+    // Placeholder for unread messages (if messaging system exists)
+    const Message = (await import('../models/Message.js')).default;
+    const unreadMessages = await Message.countDocuments({ receiver: advisorId, isRead: false });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalStudents: internships.length,
+        activeInternships,
+        pendingReports,
+        unreadMessages
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// @desc    Get reports for a specific student/internship
+// @route   GET /api/advisor/reports/:internshipId
+// @access  Private (Advisor)
+// ─────────────────────────────────────────────────────────────
+export const getReportsByStudent = async (req, res, next) => {
+  try {
+    const reports = await Report.find({ internship: req.params.internshipId }).sort({ createdAt: -1 });
+    res.status(200).json({ success: true, data: reports });
   } catch (error) {
     next(error);
   }
@@ -69,8 +140,6 @@ export const reviewReport = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Report not found' });
     }
 
-    // Optional: check if report's student is mapped to this advisor
-    
     report.status = status;
     if (feedback) {
       report.feedback = feedback;
@@ -89,6 +158,7 @@ export const reviewReport = async (req, res, next) => {
     next(error);
   }
 };
+
 
 // ─────────────────────────────────────────────────────────────
 // @desc    Evaluate student and assign final grade

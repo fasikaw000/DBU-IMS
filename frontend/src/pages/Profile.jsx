@@ -1,6 +1,6 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { BadgeCheck, Camera, KeyRound, Save, Loader2, X } from 'lucide-react';
+import { BadgeCheck, Camera, KeyRound, Save, Loader2, X, Phone, Landmark, Mail, User as UserIcon } from 'lucide-react';
 import api from '../utils/api';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -17,6 +17,7 @@ const Profile = () => {
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [studentProfile, setStudentProfile] = useState(null);
   const [cbeAccount, setCbeAccount] = useState('');
   const [savingCbe, setSavingCbe] = useState(false);
@@ -31,7 +32,8 @@ const Profile = () => {
   useEffect(() => {
     setFullName(user?.name || '');
     setEmail(user?.email || '');
-  }, [user?._id]);
+    setPhoneNumber(user?.phoneNumber || '');
+  }, [user?._id, user?.name, user?.email, user?.phoneNumber]);
 
   useEffect(() => {
     const fetchStudentProfile = async () => {
@@ -43,7 +45,7 @@ const Profile = () => {
           setCbeAccount(res.data.cbeAccount || '');
         }
       } catch (_err) {
-        // Keep profile usable even if student profile endpoint fails.
+        console.error("Student profile error", _err);
       }
     };
     fetchStudentProfile();
@@ -53,26 +55,8 @@ const Profile = () => {
 
   const getAvatarInitial = (name) => {
     if (!name) return 'U';
-    const cleaned = String(name).trim().replace(/\.+/g, '.');
-    const parts = cleaned.split(/\s+/).filter(Boolean);
-    const honorifics = new Set(['dr', 'dr.', 'mr', 'mr.', 'ms', 'ms.', 'mrs', 'mrs.', 'prof', 'prof.']);
-    const first = parts.find((p) => !honorifics.has(p.toLowerCase())) || parts[0];
-    return (first?.charAt(0) || 'U').toUpperCase();
-  };
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const shouldOpen = params.get('changePassword') === '1';
-    if (shouldOpen) {
-      setPasswordMessage('');
-      setPasswordError('');
-      setShowPasswordModal(true);
-    }
-  }, [location.search]);
-
-  const refreshMe = async () => {
-    const res = await api.get('/users/me');
-    if (res?.data) setUser(res.data);
+    const first = name.split(' ').filter(Boolean)[0] || 'U';
+    return first.charAt(0).toUpperCase();
   };
 
   const handleSaveProfile = async (e) => {
@@ -81,9 +65,13 @@ const Profile = () => {
     setMessage('');
     setError('');
     try {
-      const res = await api.put('/users/me', { name: fullName, email });
+      const res = await api.put('/users/me', {
+        name: fullName,
+        email,
+        phoneNumber
+      });
       if (res?.data) setUser(res.data);
-      setMessage(res?.message || 'Profile updated');
+      setMessage(res?.message || 'Profile updated successfully');
     } catch (err) {
       setError(err.message || 'Failed to update profile');
     } finally {
@@ -100,7 +88,7 @@ const Profile = () => {
       const res = await api.put('/users/me/student-profile/cbe', { cbeAccount });
       setStudentProfile(res?.data || { cbeAccount, cbeEditable: true });
       setCbeAccount(res?.data?.cbeAccount || cbeAccount);
-      setMessage(res?.message || 'CBE account saved successfully');
+      setMessage(res?.message || 'CBE account updated');
     } catch (err) {
       setError(err.message || 'Failed to save CBE account');
     } finally {
@@ -111,8 +99,6 @@ const Profile = () => {
   const handlePhotoUpload = async (file) => {
     if (!file) return;
     setPhotoUploading(true);
-    setMessage('');
-    setError('');
     try {
       const formData = new FormData();
       formData.append('photo', file);
@@ -120,9 +106,9 @@ const Profile = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       if (res?.data) setUser(res.data);
-      setMessage(res?.message || 'Profile photo updated');
+      setMessage('Photo updated successfully');
     } catch (err) {
-      setError(err.message || 'Failed to upload photo');
+      setError(err.message || 'Photo upload failed');
     } finally {
       setPhotoUploading(false);
     }
@@ -131,242 +117,209 @@ const Profile = () => {
   const handleChangePassword = async (e) => {
     e.preventDefault();
     setChangingPassword(true);
-    setPasswordMessage('');
-    setPasswordError('');
     try {
-      const res = await api.put('/users/me/password', {
+      await api.put('/users/me/password', {
         currentPassword,
         newPassword,
         confirmNewPassword
       });
-      setPasswordMessage(res?.message || 'Password changed successfully');
+      setShowPasswordModal(false);
+      setMessage('Password changed successfully');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
-      await refreshMe();
-      setShowPasswordModal(false);
-      navigate('/profile', { replace: true });
     } catch (err) {
-      setPasswordError(err.message || 'Failed to change password');
+      setPasswordError(err.message || 'Password change failed');
     } finally {
       setChangingPassword(false);
     }
   };
 
-  const handleOpenPassword = () => {
-    setPasswordMessage('');
-    setPasswordError('');
-    setShowPasswordModal(true);
-  };
-
-  const handleClosePassword = () => {
-    setShowPasswordModal(false);
-    setPasswordMessage('');
-    setPasswordError('');
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmNewPassword('');
-    navigate('/profile', { replace: true });
-  };
+  const isProfileComplete = useMemo(() => {
+    if (user?.role !== 'Student') return true;
+    return phoneNumber && cbeAccount && email;
+  }, [user?.role, phoneNumber, cbeAccount, email]);
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-8">
-        <h1 className="text-2xl font-black text-slate-800 mb-6">Profile</h1>
-
-        <div className="flex items-center gap-4 pb-6 border-b border-slate-100">
-          <div className="relative">
-            <div className="w-14 h-14 rounded-2xl bg-dbu-primary/10 flex items-center justify-center text-dbu-primary overflow-hidden">
-              {user?.profilePhoto ? (
-                <img src={`http://localhost:5001${user.profilePhoto}`} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-xl font-black">{getAvatarInitial(user?.name)}</span>
-              )}
-            </div>
-            <label className="absolute -bottom-2 -right-2 w-8 h-8 bg-white border border-slate-100 rounded-xl shadow flex items-center justify-center cursor-pointer hover:bg-slate-50">
-              {photoUploading ? <Loader2 className="w-4 h-4 animate-spin text-dbu-primary" /> : <Camera className="w-4 h-4 text-slate-500" />}
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={(e) => handlePhotoUpload(e.target.files?.[0] || null)}
-                disabled={photoUploading}
-              />
-            </label>
+    <div className="max-w-4xl mx-auto space-y-6">
+      {!isProfileComplete && user?.role === 'Student' && (
+        <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-xl flex items-center gap-3 animate-pulse">
+          <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
+            <Landmark className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-lg font-black text-slate-800">{user?.name || 'Unknown User'}</p>
-            <p className="text-xs uppercase tracking-widest font-bold text-dbu-primary">
-              {displayRole}
-            </p>
+            <p className="text-sm font-black text-amber-800">Profile Incomplete</p>
+            <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Please add your Phone Number and CBE Account to continue properly.</p>
           </div>
         </div>
+      )}
 
-        {(message || error) && (
-          <div className={`mt-6 p-4 rounded-xl font-bold text-sm ${message ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
-            {message || error}
-          </div>
-        )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Profile Card */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="bg-white border border-slate-100 rounded-[2.5rem] shadow-xl p-8 text-center relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-24 bg-dbu-primary/5"></div>
 
-        <form onSubmit={handleSaveProfile} className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-          <div className="bg-slate-50 rounded-xl p-4">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400 mb-1">Full Name</p>
-            <input
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-dbu-primary"
-            />
-          </div>
-          <div className="bg-slate-50 rounded-xl p-4">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400 mb-1">Email (optional)</p>
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-dbu-primary"
-              type="email"
-            />
-          </div>
-          <div className="bg-slate-50 rounded-xl p-4">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400 mb-1">Username (locked)</p>
-            <p className="text-sm font-semibold text-slate-700">{user?.username || '-'}</p>
-          </div>
-          <div className="bg-slate-50 rounded-xl p-4">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400 mb-1">Role</p>
-            <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-              <BadgeCheck className="w-4 h-4 text-dbu-primary" />
-              {displayRole}
-            </p>
-          </div>
-          {user?.role === 'Student' && (
-            <div className="md:col-span-2 bg-slate-50 rounded-xl p-4">
-              <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-                <div className="flex-1">
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400 mb-1">CBE Account Number</p>
-                  <input
-                    value={cbeAccount || ''}
-                    onChange={(e) => setCbeAccount(e.target.value.replace(/\D/g, '').slice(0, 13))}
-                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-dbu-primary"
-                    placeholder="Enter 13-digit CBE account"
-                  />
-                  <p className="text-[10px] text-slate-500 mt-1">
-                    CBE account must be exactly 13 digits
-                  </p>
+            <div className="relative z-10">
+              <div className="w-32 h-32 rounded-[2rem] bg-white border-4 border-white shadow-2xl mx-auto mb-6 relative group overflow-hidden">
+                {user?.profilePhoto ? (
+                  <img src={`http://localhost:5001${user.profilePhoto}`} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-dbu-primary/10 flex items-center justify-center text-dbu-primary text-4xl font-black">
+                    {getAvatarInitial(user?.name)}
+                  </div>
+                )}
+                <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                  <Camera className="text-white w-8 h-8" />
+                  <input type="file" className="hidden" onChange={(e) => handlePhotoUpload(e.target.files?.[0])} />
+                </label>
+              </div>
+
+              <h2 className="text-2xl font-black text-slate-800">{user?.name}</h2>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-dbu-primary mt-1">{displayRole}</p>
+
+              <div className="mt-8 pt-8 border-t border-slate-100 space-y-4">
+                <div className="flex items-center gap-3 text-left">
+                  <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
+                    <BadgeCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Username</p>
+                    <p className="text-sm font-bold text-slate-700 font-mono">{user?.username}</p>
+                  </div>
                 </div>
                 <button
-                  type="button"
-                  onClick={handleSaveCbe}
-                  disabled={savingCbe || (cbeAccount || '').length !== 13}
-                  className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-dbu-primary text-white font-bold hover:bg-dbu-accent transition-colors disabled:opacity-50"
+                  onClick={() => setShowPasswordModal(true)}
+                  className="w-full py-3 bg-slate-50 text-slate-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all border border-slate-100"
                 >
-                  {savingCbe ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                  Save CBE
+                  Change Security Password
                 </button>
               </div>
             </div>
-          )}
-          <div className="md:col-span-2 flex flex-col sm:flex-row justify-end gap-3">
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-dbu-primary text-white font-bold hover:bg-dbu-accent transition-colors disabled:opacity-50"
-            >
-              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-              Save Profile
-            </button>
-            <button
-              type="button"
-              onClick={handleOpenPassword}
-              className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-slate-800 text-white font-bold hover:bg-slate-900 transition-colors"
-            >
-              <KeyRound className="w-4 h-4 mr-2" />
-              Change Password
-            </button>
           </div>
-        </form>
+        </div>
 
-        {showPasswordModal && (
-          <>
-            <div className="fixed inset-0 bg-black/40 z-40" onClick={handleClosePassword} />
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden">
-                <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <KeyRound className="w-5 h-5 text-dbu-primary" />
-                    <h2 className="text-lg font-black text-slate-800">Change Password</h2>
+        {/* Form Area */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white border border-slate-100 rounded-[2.5rem] shadow-xl p-8">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-xl font-black text-slate-800">Personal Information</h3>
+              {isProfileComplete && <span className="bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-emerald-100 flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> Profile Complete</span>}
+            </div>
+
+            {(message || error) && (
+              <div className={`mb-6 p-4 rounded-2xl text-xs font-bold border animate-in slide-in-from-top-2 ${message ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                {message || error}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProfile} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      value={fullName}
+                      onChange={e => setFullName(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary"
+                      placeholder="Your Full Name"
+                    />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary"
+                      placeholder="name@example.com"
+                      type="email"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone Number</label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      value={phoneNumber}
+                      onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 15))}
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary"
+                      placeholder="Enter your phone number"
+                      type="tel"
+                    />
+                  </div>
+                </div>
+
+                {user?.role === 'Student' && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CBE Account (13 Digits)</label>
+                    <div className="relative">
+                      <Landmark className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        value={cbeAccount}
+                        onChange={e => setCbeAccount(e.target.value.replace(/\D/g, '').slice(0, 13))}
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary font-mono"
+                        placeholder="1000XXXXXXXXX"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-4 flex gap-4">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 py-4 bg-dbu-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-dbu-primary/20 hover:bg-dbu-accent transition-all flex items-center justify-center gap-3"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Update Profile
+                </button>
+                {user?.role === 'Student' && cbeAccount.length === 13 && (
                   <button
                     type="button"
-                    onClick={handleClosePassword}
-                    className="w-10 h-10 rounded-2xl hover:bg-slate-50 flex items-center justify-center text-slate-500"
-                    title="Close"
+                    onClick={handleSaveCbe}
+                    disabled={savingCbe}
+                    className="flex-1 py-4 bg-slate-800 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center justify-center gap-3"
                   >
-                    <X className="w-5 h-5" />
+                    {savingCbe ? <Loader2 className="w-4 h-4 animate-spin" /> : <Landmark className="w-4 h-4" />}
+                    Sync CBE Info
                   </button>
-                </div>
-
-                <div className="p-6">
-                  {(passwordMessage || passwordError) && (
-                    <div className={`mb-4 p-4 rounded-xl font-bold text-sm ${passwordMessage ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
-                      {passwordMessage || passwordError}
-                    </div>
-                  )}
-
-                  <form onSubmit={handleChangePassword} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-slate-50 rounded-xl p-4">
-                      <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400 mb-1">Current Password</p>
-                      <input
-                        type="password"
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-dbu-primary"
-                        required
-                      />
-                    </div>
-                    <div className="bg-slate-50 rounded-xl p-4">
-                      <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400 mb-1">New Password</p>
-                      <input
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-dbu-primary"
-                        required
-                      />
-                    </div>
-                    <div className="bg-slate-50 rounded-xl p-4">
-                      <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400 mb-1">Confirm New Password</p>
-                      <input
-                        type="password"
-                        value={confirmNewPassword}
-                        onChange={(e) => setConfirmNewPassword(e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-dbu-primary"
-                        required
-                      />
-                    </div>
-
-                    <div className="md:col-span-3 flex flex-col sm:flex-row justify-end gap-3 pt-2">
-                      <button
-                        type="button"
-                        onClick={handleClosePassword}
-                        className="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={changingPassword}
-                        className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-slate-800 text-white font-bold hover:bg-slate-900 transition-colors disabled:opacity-50"
-                      >
-                        {changingPassword ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <KeyRound className="w-4 h-4 mr-2" />}
-                        Update Password
-                      </button>
-                    </div>
-                  </form>
-                </div>
+                )}
               </div>
-            </div>
-          </>
-        )}
+            </form>
+          </div>
+        </div>
       </div>
+
+      {showPasswordModal && (
+        <>
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200]" onClick={() => setShowPasswordModal(false)} />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl z-[201] overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
+            <div className="p-8 bg-slate-800 text-white flex justify-between items-center">
+              <h3 className="text-xl font-black">Change Password</h3>
+              <button onClick={() => setShowPasswordModal(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={handleChangePassword} className="p-8 space-y-6">
+              <div className="space-y-4">
+                <input type="password" placeholder="Current Password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm" required />
+                <input type="password" placeholder="New Password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm" required />
+                <input type="password" placeholder="Confirm New Password" value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm" required />
+              </div>
+              {passwordError && <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest">{passwordError}</p>}
+              <button type="submit" disabled={changingPassword} className="w-full py-4 bg-slate-800 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-900 transition-all">
+                Update Security Key
+              </button>
+            </form>
+          </div>
+        </>
+      )}
     </div>
   );
 };

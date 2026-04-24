@@ -97,6 +97,7 @@ export const loginUser = async (req, res, next) => {
     res.status(200).json({
       success: true,
       token,
+      _id: user._id,
       role: normalizeRole(user.role),
       name: user.name,
       username: user.username,

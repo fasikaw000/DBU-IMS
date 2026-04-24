@@ -5,7 +5,8 @@ import {
   getMessages,
   markMessageAsRead,
   getContacts,
-  getConversation
+  getConversation,
+  markConversationAsRead
 } from '../controllers/messageController.js';
 
 const router = express.Router();
@@ -18,6 +19,7 @@ router.route('/')
 
 router.get('/contacts', getContacts);
 router.get('/conversation/:userId', getConversation);
+router.put('/conversation/:userId/read', markConversationAsRead);
 router.put('/:id/read', markMessageAsRead);
 
 export default router;

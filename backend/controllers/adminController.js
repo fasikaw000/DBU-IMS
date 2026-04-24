@@ -68,6 +68,16 @@ const IMPORTANT_ACTIVITY_ACTIONS = [
   'student_evaluated' // legacy grade action
 ];
 
+let hasStandardizedAdminRoles = false;
+const standardizeAdminRolesOnce = async () => {
+  if (hasStandardizedAdminRoles) return;
+  await User.updateMany(
+    { role: { $in: ['admin', 'ADMIN', 'college_admin'] } },
+    { $set: { role: 'Admin' } }
+  );
+  hasStandardizedAdminRoles = true;
+};
+
 const DEFAULT_GRADING_SYSTEM = [
   { minScore: 90, maxScore: 100, letterGrade: 'A+', gradePoint: 4.0, status: 'Excellent', description: 'Outstanding performance' },
   { minScore: 85, maxScore: 89, letterGrade: 'A', gradePoint: 4.0, status: 'Excellent', description: 'Excellent performance' },
@@ -300,7 +310,7 @@ export const getAllUsers = async (req, res, next) => {
 export const getAllStudents = async (req, res, next) => {
   try {
     const students = await Student.find({})
-      .populate('user', 'name email isActivated activationStatus isActive status')
+      .populate('user', 'name email isActivated activationStatus isActive status phoneNumber')
       .populate('department', 'name code');
 
     res.status(200).json({
@@ -310,12 +320,13 @@ export const getAllStudents = async (req, res, next) => {
         _id: s._id,
         userId: s.user?._id,
         name: s.user?.name,
-        email: s.user?.isActivated ? s.user?.email : null,
+        email: s.user?.email,
+        phoneNumber: s.user?.phoneNumber || s.phone,
         username: s.username,
         studentId: s.studentId,
         department: s.department,
         year: s.year,
-        cbeAccount: s.user?.isActivated ? s.cbeAccount : null,
+        cbeAccount: s.cbeAccount,
         isActivated: s.user?.isActivated,
         activationStatus: s.user?.isActivated ? 'Activated' : 'Pending',
         status: s.user?.status || 'active',
@@ -331,7 +342,7 @@ export const getAllStudents = async (req, res, next) => {
 export const getAllStaff = async (req, res, next) => {
   try {
     const staffMembers = await Staff.find({})
-      .populate('user', 'name email isActivated activationStatus isActive status')
+      .populate('user', 'name email isActivated activationStatus isActive status phoneNumber')
       .populate('department', 'name code');
 
     res.status(200).json({
@@ -341,7 +352,8 @@ export const getAllStaff = async (req, res, next) => {
         _id: s._id,
         userId: s.user?._id,
         name: s.fullName,
-        email: s.user?.isActivated ? s.user?.email : null,
+        email: s.user?.email,
+        phoneNumber: s.user?.phoneNumber,
         username: s.username,
         department: s.department,
         role: s.role, // 'dean' or 'advisor'
@@ -465,8 +477,9 @@ export const toggleDepartmentStatus = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 export const getAdminStats = async (req, res, next) => {
   try {
+    await standardizeAdminRolesOnce();
     const totalStudents = await User.countDocuments({ role: 'Student' });
-    const totalAdmins = await User.countDocuments({ role: { $in: ['Admin', 'admin', 'college_admin'] } });
+    const totalAdmins = await User.countDocuments({ role: 'Admin' });
     const totalDeans = await User.countDocuments({ role: 'Dean' });
     const totalAdvisors = await User.countDocuments({ role: 'Advisor' });
     const totalStaff = totalDeans + totalAdvisors;
@@ -901,10 +914,6 @@ export const getReportAnalytics = async (req, res, next) => {
       }
     ]);
 
-    res.status(200).json({
-      success: true,
-      data: { distribution, statusSummary, workload, grades }
-    });
     res.status(200).json({
       success: true,
       data: { distribution, statusSummary, workload, grades }

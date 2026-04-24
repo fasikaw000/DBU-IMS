@@ -1,30 +1,27 @@
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 
 const connectDB = async () => {
   try {
-    let mongoUri = process.env.MONGO_URI;
-    let fallbackToMemory = process.env.USE_MEMORY_DB === 'true';
+    const mongoUri = process.env.MONGO_URI;
 
-    if (!fallbackToMemory) {
-        try {
-            const conn = await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 2000 });
-            console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-            return;
-        } catch (error) {
-            console.warn(`⚠️ Could not connect to Atlas: ${error.message}. Falling back to Memory Server...`);
-            fallbackToMemory = true;
-        }
+    if (!mongoUri) {
+      throw new Error('MONGO_URI is not defined in environment variables');
     }
 
-    if (fallbackToMemory) {
-        const mongoServer = await MongoMemoryServer.create();
-        const memUri = mongoServer.getUri();
-        const conn = await mongoose.connect(memUri);
-        console.log(`MongoDB Memory Server Connected`);
-    }
+    const conn = await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 5000,
+      autoIndex: true
+    });
+
+    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    console.log("Database connected successfully and is now persistent.");
+    
+    // Log database name to verify we are not in memory
+    console.log(`Connected to database: ${conn.connection.name}`);
+
   } catch (error) {
-    console.error(`Database Connection Error: ${error.message}`);
+    console.error(`❌ Database Connection Error: ${error.message}`);
+    console.error("Critical Failure: Could not connect to persistent database. Exiting...");
     process.exit(1);
   }
 };

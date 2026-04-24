@@ -1,0 +1,6 @@
+{
+  "ignore": ["node_modules", "uploads", "logs", "temp", "data", "*.test.js"],
+  "ext": "js,mjs,cjs,json",
+  "watch": ["."],
+  "delay": "1000"
+}

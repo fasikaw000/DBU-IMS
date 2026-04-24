@@ -9,7 +9,7 @@ import DeptDashboard from './pages/DeptDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import CollegeHeadDashboard from './pages/CollegeHeadDashboard';
 import SupervisorDashboard from './pages/SupervisorDashboard';
-import ReportUpload from './pages/ReportUpload';
+import ReportsPage from './pages/ReportsPage';
 import CompaniesPage from './pages/CompaniesPage';
 import AssignmentsPage from './pages/AssignmentsPage';
 import AdvisorStudentsPage from './pages/AdvisorStudentsPage';
@@ -42,7 +42,7 @@ function App() {
       <Route element={<DashboardLayout />}>
         <Route element={<ProtectedRoute allowedRoles={['Student']} />}>
           <Route path="/student-dashboard" element={<StudentDashboard />} />
-          <Route path="/student/reports" element={<ReportUpload />} />
+          <Route path="/student/reports" element={<ReportsPage />} />
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={['Advisor']} />}>
