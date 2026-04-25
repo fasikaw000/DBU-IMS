@@ -98,16 +98,19 @@ const Profile = () => {
     setMessage('');
     setError('');
     try {
-      const res = await api.put('/users/me', {
+      await api.put('/users/me', {
         name: fullName,
         email,
         phoneNumber
       });
-      if (res?.data) {
-        setUser(res.data);
-        // Persist to session storage via setUser is already handled in AuthContext
+      
+      // Critical Fix: Fetch current user to ensure UI reflects changes instantly
+      const updatedUserRes = await api.get('/users/me');
+      if (updatedUserRes?.data) {
+        setUser(updatedUserRes.data);
       }
-      setMessage(res?.message || 'Profile updated successfully');
+      
+      setMessage('Profile updated successfully');
     } catch (err) {
       setError(err.message || 'Failed to update profile');
     } finally {

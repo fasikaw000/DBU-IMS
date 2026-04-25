@@ -14,9 +14,12 @@ import {
     Edit,
     Shield,
     ShieldOff,
-    FileText
+    FileText,
+    Download
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
 
 const DeanStudents = () => {
     const navigate = useNavigate();
@@ -25,6 +28,7 @@ const DeanStudents = () => {
     const [search, setSearch] = useState('');
     const [departmentName, setDepartmentName] = useState('');
     const [message, setMessage] = useState(null);
+    const { user } = useContext(AuthContext);
 
     // Print Modal State
     const [showPrintModal, setShowPrintModal] = useState(false);
@@ -37,6 +41,12 @@ const DeanStudents = () => {
         phone: true,
         status: true
     });
+
+    // Default all fields to true on mount
+    useEffect(() => {
+        const allTrue = Object.keys(printFields).reduce((acc, key) => ({ ...acc, [key]: true }), {});
+        setPrintFields(allTrue);
+    }, []);
 
     useEffect(() => {
         fetchData();
@@ -89,7 +99,7 @@ const DeanStudents = () => {
                     </style>
                 </head>
                 <body>
-                    <h1>${departmentName} - Student Records</h1>
+                    <h1>${user?.department?.name || departmentName || 'Department'} - Student Records</h1>
                     <p>Generated: ${new Date().toLocaleString()}</p>
                     <table>
                         <thead>
@@ -117,32 +127,27 @@ const DeanStudents = () => {
     };
 
     const handleExportCSV = () => {
-        const activeFields = Object.keys(printFields).filter(f => printFields[f]);
-        const fieldLabels = {
-            name: 'Student Name',
-            studentId: 'Student ID',
-            username: 'Username',
-            year: 'Year',
-            cbeAccount: 'CBE Account',
-            phone: 'Phone Number',
-            status: 'Placement Status'
-        };
+        if (!students || students.length === 0) return;
 
-        const headers = activeFields.map(f => fieldLabels[f]).join(',');
-        const rows = students.map(s => {
-            return activeFields.map(f => {
-                if (f === 'name') return `"${s.user?.name || ''}"`;
-                if (f === 'status') return `"${s.internship?.status || 'NOT APPLIED'}"`;
-                if (f === 'phone') return `"${s.phone || s.phoneNumber || 'N/A'}"`;
-                return `"${s[f] || 'N/A'}"`;
-            }).join(',');
-        });
+        const csvData = students.map((s) => ({
+            Name: s.user?.name || '',
+            Email: s.user?.email || '',
+            StudentID: s.studentId || '',
+            Department: user?.department?.name || departmentName || '',
+            Year: s.year || '',
+            Status: s.internship?.status || 'NOT APPLIED'
+        }));
+
+        const headers = Object.keys(csvData[0]).join(",");
+        const rows = csvData.map((row) => 
+            Object.values(row).map(val => `"${val}"`).join(",")
+        );
 
         const csvContent = "data:text/csv;charset=utf-8," + headers + "\n" + rows.join("\n");
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `Department_Data_${departmentName.replace(/\s+/g, '_')}.csv`);
+        link.setAttribute("download", `Department_Data_${(user?.department?.name || departmentName || 'Records').replace(/\s+/g, '_')}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -170,7 +175,7 @@ const DeanStudents = () => {
                     <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
                         Department Students
                         <span className="bg-dbu-primary/10 text-dbu-primary text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-widest">
-                            {departmentName}
+                            {user?.department?.name || departmentName || 'Loading...'}
                         </span>
                     </h1>
                     <p className="text-slate-500 text-sm mt-2 font-medium">Viewing all students registered in your department.</p>
@@ -179,8 +184,8 @@ const DeanStudents = () => {
                     onClick={() => setShowPrintModal(true)}
                     className="bg-dbu-primary text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-dbu-primary/20 hover:bg-dbu-accent transition-all flex items-center gap-2"
                 >
-                    <Printer className="w-4 h-4" />
-                    Export Department Data
+                    <Download className="w-4 h-4" />
+                    Export
                 </button>
             </div>
 
@@ -277,7 +282,7 @@ const DeanStudents = () => {
                     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100]" onClick={() => setShowPrintModal(false)} />
                     <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl z-[101] overflow-hidden border border-slate-100 animate-in zoom-in-95">
                         <div className="p-8 bg-slate-800 text-white flex justify-between items-center">
-                            <h3 className="text-xl font-black flex items-center gap-2"><Printer className="w-5 h-5" /> Export Department Data</h3>
+                            <h3 className="text-xl font-black flex items-center gap-2"><Download className="w-5 h-5" /> Export Department Data</h3>
                             <button onClick={() => setShowPrintModal(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all"><X className="w-5 h-5" /></button>
                         </div>
                         <div className="p-8 space-y-8">
@@ -293,11 +298,11 @@ const DeanStudents = () => {
                             <div className="flex flex-col gap-3">
                                 <button onClick={handlePrint} className="w-full py-4 bg-dbu-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-dbu-primary/20 hover:bg-dbu-accent transition-all flex items-center justify-center gap-2">
                                     <FileText className="w-4 h-4" />
-                                    Generate PDF Report
+                                    Generate Document
                                 </button>
                                 <button onClick={handleExportCSV} className="w-full py-4 bg-white text-slate-700 border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
-                                    <Users className="w-4 h-4" />
-                                    Export CSV Spreadsheet
+                                    <Download className="w-4 h-4" />
+                                    Export Spreadsheet
                                 </button>
                             </div>
                         </div>

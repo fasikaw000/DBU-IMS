@@ -5,10 +5,20 @@ import nodemailer from 'nodemailer';
  * Falls back to Ethereal (test email) if SMTP_HOST is not set.
  */
 const sendEmail = async ({ to, subject, html }) => {
-  const gmailUser = process.env.GMAIL_USER || process.env.SMTP_USER;
-  const gmailPass = process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS;
+  const gmailUser = (process.env.GMAIL_USER || process.env.SMTP_USER || '').trim();
+  const gmailPass = (process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || '').replace(/\s/g, '');
 
   if (!gmailUser || !gmailPass) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('-----------------------------------------');
+      console.log('DEBUG: Email Sending (Dev Mode Fallback)');
+      console.log(`To: ${to}`);
+      console.log(`Subject: ${subject}`);
+      console.log('Content (HTML):');
+      console.log(html);
+      console.log('-----------------------------------------');
+      return { messageId: 'dev-mock-id' };
+    }
     throw new Error('Gmail SMTP credentials are missing. Set GMAIL_USER and GMAIL_APP_PASSWORD.');
   }
 

@@ -41,6 +41,7 @@ const Messaging = () => {
     });
     const [commLoading, setCommLoading] = useState(false);
     const [errors, setErrors] = useState({});
+    const [successMessage, setSuccessMessage] = useState('');
 
     const [toast, setToast] = useState(null);
     const messagesEndRef = useRef(null);
@@ -167,17 +168,19 @@ const Messaging = () => {
     };
 
     const handleSendCommunication = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         setErrors({});
+        setSuccessMessage('');
 
         // Validation
         let newErrors = {};
-        if (!commTitle.trim()) newErrors.title = "Required";
-        if (!commContent.trim()) newErrors.content = "Required";
+        if (!commTitle || !commTitle.trim()) newErrors.title = "Please enter a title";
+        if (!commContent || !commContent.trim()) newErrors.content = "Please enter a message";
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
-            setToast({ type: 'error', text: 'Please fill out all required fields.' });
+            // Optionally set a general professional error
+            setErrors(prev => ({ ...prev, submit: 'Information required is missing. Please complete all fields to proceed.' }));
             return;
         }
 
@@ -193,12 +196,28 @@ const Messaging = () => {
             };
 
             const res = await api.post('/communication/send', payload);
-            setToast({ type: 'success', text: res.data?.message || 'Message sent successfully.' });
-            setShowCommModal(false);
+            setSuccessMessage(res.message || 'Communication has been successfully transmitted.');
             setCommTitle('');
             setCommContent('');
+            
+            // Auto close modal after delay
+            setTimeout(() => {
+                setShowCommModal(false);
+                setSuccessMessage('');
+            }, 2500);
         } catch (err) {
-            setToast({ type: 'error', text: err.response?.data?.message || err.message || 'Failed to send communication.' });
+            let userFriendlyMsg = 'System encountered an issue. Please verify your connection or contact administrator.';
+            const rawMsg = err.response?.data?.message || err.message || '';
+            
+            if (rawMsg.includes('enum value')) {
+                userFriendlyMsg = 'The communication type selected is not recognized by the system security protocols.';
+            } else if (rawMsg.toLowerCase().includes('validation')) {
+                userFriendlyMsg = 'Please ensure all required information is accurately provided before sending.';
+            } else if (rawMsg) {
+                userFriendlyMsg = rawMsg;
+            }
+            
+            setErrors({ submit: userFriendlyMsg });
         } finally {
             setCommLoading(false);
         }
@@ -431,7 +450,9 @@ const Messaging = () => {
                                         value={commContent}
                                         onChange={e => { setCommContent(e.target.value); setErrors({ ...errors, content: null }); }}
                                     />
-                                    {errors.content && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.content}</p>}
+                                    {errors.content && <p className="text-red-500 text-[10px] font-black mt-2 ml-1 uppercase tracking-widest">{errors.content}</p>}
+                                    {errors.submit && <p className="text-red-500 text-[10px] font-black mt-2 ml-1 uppercase tracking-widest">{errors.submit}</p>}
+                                    {successMessage && <p className="text-emerald-500 text-[10px] font-black mt-2 ml-1 uppercase tracking-widest">{successMessage}</p>}
                                 </div>
 
                                 {commType === 'group' && (
@@ -481,7 +502,7 @@ const Messaging = () => {
 
                             <button
                                 type="submit"
-                                disabled={commLoading || !commContent.trim()}
+                                disabled={commLoading}
                                 className="w-full py-4 bg-dbu-primary text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl hover:bg-dbu-accent transition-all flex items-center justify-center gap-3"
                             >
                                 {commLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}

@@ -27,11 +27,13 @@ export const AuthProvider = ({ children }) => {
       if (storedToken) {
         try {
           // Rehydrate auth state from token on refresh/navigation.
-          if (!user) {
+          // Fetch if user is missing OR if department data is incomplete (not populated)
+          if (!user || (user.role !== 'Admin' && !user.department?.name)) {
             const res = await api.get('/users/me');
             if (res?.data) {
-              setUser(res.data);
-              sessionStorage.setItem('user', JSON.stringify(res.data));
+              const updatedUser = res.data;
+              setUser(updatedUser);
+              sessionStorage.setItem('user', JSON.stringify(updatedUser));
             }
           }
         } catch (e) {

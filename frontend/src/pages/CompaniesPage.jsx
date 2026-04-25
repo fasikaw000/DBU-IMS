@@ -11,10 +11,13 @@ import {
     Phone,
     MapPin,
     User,
+    Users,
     X,
     CheckCircle,
     AlertCircle,
-    Loader2
+    Loader2,
+    Check,
+    X as XIcon
 } from 'lucide-react';
 
 const CompaniesPage = () => {
@@ -34,7 +37,7 @@ const CompaniesPage = () => {
     });
     const [submitting, setSubmitting] = useState(false);
     const [message, setMessage] = useState(null);
-    const [statusFilter, setStatusFilter] = useState('all'); // all, active, inactive
+    const [statusFilter, setStatusFilter] = useState('all'); // all, active, inactive, pending
     const [allStudents, setAllStudents] = useState([]);
     const [viewingStudentsFor, setViewingStudentsFor] = useState(null);
 
@@ -63,6 +66,16 @@ const CompaniesPage = () => {
             fetchData();
         } catch (err) {
             console.error(err);
+        }
+    };
+
+    const handleApprove = async (id, status) => {
+        try {
+            await api.patch(`/department/companies/${id}/approve`, { status });
+            setMessage({ type: 'success', text: `Company ${status.toLowerCase()} successfully!` });
+            fetchData();
+        } catch (err) {
+            setMessage({ type: 'error', text: err.response?.data?.message || 'Action failed' });
         }
     };
 
@@ -118,7 +131,12 @@ const CompaniesPage = () => {
         const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
             c.industry.toLowerCase().includes(search.toLowerCase()) ||
             c.location.toLowerCase().includes(search.toLowerCase());
-        const matchesStatus = statusFilter === 'all' ? true : statusFilter === 'active' ? c.isActive : !c.isActive;
+        
+        let matchesStatus = true;
+        if (statusFilter === 'active') matchesStatus = c.isActive && c.approvalStatus === 'APPROVED';
+        else if (statusFilter === 'inactive') matchesStatus = !c.isActive && c.approvalStatus === 'APPROVED';
+        else if (statusFilter === 'pending') matchesStatus = c.approvalStatus === 'PENDING';
+        
         return matchesSearch && matchesStatus;
     });
 
@@ -137,7 +155,7 @@ const CompaniesPage = () => {
                         <Building2 className="w-8 h-8 text-dbu-primary" />
                         Company Management
                     </h1>
-                    <p className="text-slate-500 text-sm mt-1">Add and manage partner companies for student placements.</p>
+                    <p className="text-slate-500 text-sm mt-1">Manage approved internship companies and student placements.</p>
                 </div>
                 <button
                     onClick={() => {
@@ -170,8 +188,9 @@ const CompaniesPage = () => {
                         onChange={(e) => setStatusFilter(e.target.value)}
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm font-bold text-slate-600 appearance-none"
                     >
-                        <option value="all">All Status</option>
-                        <option value="active">Active Placements</option>
+                        <option value="all">All Companies</option>
+                        <option value="active">Active (Approved)</option>
+                        <option value="pending">Pending Approval</option>
                         <option value="inactive">Deactivated</option>
                     </select>
                 </div>
@@ -195,30 +214,44 @@ const CompaniesPage = () => {
                 ) : (
                     filteredCompanies.map((company) => (
                         <div key={company._id} className={`bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-xl transition-all group relative overflow-hidden ${!company.isActive ? 'opacity-60' : ''}`}>
-                            {!company.isActive && (
-                                <div className="absolute top-4 right-4 bg-slate-100 text-slate-500 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                                    Deactivated
-                                </div>
-                            )}
-
                             <div className="flex items-start justify-between mb-4">
                                 <div className="w-12 h-12 bg-dbu-primary/10 rounded-xl flex items-center justify-center text-dbu-primary">
                                     <Building2 size={24} />
                                 </div>
                                 <div className="flex gap-1">
-                                    <button onClick={() => openEdit(company)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-dbu-primary transition">
-                                        <Edit2 size={16} />
-                                    </button>
-                                    <button onClick={() => handleToggleStatus(company._id)} className={`p-2 hover:bg-slate-100 rounded-lg transition ${company.isActive ? 'text-amber-500' : 'text-emerald-500'}`}>
-                                        <Power size={16} />
-                                    </button>
-                                    <button onClick={() => handleDelete(company._id)} className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-500 transition">
-                                        <Trash2 size={16} />
-                                    </button>
+                                    {company.approvalStatus === 'PENDING' ? (
+                                        <>
+                                            <button onClick={() => handleApprove(company._id, 'APPROVED')} className="p-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition" title="Approve">
+                                                <Check size={16} />
+                                            </button>
+                                            <button onClick={() => handleApprove(company._id, 'REJECTED')} className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition" title="Reject">
+                                                <XIcon size={16} />
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button onClick={() => openEdit(company)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-dbu-primary transition">
+                                                <Edit2 size={16} />
+                                            </button>
+                                            <button onClick={() => handleToggleStatus(company._id)} className={`p-2 hover:bg-slate-100 rounded-lg transition ${company.isActive ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                                <Power size={16} />
+                                            </button>
+                                            <button onClick={() => handleDelete(company._id)} className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-500 transition">
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
-                            <h3 className="text-lg font-black text-slate-800 mb-1">{company.name}</h3>
+                            <div className="flex items-center gap-2 mb-1">
+                                <h3 className="text-lg font-black text-slate-800">{company.name}</h3>
+                                {company.approvalStatus === 'PENDING' && (
+                                    <span className="bg-amber-100 text-amber-600 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                                        Pending
+                                    </span>
+                                )}
+                            </div>
                             <span className="text-[10px] font-black text-dbu-primary uppercase tracking-widest bg-dbu-primary/5 px-2 py-0.5 rounded">
                                 {company.industry}
                             </span>

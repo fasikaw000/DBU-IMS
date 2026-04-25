@@ -17,7 +17,9 @@ import {
     ArrowRight,
     Loader2,
     Activity,
-    CreditCard
+    CreditCard,
+    Book,
+    AlertCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -250,18 +252,18 @@ const StudentDashboard = () => {
                                 </div>
                                 <div className="p-6 bg-slate-50 flex gap-4">
                                     <button
+                                        onClick={() => navigate('/student/logbook')}
+                                        className="flex-1 py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black tracking-widest hover:border-dbu-primary hover:text-dbu-primary transition flex items-center justify-center gap-2"
+                                    >
+                                        <Book size={16} />
+                                        DAILY LOGBOOK
+                                    </button>
+                                    <button
                                         onClick={() => navigate('/student/reports')}
                                         className="flex-1 py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black tracking-widest hover:border-dbu-primary hover:text-dbu-primary transition flex items-center justify-center gap-2"
                                     >
                                         <FileText size={16} />
                                         MANAGE REPORTS
-                                    </button>
-                                    <button
-                                        onClick={() => navigate('/messages')}
-                                        className="flex-1 py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black tracking-widest hover:border-dbu-primary hover:text-dbu-primary transition flex items-center justify-center gap-2"
-                                    >
-                                        <MessageSquare size={16} />
-                                        CONTACT ADVISOR
                                     </button>
                                 </div>
                             </div>
@@ -333,19 +335,19 @@ const StudentDashboard = () => {
                                                 {user?.phoneNumber ? 'Completed' : 'Missing'}
                                             </span>
                                         </div>
-                                        <p className={`text-xs font-bold ${user?.phoneNumber ? 'text-slate-700' : 'text-red-500 italic'}`}>{user?.phoneNumber || 'Missing Info'}</p>
+                                        <p className={`text-xs font-bold ${user?.phoneNumber ? 'text-slate-700' : 'text-red-500 italic'}`}>{user?.phoneNumber || 'Missing'}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${user?.studentProfile?.cbeAccount ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'}`}><CreditCard size={18} /></div>
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${(user?.cbeAccount || user?.studentProfile?.cbeAccount) ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'}`}><CreditCard size={18} /></div>
                                     <div className="flex-1">
                                         <div className="flex items-center justify-between">
                                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">CBE Account</p>
-                                            <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${user?.studentProfile?.cbeAccount ? 'text-emerald-500 bg-emerald-50' : 'text-red-500 bg-red-50'}`}>
-                                                {user?.studentProfile?.cbeAccount ? 'Linked' : 'Missing'}
+                                            <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${(user?.cbeAccount || user?.studentProfile?.cbeAccount) ? 'text-emerald-500 bg-emerald-50' : 'text-red-500 bg-red-50'}`}>
+                                                {(user?.cbeAccount || user?.studentProfile?.cbeAccount) ? 'Completed' : 'Missing'}
                                             </span>
                                         </div>
-                                        <p className={`text-xs font-bold ${user?.studentProfile?.cbeAccount ? 'text-slate-700' : 'text-red-500 italic'}`}>{user?.studentProfile?.cbeAccount || 'Not linked'}</p>
+                                        <p className={`text-xs font-bold ${(user?.cbeAccount || user?.studentProfile?.cbeAccount) ? 'text-slate-700' : 'text-red-500 italic'}`}>{(user?.cbeAccount || user?.studentProfile?.cbeAccount) || 'Missing'}</p>
                                     </div>
                                 </div>
                             </div>

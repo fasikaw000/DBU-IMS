@@ -13,6 +13,40 @@ export const getCompanies = async (req, res, next) => {
   }
 };
 
+// @desc    Approve/Reject a company
+// @route   PATCH /api/companies/:id/approve
+// @access  Private (Dean)
+export const approveCompany = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    if (!['APPROVED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+
+    const company = await Company.findById(req.params.id);
+    if (!company) {
+      return res.status(404).json({ success: false, message: 'Company not found' });
+    }
+
+    company.approvalStatus = status;
+    company.departmentApprover = req.user.id;
+    if (status === 'APPROVED') company.isActive = true;
+    
+    await company.save();
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: status === 'APPROVED' ? 'company_approved' : 'company_rejected',
+      details: `${status} company: ${company.name}`,
+      ip: req.ip
+    });
+
+    res.status(200).json({ success: true, data: company });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Create a company
 // @route   POST /api/companies
 // @access  Private (Dean)

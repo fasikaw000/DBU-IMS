@@ -11,11 +11,15 @@ import {
     Briefcase,
     Calendar,
     ChevronRight,
-    Loader2
+    Loader2,
+    Book
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
+import { useContext } from 'react';
 
 const AdvisorDashboard = () => {
+    const { user } = useContext(AuthContext);
     const navigate = useNavigate();
     const [stats, setStats] = useState({
         totalStudents: 0,
@@ -56,7 +60,12 @@ const AdvisorDashboard = () => {
             {/* Welcome Header */}
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 relative overflow-hidden">
                 <div className="relative z-10">
-                    <h1 className="text-3xl font-black text-slate-800 tracking-tight">Advisor Overview</h1>
+                    <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                        Advisor Overview
+                        <span className="bg-dbu-primary/10 text-dbu-primary text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-widest border border-dbu-primary/10">
+                            Department: {user?.department?.name || 'Unknown Department'}
+                        </span>
+                    </h1>
                     <p className="text-slate-500 mt-2 flex items-center gap-2">
                         <Calendar size={16} className="text-dbu-primary" />
                         Supervising student progress and academic performance.
@@ -179,13 +188,22 @@ const AdvisorDashboard = () => {
                                             </span>
                                         </td>
                                         <td className="p-6 text-right">
-                                            <button 
-                                                onClick={() => navigate('/students')}
-                                                className="inline-flex items-center gap-1 px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-xl text-[10px] font-black tracking-widest hover:border-dbu-primary hover:text-dbu-primary transition shadow-sm"
-                                            >
-                                                MANAGE
-                                                <ChevronRight size={14} />
-                                            </button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button 
+                                                    onClick={() => navigate(`/logbook?studentId=${intern.student?._id}`)}
+                                                    className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:text-dbu-primary hover:bg-dbu-primary/10 transition-all"
+                                                    title="View Logbook"
+                                                >
+                                                    <Book size={16} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => navigate('/students')}
+                                                    className="inline-flex items-center gap-1 px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-xl text-[10px] font-black tracking-widest hover:border-dbu-primary hover:text-dbu-primary transition shadow-sm"
+                                                >
+                                                    MANAGE
+                                                    <ChevronRight size={14} />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

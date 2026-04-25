@@ -10,7 +10,7 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user.id).select('-password').populate('department', 'name code');
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
@@ -96,8 +96,12 @@ export const updateMe = async (req, res, next) => {
     await user.save();
 
     let studentProfile = null;
-    if (user.role === 'Student') {
-      studentProfile = await Student.findOne({ user: user._id }).select('studentId cbeAccount');
+    if (normalizeRole(user.role) === 'Student') {
+      studentProfile = await Student.findOne({ user: user._id });
+      if (studentProfile && updates.phoneNumber) {
+        studentProfile.phone = updates.phoneNumber;
+        await studentProfile.save();
+      }
     }
 
     await AuditLog.create({

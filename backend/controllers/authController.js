@@ -26,7 +26,7 @@ export const loginUser = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Please provide username and password' });
     }
 
-    const user = await User.findOne({ username }).select('+password');
+    const user = await User.findOne({ username }).select('+password').populate('department', 'name code');
 
     if (!user) {
       await AuditLog.create({ action: 'failed_login', details: `Invalid username: ${username}`, ip: req.ip });
@@ -81,10 +81,17 @@ export const loginUser = async (req, res, next) => {
 
     const token = generateToken(user._id, user.role);
     let studentId = undefined;
+    let cbeAccount = undefined;
+    let phoneNumber = user.phoneNumber;
 
     if (normalizeRole(user.role) === 'Student') {
       const student = await Student.findOne({ user: user._id });
-      studentId = student?.studentId;
+      if (student) {
+        studentId = student.studentId;
+        cbeAccount = student.cbeAccount;
+        // Fallback to student phone if user phoneNumber is missing
+        if (!phoneNumber) phoneNumber = student.phone;
+      }
     }
 
     await AuditLog.create({
@@ -102,9 +109,12 @@ export const loginUser = async (req, res, next) => {
       name: user.name,
       username: user.username,
       email: user.email,
+      phoneNumber,
+      cbeAccount,
       activationStatus: user.activationStatus || (user.isActivated ? 'Activated' : 'Pending'),
       isActive: user.isActive !== false,
-      studentId
+      studentId,
+      department: user.department
     });
   } catch (err) {
     console.error('[loginUser] error:', err);

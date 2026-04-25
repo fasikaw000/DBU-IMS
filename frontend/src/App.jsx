@@ -28,6 +28,7 @@ import Profile from './pages/Profile';
 import AccountSettings from './pages/AccountSettings';
 import NotificationCenter from './pages/NotificationCenter';
 import DeanStudents from './pages/DeanStudents';
+import LogbookPage from './pages/LogbookPage';
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={['Student']} />}>
           <Route path="/student-dashboard" element={<StudentDashboard />} />
           <Route path="/student/reports" element={<ReportsPage />} />
+          <Route path="/student/logbook" element={<LogbookPage />} />
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={['Advisor']} />}>
@@ -75,6 +77,7 @@ function App() {
           <Route path="/notifications" element={<NotificationCenter />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<AccountSettings />} />
+          <Route path="/logbook" element={<LogbookPage />} />
         </Route>
       </Route>
 

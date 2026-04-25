@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
-import { Users, Search, Activity, Key, Upload, Plus, Printer, Trash2, Mail, UserPlus, Edit, Shield, ShieldOff, X, CheckCircle } from 'lucide-react';
+import { Users, Search, Activity, Key, Upload, Plus, Printer, Trash2, Mail, UserPlus, Edit, Shield, ShieldOff, X, CheckCircle, FileText, Download } from 'lucide-react';
 
 const AdminStudents = () => {
   const [students, setStudents] = useState([]);
@@ -83,7 +83,7 @@ const AdminStudents = () => {
   const handleRegisterStudent = async (e) => {
     e.preventDefault();
     setErrors({});
-    
+
     // Validation
     let newErrors = {};
     if (!newStudent.name) newErrors.name = "Required";
@@ -218,8 +218,8 @@ const AdminStudents = () => {
                   ${activeFields.map(f => {
       let val = '';
       if (f === 'department') val = s.department?.name || s.department?.code || 'N/A';
-      else if (f === 'cbeAccount') val = s.cbeAccount || 'N/A';
-      else if (f === 'phone') val = s.phoneNumber || 'N/A';
+      else if (f === 'cbeAccount') val = s.studentProfile?.cbeAccount || s.cbeAccount || 'N/A';
+      else if (f === 'phone') val = s.phoneNumber || s.phone || 'N/A';
       else val = s[f] || 'N/A';
 
       const isMono = ['studentId', 'username', 'cbeAccount', 'phone'].includes(f);
@@ -240,6 +240,41 @@ const AdminStudents = () => {
     setShowPrintModal(false);
   };
 
+  const handleExportCSV = () => {
+    const data = printData;
+    if (!data || data.length === 0) return;
+    const activeFields = Object.keys(printFields).filter(f => printFields[f]);
+    const fieldLabels = {
+      name: 'Full Name',
+      studentId: 'Student ID',
+      username: 'Username',
+      department: 'Department',
+      year: 'Year',
+      cbeAccount: 'CBE Account',
+      email: 'Email',
+      phone: 'Phone'
+    };
+    const headers = activeFields.map(f => fieldLabels[f]).join(',');
+    const rows = data.map(s => {
+      return activeFields.map(f => {
+        let val = '';
+        if (f === 'department') val = s.department?.name || s.department?.code || '';
+        else if (f === 'cbeAccount') val = s.studentProfile?.cbeAccount || s.cbeAccount || '';
+        else if (f === 'phone') val = s.phoneNumber || s.phone || '';
+        else val = s[f] || '';
+        return `"${val}"`;
+      }).join(',');
+    });
+    const csvContent = 'data:text/csv;charset=utf-8,' + headers + '\n' + rows.join('\n');
+    const link = document.createElement('a');
+    link.setAttribute('href', encodeURI(csvContent));
+    link.setAttribute('download', `Student_Records_${new Date().toLocaleDateString().replace(/\//g, '-')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setShowPrintModal(false);
+  };
+
   const handleOpenPrintModal = (type) => {
     let data = [];
     if (type === 'all') data = students;
@@ -248,9 +283,22 @@ const AdminStudents = () => {
 
     if (data.length === 0) {
       setMessageType('error');
-      setMessage('No data to print.');
+      setMessage('please select to print');
       return;
     }
+    
+    // Pre-fill fields based on type
+    if (type === 'all') {
+      const allTrue = Object.keys(printFields).reduce((acc, key) => ({ ...acc, [key]: true }), {});
+      setPrintFields(allTrue);
+    } else {
+      const defaultFields = Object.keys(printFields).reduce((acc, key) => ({ 
+        ...acc, 
+        [key]: !['cbeAccount', 'email', 'phone'].includes(key) 
+      }), {});
+      setPrintFields(defaultFields);
+    }
+
     setPrintData(data);
     setShowPrintModal(true);
   };
@@ -414,15 +462,15 @@ const AdminStudents = () => {
                     </td>
                     <td className="px-4 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button 
-                          onClick={() => handleEditStudent(student)} 
+                        <button
+                          onClick={() => handleEditStudent(student)}
                           className="p-2 text-slate-400 hover:text-dbu-primary hover:bg-dbu-primary/10 rounded-lg transition-all cursor-pointer hover:scale-110"
                           title="Edit Student"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button 
-                          onClick={() => handleToggleStatus(student.userId)} 
+                        <button
+                          onClick={() => handleToggleStatus(student.userId)}
                           className={`p-2 rounded-lg transition-all cursor-pointer hover:scale-110 ${student.isActive !== false ? 'text-slate-400 hover:text-red-500 hover:bg-red-50' : 'text-red-500 hover:text-green-500 hover:bg-green-50'}`}
                           title={student.isActive !== false ? 'Deactivate User' : 'Activate User'}
                         >
@@ -437,18 +485,36 @@ const AdminStudents = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col gap-6 h-fit">
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-            <h3 className="text-sm font-black text-slate-800 mb-3 flex items-center gap-2">
-              <Upload className="w-4 h-4 text-dbu-primary" />
-              Bulk Upload
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
+              <Upload className="w-5 h-5 mr-3 text-dbu-primary" />
+              Upload Students (CSV/Excel)
             </h3>
-            <form onSubmit={handleBulkUpload} className="space-y-3">
-              <input type="file" accept=".csv,.xlsx" onChange={(e) => setUploadFile(e.target.files?.[0] || null)} className="text-[10px] w-full" />
-              <button type="submit" disabled={actionLoading} className="w-full bg-dbu-primary text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-dbu-accent transition-all">
-                Upload Data
+            <form onSubmit={handleBulkUpload} className="space-y-4">
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                className="w-full text-sm file:mr-3 file:px-4 file:py-2 file:rounded-lg file:border-0 file:bg-dbu-primary file:text-white hover:file:bg-dbu-accent"
+              />
+              <button
+                type="submit"
+                disabled={actionLoading}
+                className="w-full bg-dbu-primary text-white py-3 rounded-xl font-bold shadow-lg shadow-dbu-primary/20 hover:bg-dbu-accent transition-all flex items-center justify-center"
+              >
+                {actionLoading ? 'Uploading...' : 'Upload Students'}
               </button>
             </form>
+            <p className="text-[11px] text-slate-500 mt-3">
+              Required columns: Full Name, Student ID, Department, Year
+            </p>
+            {uploadSummary && (
+              <div className="mt-4 text-xs bg-slate-50 border border-slate-100 rounded-xl p-3">
+                <p className="font-bold text-slate-700">Created: {uploadSummary.createdCount || 0}</p>
+                <p className="font-bold text-slate-700">Failed: {uploadSummary.failedCount || 0}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -484,12 +550,22 @@ const AdminStudents = () => {
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                 <p className="text-[10px] font-bold text-slate-400">Total Records to Print: <span className="text-slate-800">{printData.length}</span></p>
               </div>
-              <button
-                onClick={printRecords}
-                className="w-full py-4 bg-dbu-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-dbu-primary/20 hover:bg-dbu-accent transition-all"
-              >
-                Generate Document
-              </button>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={printRecords}
+                  className="w-full py-4 bg-dbu-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-dbu-primary/20 hover:bg-dbu-accent transition-all flex items-center justify-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  Generate Document
+                </button>
+                <button
+                  onClick={handleExportCSV}
+                  className="w-full py-4 bg-white text-slate-700 border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Export Spreadsheet
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -23,8 +23,11 @@ import {
     Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
+import { useContext } from 'react';
 
 const DeptDashboard = () => {
+    const { user } = useContext(AuthContext);
     const navigate = useNavigate();
     const [stats, setStats] = useState({
         pendingApplications: 0,
@@ -132,7 +135,7 @@ const DeptDashboard = () => {
                     <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
                         Dean Overview
                         <span className="bg-dbu-primary/10 text-dbu-primary text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-widest border border-dbu-primary/10">
-                            {departmentName}
+                            Department: {user?.department?.name || 'Unknown Department'}
                         </span>
                     </h1>
                     <p className="text-slate-500 text-sm mt-2 font-medium">Monitoring departmental student progress and approvals.</p>

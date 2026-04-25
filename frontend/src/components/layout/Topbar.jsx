@@ -156,10 +156,10 @@ const Topbar = () => {
             className="flex items-center gap-4 hover:bg-slate-50 p-2 rounded-2xl transition-all group"
           >
             <div className="flex flex-col text-right hidden sm:block">
-              <span className="text-sm font-black text-slate-800 leading-none">
+              <span className="text-sm font-black text-slate-800 leading-tight block">
                 {user?.name || 'User'}
               </span>
-              <span className="text-[10px] font-black uppercase tracking-widest text-dbu-primary mt-1 opacity-70">
+              <span className="text-[10px] font-black uppercase tracking-widest text-dbu-primary mt-1 opacity-70 block">
                 {user?.role || ''}
               </span>
             </div>

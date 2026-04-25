@@ -13,7 +13,9 @@ import {
     ShieldCheck,
     Mail,
     Printer,
-    Upload
+    Upload,
+    FileText,
+    Download
 } from 'lucide-react';
 
 const AdminStaff = () => {
@@ -32,6 +34,9 @@ const AdminStaff = () => {
     const [editingStaff, setEditingStaff] = useState(null);
     const [uploadFile, setUploadFile] = useState(null);
     const [uploadSummary, setUploadSummary] = useState(null);
+    const [showPrintModal, setShowPrintModal] = useState(false);
+    const [printModalData, setPrintModalData] = useState([]);
+    const [printModalTitle, setPrintModalTitle] = useState('');
     const [statusModal, setStatusModal] = useState({ open: false, userId: null });
     const [staffData, setStaffData] = useState({
         name: '',
@@ -189,6 +194,34 @@ const AdminStaff = () => {
         }
     };
 
+    const openPrintModal = (data, titleSuffix) => {
+        if (!data || data.length === 0) {
+            setMessageType('error');
+            setMessage('Failed: No data available to print.');
+            return;
+        }
+        setPrintModalData(data);
+        setPrintModalTitle(titleSuffix);
+        setShowPrintModal(true);
+    };
+
+    const handleExportStaffCSV = () => {
+        const data = printModalData;
+        if (!data || data.length === 0) return;
+        const headers = 'Full Name,Department,Username,Role';
+        const rows = data.map(s =>
+            `"${s.name}","${s.department?.name || 'Central'}","${s.username}","${s.role}"`
+        ).join('\n');
+        const csvContent = 'data:text/csv;charset=utf-8,' + headers + '\n' + rows;
+        const link = document.createElement('a');
+        link.setAttribute('href', encodeURI(csvContent));
+        link.setAttribute('download', `Staff_Records_${new Date().toLocaleDateString().replace(/\//g, '-')}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setShowPrintModal(false);
+    };
+
     const printRecords = (data, titleSuffix) => {
         if (!data || data.length === 0) {
             setMessageType('error');
@@ -260,16 +293,17 @@ const AdminStaff = () => {
           </html>
         `);
         printWindow.document.close();
+        setShowPrintModal(false);
     };
 
     const handlePrintSelected = () => {
         if (selectedIds.length === 0) {
             setMessageType('error');
-            setMessage('Failed: Please select at least one record to print.');
+            setMessage('please select to print');
             return;
         }
         const selectedData = users.filter(s => selectedIds.includes(s._id));
-        printRecords(selectedData, 'Selected Records');
+        openPrintModal(selectedData, 'Selected Records');
     };
 
     const toggleSelectAll = () => {
@@ -315,26 +349,13 @@ const AdminStaff = () => {
                         Add Staff
                     </button>
 
-                    <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-xl shadow-sm">
-                        <button
-                            onClick={() => printRecords(users, 'All Staff')}
-                            className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tight text-slate-600 hover:bg-slate-50 transition-all border-r border-slate-100"
-                        >
-                            Print All
-                        </button>
-                        <button
-                            onClick={() => printRecords(filteredStaff, 'Filtered View')}
-                            className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tight text-dbu-primary hover:bg-slate-50 transition-all border-r border-slate-100"
-                        >
-                            Print Filtered
-                        </button>
-                        <button
-                            onClick={handlePrintSelected}
-                            className="px-3 py-1.5 text-[10px] font-black uppercase tracking-tight text-orange-600 hover:bg-slate-50 transition-all"
-                        >
-                            Print Selected ({selectedIds.length})
-                        </button>
-                    </div>
+                    <button
+                        onClick={() => openPrintModal(users, 'All Staff')}
+                        className="bg-dbu-primary text-white px-4 py-2.5 rounded-xl font-bold flex items-center shadow-lg shadow-dbu-primary/20 hover:bg-dbu-accent transition-all text-xs"
+                    >
+                        <Download className="w-4 h-4 mr-2" />
+                        Export
+                    </button>
                 </div>
             </div>
 
@@ -669,6 +690,44 @@ const AdminStaff = () => {
                             >
                                 Confirm
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Print / Export Modal */}
+            {showPrintModal && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="bg-slate-800 p-6 text-white flex items-center justify-between">
+                            <h3 className="text-lg font-black flex items-center gap-2">
+                                <Printer className="w-5 h-5" /> Export Staff Data
+                            </h3>
+                            <button onClick={() => setShowPrintModal(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <div className="p-8 space-y-4">
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                <p className="text-[10px] font-bold text-slate-400">Records Ready: <span className="text-slate-800">{printModalData.length}</span></p>
+                                <p className="text-[10px] font-bold text-slate-400 mt-1">Set: <span className="text-slate-800">{printModalTitle}</span></p>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={() => printRecords(printModalData, printModalTitle)}
+                                    className="w-full py-4 bg-dbu-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-dbu-primary/20 hover:bg-dbu-accent transition-all flex items-center justify-center gap-2"
+                                >
+                                    <FileText className="w-4 h-4" />
+                                    Generate Document
+                                </button>
+                                <button
+                                    onClick={handleExportStaffCSV}
+                                    className="w-full py-4 bg-white text-slate-700 border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    Export Spreadsheet
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

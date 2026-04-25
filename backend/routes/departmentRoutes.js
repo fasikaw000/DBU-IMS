@@ -12,7 +12,8 @@ import {
   createCompany,
   updateCompany,
   toggleCompanyStatus,
-  deleteCompany
+  deleteCompany,
+  approveCompany
 } from '../controllers/companyController.js';
 
 const router = express.Router();
@@ -31,6 +32,7 @@ router.get('/companies', authorize('Dean', 'Student'), getCompanies);
 router.post('/companies', authorize('Dean'), createCompany);
 router.put('/companies/:id', authorize('Dean'), updateCompany);
 router.patch('/companies/:id/status', authorize('Dean'), toggleCompanyStatus);
+router.patch('/companies/:id/approve', authorize('Dean'), approveCompany);
 router.delete('/companies/:id', authorize('Dean'), deleteCompany);
 
 export default router;
