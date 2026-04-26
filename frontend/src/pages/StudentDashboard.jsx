@@ -19,7 +19,8 @@ import {
     Activity,
     CreditCard,
     Book,
-    AlertCircle
+    AlertCircle,
+    Edit3
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -35,6 +36,7 @@ const StudentDashboard = () => {
     const [message, setMessage] = useState(null);
     const [errors, setErrors] = useState({});
     const [companies, setCompanies] = useState([]);
+    const [companyInputMode, setCompanyInputMode] = useState('select'); // 'select' or 'manual'
 
     useEffect(() => {
         if (!message) return;
@@ -84,13 +86,35 @@ const StudentDashboard = () => {
         // Validation
         let newErrors = {};
         const required = ['companyName', 'location', 'field', 'startDate', 'endDate', 'companySupervisorName', 'companySupervisorPhone', 'companySupervisorEmail'];
+        
         required.forEach(field => {
-            if (!applyData[field]) newErrors[field] = "Required";
+            if (!applyData[field]) {
+                const label = field.replace(/([A-Z])/g, ' $1').toLowerCase();
+                newErrors[field] = `${label.charAt(0).toUpperCase() + label.slice(1)} is required`;
+            }
         });
+
+        // Email Validation
+        if (applyData.companySupervisorEmail && !/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(applyData.companySupervisorEmail)) {
+            newErrors.companySupervisorEmail = "Please enter a valid supervisor email address";
+        }
+
+        // Phone Validation
+        if (applyData.companySupervisorPhone && !/^\+?[0-9]{10,15}$/.test(applyData.companySupervisorPhone)) {
+            newErrors.companySupervisorPhone = "Phone number must be between 10-15 digits";
+        }
+
+        // Date Validation
+        if (applyData.startDate && applyData.endDate) {
+            if (new Date(applyData.startDate) >= new Date(applyData.endDate)) {
+                newErrors.endDate = "The completion date must occur after the start date";
+            }
+        }
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
-            setMessage({ type: 'error', text: 'Please fill out all required fields' });
+            const count = Object.keys(newErrors).length;
+            setMessage({ type: 'error', text: `Incomplete Application: ${count} field${count > 1 ? 's' : ''} require${count === 1 ? 's' : ''} your attention.` });
             return;
         }
 
@@ -98,10 +122,22 @@ const StudentDashboard = () => {
         try {
             await api.post('/internships/apply', applyData);
             setMessage({ type: 'success', text: 'Application submitted successfully!' });
+            setApplyData({
+                companyName: '',
+                location: '',
+                field: '',
+                startDate: '',
+                endDate: '',
+                companySupervisorName: '',
+                companySupervisorPhone: '',
+                companySupervisorEmail: ''
+            });
+            setErrors({});
             setShowApply(false);
             fetchData();
         } catch (err) {
-            setMessage({ type: 'error', text: err.response?.data?.message || 'Submission failed' });
+            const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || 'Submission failed. Please try again later.';
+            setMessage({ type: 'error', text: errorMsg });
         } finally {
             setSubmitting(false);
         }
@@ -125,11 +161,13 @@ const StudentDashboard = () => {
                     </p>
                 </div>
                 <div className="flex items-center gap-4 relative z-10">
-                    <div className={`px-5 py-2 rounded-2xl border text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${status === 'APPROVED' || status === 'ACTIVE' || status === 'COMPLETED' || status === 'Active' || status === 'Approved'
+                    <div className={`px-5 py-2 rounded-2xl border text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${['APPROVED', 'ACTIVE', 'ONGOING', 'COMPLETED', 'Active', 'Approved'].includes(status)
                         ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                        : status === 'PENDING_APPROVAL' || status === 'Pending'
+                        : ['PENDING', 'PENDING_APPROVAL', 'Pending', 'RESUBMITTED'].includes(status)
                             ? 'bg-amber-50 text-amber-600 border-amber-100'
-                            : 'bg-slate-50 text-slate-600 border-slate-100'
+                            : status === 'REVISION_REQUIRED'
+                                ? 'bg-red-50 text-red-600 border-red-100 animate-pulse'
+                                : 'bg-slate-50 text-slate-600 border-slate-100'
                         }`}>
                         {status === 'NOT_APPLIED' ? <Clock size={14} /> : <CheckCircle size={14} />}
                         Status: {status.replace('_', ' ')}
@@ -143,8 +181,43 @@ const StudentDashboard = () => {
                             APPLY FOR INTERNSHIP
                         </button>
                     )}
+                    {status === 'REVISION_REQUIRED' && (
+                        <button
+                            onClick={() => {
+                                if (internship) {
+                                    setApplyData({
+                                        companyName: internship.company?.name || '',
+                                        location: internship.company?.location || '',
+                                        field: internship.field || '',
+                                        startDate: internship.startDate ? new Date(internship.startDate).toISOString().split('T')[0] : '',
+                                        endDate: internship.endDate ? new Date(internship.endDate).toISOString().split('T')[0] : '',
+                                        companySupervisorName: internship.companySupervisorName || '',
+                                        companySupervisorPhone: internship.companySupervisorPhone || '',
+                                        companySupervisorEmail: internship.companySupervisorEmail || ''
+                                    });
+                                }
+                                setShowApply(true);
+                            }}
+                            className="px-6 py-3 bg-red-600 text-white rounded-2xl font-black text-[10px] tracking-widest hover:bg-red-700 transition shadow-lg shadow-red-600/20 flex items-center gap-2"
+                        >
+                            <Edit3 size={16} />
+                            EDIT & RESUBMIT
+                        </button>
+                    )}
                 </div>
             </div>
+
+            {status === 'REVISION_REQUIRED' && internship?.revisionMessage && (
+                <div className="bg-red-50 border border-red-100 p-6 rounded-3xl flex items-start gap-4">
+                    <div className="bg-red-500 text-white p-2 rounded-xl">
+                        <AlertCircle size={20} />
+                    </div>
+                    <div>
+                        <h4 className="text-red-700 font-black text-xs uppercase tracking-widest mb-1">Correction Required</h4>
+                        <p className="text-red-600 text-sm font-bold">"{internship.revisionMessage}"</p>
+                    </div>
+                </div>
+            )}
 
             {message && (
                 <div className={`p-4 rounded-2xl border flex items-center gap-3 ${message.type === 'error' ? 'bg-red-50 border-red-100 text-red-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'
@@ -165,43 +238,74 @@ const StudentDashboard = () => {
                             <div className="space-y-6">
                                 <h3 className="text-[10px] font-black text-dbu-primary uppercase tracking-widest border-b border-dbu-primary/10 pb-2">Company Details</h3>
                                 <div className="space-y-4">
-                                    <div className="space-y-1">
+                                    <div className="space-y-3">
                                         <label className="text-[9px] font-black text-slate-400 uppercase ml-2">Company Name</label>
-                                        <select
-                                            className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.companyName ? 'border-red-500' : 'border-slate-200'}`}
-                                            value={applyData.companyName}
-                                            onChange={e => {
-                                                const selected = companies.find(c => c.name === e.target.value);
-                                                if (selected) {
-                                                    setApplyData({ ...applyData, companyName: selected.name, location: selected.location || '' });
-                                                } else {
-                                                    setApplyData({ ...applyData, companyName: e.target.value });
-                                                }
-                                                setErrors({ ...errors, companyName: null });
-                                            }}
-                                        >
-                                            <option value="">Select or Type Name...</option>
-                                            {companies.map(c => <option key={c._id} value={c.name}>{c.name}</option>)}
-                                            <option value="other">--- Other (Type Below) ---</option>
-                                        </select>
-                                        {applyData.companyName === 'other' && (
+                                        
+                                        <div className="flex bg-slate-100 p-1 rounded-xl mb-2">
+                                            <button 
+                                                type="button"
+                                                onClick={() => setCompanyInputMode('select')}
+                                                className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${companyInputMode === 'select' ? 'bg-white text-dbu-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                            >
+                                                Select Existing
+                                            </button>
+                                            <button 
+                                                type="button"
+                                                onClick={() => setCompanyInputMode('manual')}
+                                                className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${companyInputMode === 'manual' ? 'bg-white text-dbu-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                            >
+                                                Enter New
+                                            </button>
+                                        </div>
+
+                                        {companyInputMode === 'select' ? (
+                                            <select
+                                                className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.companyName ? 'border-red-500' : 'border-slate-200'}`}
+                                                value={applyData.companyName}
+                                                onChange={e => {
+                                                    const selected = companies.find(c => c.name === e.target.value);
+                                                    if (selected) {
+                                                        setApplyData({ ...applyData, companyName: selected.name, location: selected.location || '' });
+                                                    } else {
+                                                        setApplyData({ ...applyData, companyName: e.target.value });
+                                                    }
+                                                    setErrors({ ...errors, companyName: null });
+                                                }}
+                                            >
+                                                <option value="">Choose Company...</option>
+                                                {companies.map(c => <option key={c._id} value={c.name}>{c.name}</option>)}
+                                            </select>
+                                        ) : (
                                             <input
                                                 placeholder="Enter Company Name"
-                                                className={`w-full px-6 py-4 mt-2 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.companyName ? 'border-red-500' : 'border-slate-200'}`}
-                                                onChange={e => setApplyData({ ...applyData, companyName: e.target.value })}
+                                                value={applyData.companyName}
+                                                className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.companyName ? 'border-red-500' : 'border-slate-200'}`}
+                                                onChange={e => {
+                                                    setApplyData({ ...applyData, companyName: e.target.value });
+                                                    setErrors({ ...errors, companyName: null });
+                                                }}
                                             />
                                         )}
+                                        {errors.companyName && <p className="text-[10px] text-red-500 font-bold ml-2">{errors.companyName}</p>}
                                     </div>
-                                    <input placeholder="Location" className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.location ? 'border-red-500' : 'border-slate-200'}`} value={applyData.location} onChange={e => { setApplyData({ ...applyData, location: e.target.value }); setErrors({ ...errors, location: null }); }} />
-                                    <input placeholder="Field (e.g Website Dev)" className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.field ? 'border-red-500' : 'border-slate-200'}`} value={applyData.field} onChange={e => { setApplyData({ ...applyData, field: e.target.value }); setErrors({ ...errors, field: null }); }} />
+                                    <div className="space-y-1">
+                                        <input placeholder="Location" className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.location ? 'border-red-500' : 'border-slate-200'}`} value={applyData.location} onChange={e => { setApplyData({ ...applyData, location: e.target.value }); setErrors({ ...errors, location: null }); }} />
+                                        {errors.location && <p className="text-[10px] text-red-500 font-bold ml-2">{errors.location}</p>}
+                                    </div>
+                                    <div className="space-y-1">
+                                        <input placeholder="Field (e.g Website Dev)" className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.field ? 'border-red-500' : 'border-slate-200'}`} value={applyData.field} onChange={e => { setApplyData({ ...applyData, field: e.target.value }); setErrors({ ...errors, field: null }); }} />
+                                        {errors.field && <p className="text-[10px] text-red-500 font-bold ml-2">{errors.field}</p>}
+                                    </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1">
                                             <label className="text-[9px] font-black text-slate-400 uppercase ml-2">Start Date</label>
-                                            <input required type="date" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none text-sm font-bold" value={applyData.startDate} onChange={e => setApplyData({ ...applyData, startDate: e.target.value })} />
+                                            <input required type="date" className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none text-sm font-bold ${errors.startDate ? 'border-red-500' : 'border-slate-200'}`} value={applyData.startDate} onChange={e => { setApplyData({ ...applyData, startDate: e.target.value }); setErrors({ ...errors, startDate: null }); }} />
+                                            {errors.startDate && <p className="text-[10px] text-red-500 font-bold ml-2">{errors.startDate}</p>}
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-[9px] font-black text-slate-400 uppercase ml-2">End Date</label>
-                                            <input required type="date" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none text-sm font-bold" value={applyData.endDate} onChange={e => setApplyData({ ...applyData, endDate: e.target.value })} />
+                                            <input required type="date" className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none text-sm font-bold ${errors.endDate ? 'border-red-500' : 'border-slate-200'}`} value={applyData.endDate} onChange={e => { setApplyData({ ...applyData, endDate: e.target.value }); setErrors({ ...errors, endDate: null }); }} />
+                                            {errors.endDate && <p className="text-[10px] text-red-500 font-bold ml-2">{errors.endDate}</p>}
                                         </div>
                                     </div>
                                 </div>
@@ -209,9 +313,18 @@ const StudentDashboard = () => {
                             <div className="space-y-6">
                                 <h3 className="text-[10px] font-black text-dbu-primary uppercase tracking-widest border-b border-dbu-primary/10 pb-2">Supervisor Contact</h3>
                                 <div className="space-y-4">
-                                    <input placeholder="Full Name" className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.companySupervisorName ? 'border-red-500' : 'border-slate-200'}`} value={applyData.companySupervisorName} onChange={e => { setApplyData({ ...applyData, companySupervisorName: e.target.value }); setErrors({ ...errors, companySupervisorName: null }); }} />
-                                    <input placeholder="Phone Number" className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.companySupervisorPhone ? 'border-red-500' : 'border-slate-200'}`} value={applyData.companySupervisorPhone} onChange={e => { setApplyData({ ...applyData, companySupervisorPhone: e.target.value }); setErrors({ ...errors, companySupervisorPhone: null }); }} />
-                                    <input type="email" placeholder="Email Address" className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.companySupervisorEmail ? 'border-red-500' : 'border-slate-200'}`} value={applyData.companySupervisorEmail} onChange={e => { setApplyData({ ...applyData, companySupervisorEmail: e.target.value }); setErrors({ ...errors, companySupervisorEmail: null }); }} />
+                                    <div className="space-y-1">
+                                        <input placeholder="Full Name" className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.companySupervisorName ? 'border-red-500' : 'border-slate-200'}`} value={applyData.companySupervisorName} onChange={e => { setApplyData({ ...applyData, companySupervisorName: e.target.value }); setErrors({ ...errors, companySupervisorName: null }); }} />
+                                        {errors.companySupervisorName && <p className="text-[10px] text-red-500 font-bold ml-2">{errors.companySupervisorName}</p>}
+                                    </div>
+                                    <div className="space-y-1">
+                                        <input placeholder="Phone Number" className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.companySupervisorPhone ? 'border-red-500' : 'border-slate-200'}`} value={applyData.companySupervisorPhone} onChange={e => { setApplyData({ ...applyData, companySupervisorPhone: e.target.value }); setErrors({ ...errors, companySupervisorPhone: null }); }} />
+                                        {errors.companySupervisorPhone && <p className="text-[10px] text-red-500 font-bold ml-2">{errors.companySupervisorPhone}</p>}
+                                    </div>
+                                    <div className="space-y-1">
+                                        <input type="email" placeholder="Email Address" className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.companySupervisorEmail ? 'border-red-500' : 'border-slate-200'}`} value={applyData.companySupervisorEmail} onChange={e => { setApplyData({ ...applyData, companySupervisorEmail: e.target.value }); setErrors({ ...errors, companySupervisorEmail: null }); }} />
+                                        {errors.companySupervisorEmail && <p className="text-[10px] text-red-500 font-bold ml-2">{errors.companySupervisorEmail}</p>}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -227,46 +340,181 @@ const StudentDashboard = () => {
                     {/* Main Content */}
                     <div className="lg:col-span-2 space-y-8">
                         {internship ? (
-                            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                                <div className="p-8 bg-slate-50/50 border-b border-slate-100">
-                                    <h2 className="text-xl font-black text-slate-800">Active Placement</h2>
-                                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">{internship.company?.name || internship.companyName}</p>
+                            ['APPROVED', 'ACTIVE', 'ONGOING', 'COMPLETED', 'Approved', 'Active'].includes(status) ? (
+                                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                                    <div className="p-8 bg-slate-50/50 border-b border-slate-100">
+                                        <h2 className="text-xl font-black text-slate-800">Active Placement</h2>
+                                        <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">{internship.company?.name || internship.companyName}</p>
+                                    </div>
+                                    <div className="p-8 grid grid-cols-2 md:grid-cols-3 gap-8">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Industry Field</p>
+                                            <p className="text-sm font-bold text-slate-700">{internship.field}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Duration</p>
+                                            <p className="text-sm font-bold text-slate-700">{new Date(internship.startDate).toLocaleDateString()} - {new Date(internship.endDate).toLocaleDateString()}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Supervisor</p>
+                                            <p className="text-sm font-bold text-slate-700">{internship.companySupervisorName}</p>
+                                        </div>
+                                        <div className="col-span-2 md:col-span-1 pt-6 border-t border-slate-50">
+                                            <p className="text-[10px] font-black text-dbu-primary uppercase tracking-widest">Assigned Advisor</p>
+                                            <p className="text-sm font-bold text-slate-700">{internship.advisor?.name || internship.advisor_id?.name || 'Pending Assignment'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="p-6 bg-slate-50 flex gap-4">
+                                        {(status === 'APPROVED' || status === 'ACTIVE' || status === 'ONGOING' || status === 'Approved' || status === 'Active') ? (
+                                            <button
+                                                onClick={() => navigate('/student/logbook')}
+                                                className="flex-1 py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black tracking-widest hover:border-dbu-primary hover:text-dbu-primary transition flex items-center justify-center gap-2"
+                                            >
+                                                <Book size={16} />
+                                                DAILY LOGBOOK
+                                            </button>
+                                        ) : (
+                                            <div className="flex-1 py-4 bg-slate-100 border border-slate-200 rounded-2xl text-[10px] font-black tracking-widest text-slate-400 flex items-center justify-center gap-2 cursor-not-allowed opacity-60">
+                                                <Book size={16} />
+                                                LOGBOOK (LOCKED)
+                                            </div>
+                                        )}
+                                        <button
+                                            onClick={() => navigate('/student/reports')}
+                                            className="flex-1 py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black tracking-widest hover:border-dbu-primary hover:text-dbu-primary transition flex items-center justify-center gap-2"
+                                        >
+                                            <FileText size={16} />
+                                            MANAGE REPORTS
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="p-8 grid grid-cols-2 md:grid-cols-3 gap-8">
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Industry Field</p>
-                                        <p className="text-sm font-bold text-slate-700">{internship.field}</p>
+                            ) : (
+                                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                                    <div className={`p-8 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
+                                        status === 'REVISION_REQUIRED' || status === 'REJECTED' 
+                                        ? 'bg-red-50/50 border-red-100' 
+                                        : 'bg-amber-50/50 border-amber-100'
+                                    }`}>
+                                        <div>
+                                            <h2 className={`text-xl font-black ${
+                                                status === 'REVISION_REQUIRED' || status === 'REJECTED' 
+                                                ? 'text-red-800' 
+                                                : 'text-slate-800'
+                                            }`}>
+                                                {status === 'REVISION_REQUIRED' 
+                                                    ? 'Action Required' 
+                                                    : status === 'REJECTED'
+                                                    ? 'Application Rejected'
+                                                    : 'Application Pending Review'}
+                                            </h2>
+                                            <p className={`text-xs font-bold mt-1 ${
+                                                status === 'REVISION_REQUIRED' || status === 'REJECTED' 
+                                                ? 'text-red-600' 
+                                                : 'text-slate-500'
+                                            }`}>
+                                                {status === 'REVISION_REQUIRED' 
+                                                    ? 'The Dean has requested some changes to your application.' 
+                                                    : status === 'REJECTED'
+                                                    ? 'Your application was rejected. You can edit your details to resubmit or find a different company.'
+                                                    : 'Your application is awaiting review by the Department Dean. You can still edit your details.'}
+                                            </p>
+                                        </div>
+                                        {['PENDING', 'PENDING_APPROVAL', 'Pending', 'RESUBMITTED', 'REVISION_REQUIRED', 'REJECTED'].includes(status) && (
+                                            <button
+                                                onClick={() => {
+                                                    if (internship) {
+                                                        setApplyData({
+                                                            companyName: internship.company?.name || internship.companyName || '',
+                                                            location: internship.company?.location || internship.location || '',
+                                                            field: internship.field || '',
+                                                            startDate: internship.startDate ? new Date(internship.startDate).toISOString().split('T')[0] : '',
+                                                            endDate: internship.endDate ? new Date(internship.endDate).toISOString().split('T')[0] : '',
+                                                            companySupervisorName: internship.companySupervisorName || '',
+                                                            companySupervisorPhone: internship.companySupervisorPhone || '',
+                                                            companySupervisorEmail: internship.companySupervisorEmail || ''
+                                                        });
+                                                    }
+                                                    setShowApply(true);
+                                                }}
+                                                className={`px-5 py-2.5 bg-white border rounded-xl font-black text-[10px] tracking-widest transition flex items-center gap-2 shadow-sm ${
+                                                    status === 'REVISION_REQUIRED' || status === 'REJECTED'
+                                                    ? 'border-red-200 text-red-600 hover:bg-red-50' 
+                                                    : 'border-amber-200 text-amber-600 hover:bg-amber-50'
+                                                }`}
+                                            >
+                                                <Edit3 size={14} />
+                                                EDIT DETAILS
+                                            </button>
+                                        )}
                                     </div>
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Duration</p>
-                                        <p className="text-sm font-bold text-slate-700">{new Date(internship.startDate).toLocaleDateString()} - {new Date(internship.endDate).toLocaleDateString()}</p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Supervisor</p>
-                                        <p className="text-sm font-bold text-slate-700">{internship.companySupervisorName}</p>
-                                    </div>
-                                    <div className="col-span-2 md:col-span-1 pt-6 border-t border-slate-50">
-                                        <p className="text-[10px] font-black text-dbu-primary uppercase tracking-widest">Assigned Advisor</p>
-                                        <p className="text-sm font-bold text-slate-700">{internship.advisor?.name || internship.advisor_id?.name || 'Pending Assignment'}</p>
+                                    <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-5">
+                                            <h3 className="text-[10px] font-black text-dbu-primary uppercase tracking-widest border-b border-slate-100 pb-2 flex items-center gap-2">
+                                                <Briefcase size={14} /> Company Details
+                                            </h3>
+                                            <div className="grid grid-cols-2 gap-y-4 gap-x-6">
+                                                <div className="space-y-1 col-span-2 sm:col-span-1">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase">Company Name</p>
+                                                    <p className="text-sm font-bold text-slate-700">{internship.company?.name || internship.companyName || 'N/A'}</p>
+                                                </div>
+                                                <div className="space-y-1 col-span-2 sm:col-span-1">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase">Location</p>
+                                                    <p className="text-sm font-bold text-slate-700">{internship.company?.location || internship.location || 'N/A'}</p>
+                                                </div>
+                                                <div className="space-y-1 col-span-2">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase">Field</p>
+                                                    <p className="text-sm font-bold text-slate-700">{internship.field || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                                <div className="space-y-1">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-1"><Calendar size={10} /> Start Date</p>
+                                                    <p className="text-sm font-bold text-slate-700">{internship.startDate ? new Date(internship.startDate).toLocaleDateString() : 'N/A'}</p>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-1"><Calendar size={10} /> End Date</p>
+                                                    <p className="text-sm font-bold text-slate-700">{internship.endDate ? new Date(internship.endDate).toLocaleDateString() : 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="space-y-5">
+                                            <h3 className="text-[10px] font-black text-dbu-primary uppercase tracking-widest border-b border-slate-100 pb-2 flex items-center gap-2">
+                                                <User size={14} /> Supervisor Contact
+                                            </h3>
+                                            <div className="space-y-4">
+                                                <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                                                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 shrink-0">
+                                                        <User size={14} />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase">Full Name</p>
+                                                        <p className="text-sm font-bold text-slate-700">{internship.companySupervisorName || 'N/A'}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                                                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 shrink-0">
+                                                        <Phone size={14} />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase">Phone Number</p>
+                                                        <p className="text-sm font-bold text-slate-700">{internship.companySupervisorPhone || 'N/A'}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                                                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 shrink-0">
+                                                        <Mail size={14} />
+                                                    </div>
+                                                    <div className="overflow-hidden">
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase">Email Address</p>
+                                                        <p className="text-sm font-bold text-slate-700 truncate">{internship.companySupervisorEmail || 'N/A'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="p-6 bg-slate-50 flex gap-4">
-                                    <button
-                                        onClick={() => navigate('/student/logbook')}
-                                        className="flex-1 py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black tracking-widest hover:border-dbu-primary hover:text-dbu-primary transition flex items-center justify-center gap-2"
-                                    >
-                                        <Book size={16} />
-                                        DAILY LOGBOOK
-                                    </button>
-                                    <button
-                                        onClick={() => navigate('/student/reports')}
-                                        className="flex-1 py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black tracking-widest hover:border-dbu-primary hover:text-dbu-primary transition flex items-center justify-center gap-2"
-                                    >
-                                        <FileText size={16} />
-                                        MANAGE REPORTS
-                                    </button>
-                                </div>
-                            </div>
+                            )
                         ) : (
                             <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl p-20 text-center flex flex-col items-center gap-4">
                                 <Briefcase size={64} className="text-slate-200" />

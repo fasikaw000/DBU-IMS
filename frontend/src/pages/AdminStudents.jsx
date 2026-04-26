@@ -31,7 +31,9 @@ const AdminStudents = () => {
     year: true,
     cbeAccount: false,
     email: false,
-    phone: false
+    phone: false,
+    internshipStatus: true,
+    companyName: true
   });
   const [printData, setPrintData] = useState([]);
 
@@ -177,7 +179,9 @@ const AdminStudents = () => {
       year: 'Year',
       cbeAccount: 'CBE Account',
       email: 'Email',
-      phone: 'Phone'
+      phone: 'Phone',
+      internshipStatus: 'Internship Status',
+      companyName: 'Company'
     };
 
     const printWindow = window.open('', '_blank');
@@ -252,7 +256,9 @@ const AdminStudents = () => {
       year: 'Year',
       cbeAccount: 'CBE Account',
       email: 'Email',
-      phone: 'Phone'
+      phone: 'Phone',
+      internshipStatus: 'Internship Status',
+      companyName: 'Company'
     };
     const headers = activeFields.map(f => fieldLabels[f]).join(',');
     const rows = data.map(s => {
@@ -419,8 +425,9 @@ const AdminStudents = () => {
                   <th className="px-6 py-4">Username</th>
                   <th className="px-6 py-4">Department</th>
                   <th className="px-6 py-4 text-center">Year</th>
-                  <th className="px-6 py-4">Phone</th>
+                   <th className="px-6 py-4">Phone</th>
                   <th className="px-6 py-4">CBE Account</th>
+                  <th className="px-6 py-4">Internship</th>
                   <th className="px-6 py-4 text-center">Status</th>
                   <th className="px-4 py-4 text-right">Actions</th>
                 </tr>
@@ -443,8 +450,20 @@ const AdminStudents = () => {
                     <td className="px-6 py-4 text-[10px] font-black text-slate-600">{student.department?.code || student.department?.name || 'N/A'}</td>
                     <td className="px-6 py-4 text-center text-[10px] font-bold text-slate-500">{student.year || 'N/A'}</td>
                     <td className="px-6 py-4 text-[10px] font-bold text-slate-600">{student.phoneNumber || student.phone || 'N/A'}</td>
-                    <td className="px-6 py-4 text-[10px] font-mono font-bold text-dbu-primary bg-slate-50/50 px-2 py-1 rounded">
+                     <td className="px-6 py-4 text-[10px] font-mono font-bold text-dbu-primary bg-slate-50/50 px-2 py-1 rounded">
                       {student.studentProfile?.cbeAccount || student.cbeAccount || 'Not provided'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full w-fit ${
+                          student.internshipStatus === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600' :
+                          student.internshipStatus === 'NOT_APPLIED' ? 'bg-slate-50 text-slate-400' :
+                          'bg-blue-50 text-blue-600'
+                        }`}>
+                          {student.internshipStatus.replace('_', ' ')}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-600 mt-1 truncate max-w-[100px]">{student.companyName}</span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex flex-col items-center gap-1">

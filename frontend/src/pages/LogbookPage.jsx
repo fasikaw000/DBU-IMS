@@ -32,13 +32,12 @@ const LogbookPage = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [expandedId, setExpandedId] = useState(null);
     
-    // Form State
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
         activity: '',
         tasksCompleted: '',
         problemsFaced: '',
-        hoursWorked: 8
+        hoursWorked: 3
     });
 
     // Advisor Comment State
@@ -78,7 +77,7 @@ const LogbookPage = () => {
                 activity: '',
                 tasksCompleted: '',
                 problemsFaced: '',
-                hoursWorked: 8
+                hoursWorked: 3
             });
             fetchLogbooks();
         } catch (err) {
@@ -159,12 +158,15 @@ const LogbookPage = () => {
                                 onClick={() => setExpandedId(expandedId === log._id ? null : log._id)}
                             >
                                 <div className="flex items-center gap-6">
-                                    <div className="w-12 h-12 bg-slate-50 rounded-2xl flex flex-col items-center justify-center border border-slate-100">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-                                            {new Date(log.date).toLocaleString('default', { month: 'short' })}
+                                    <div className="w-14 h-14 bg-slate-50 rounded-2xl flex flex-col items-center justify-center border border-slate-100 shadow-sm">
+                                        <span className="text-[8px] font-black text-dbu-primary uppercase tracking-tighter">
+                                            {new Date(log.date).toLocaleDateString('default', { weekday: 'short' })}
                                         </span>
-                                        <span className="text-xl font-black text-slate-800">
+                                        <span className="text-lg font-black text-slate-800 leading-none">
                                             {new Date(log.date).getDate()}
+                                        </span>
+                                        <span className="text-[8px] font-black text-slate-400 uppercase">
+                                            {new Date(log.date).toLocaleString('default', { month: 'short' })}
                                         </span>
                                     </div>
                                     <div>

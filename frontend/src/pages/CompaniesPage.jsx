@@ -128,15 +128,17 @@ const CompaniesPage = () => {
     };
 
     const filteredCompanies = companies.filter(c => {
+        // Only show approved companies
+        if (c.approvalStatus !== 'APPROVED') return false;
+
         const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
             c.industry.toLowerCase().includes(search.toLowerCase()) ||
             c.location.toLowerCase().includes(search.toLowerCase());
-        
+
         let matchesStatus = true;
-        if (statusFilter === 'active') matchesStatus = c.isActive && c.approvalStatus === 'APPROVED';
-        else if (statusFilter === 'inactive') matchesStatus = !c.isActive && c.approvalStatus === 'APPROVED';
-        else if (statusFilter === 'pending') matchesStatus = c.approvalStatus === 'PENDING';
-        
+        if (statusFilter === 'active') matchesStatus = c.isActive;
+        else if (statusFilter === 'inactive') matchesStatus = !c.isActive;
+
         return matchesSearch && matchesStatus;
     });
 
@@ -189,8 +191,7 @@ const CompaniesPage = () => {
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm font-bold text-slate-600 appearance-none"
                     >
                         <option value="all">All Companies</option>
-                        <option value="active">Active (Approved)</option>
-                        <option value="pending">Pending Approval</option>
+                        <option value="active">Active</option>
                         <option value="inactive">Deactivated</option>
                     </select>
                 </div>
@@ -219,38 +220,20 @@ const CompaniesPage = () => {
                                     <Building2 size={24} />
                                 </div>
                                 <div className="flex gap-1">
-                                    {company.approvalStatus === 'PENDING' ? (
-                                        <>
-                                            <button onClick={() => handleApprove(company._id, 'APPROVED')} className="p-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition" title="Approve">
-                                                <Check size={16} />
-                                            </button>
-                                            <button onClick={() => handleApprove(company._id, 'REJECTED')} className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition" title="Reject">
-                                                <XIcon size={16} />
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <button onClick={() => openEdit(company)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-dbu-primary transition">
-                                                <Edit2 size={16} />
-                                            </button>
-                                            <button onClick={() => handleToggleStatus(company._id)} className={`p-2 hover:bg-slate-100 rounded-lg transition ${company.isActive ? 'text-amber-500' : 'text-emerald-500'}`}>
-                                                <Power size={16} />
-                                            </button>
-                                            <button onClick={() => handleDelete(company._id)} className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-500 transition">
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </>
-                                    )}
+                                    <button onClick={() => openEdit(company)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-dbu-primary transition" title="Edit Company Details">
+                                        <Edit2 size={16} />
+                                    </button>
+                                    <button onClick={() => handleToggleStatus(company._id)} className={`p-2 hover:bg-slate-100 rounded-lg transition ${company.isActive ? 'text-amber-500' : 'text-emerald-500'}`} title={company.isActive ? 'Deactivate Company' : 'Activate Company'}>
+                                        <Power size={16} />
+                                    </button>
+                                    <button onClick={() => handleDelete(company._id)} className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-500 transition" title="Delete Company">
+                                        <Trash2 size={16} />
+                                    </button>
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-2 mb-1">
                                 <h3 className="text-lg font-black text-slate-800">{company.name}</h3>
-                                {company.approvalStatus === 'PENDING' && (
-                                    <span className="bg-amber-100 text-amber-600 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                                        Pending
-                                    </span>
-                                )}
                             </div>
                             <span className="text-[10px] font-black text-dbu-primary uppercase tracking-widest bg-dbu-primary/5 px-2 py-0.5 rounded">
                                 {company.industry}
@@ -263,15 +246,24 @@ const CompaniesPage = () => {
                                 </div>
                                 <div className="flex items-center gap-3 text-slate-500">
                                     <User size={16} className="text-slate-300" />
-                                    <span className="text-xs font-medium">{company.contactPerson || 'No contact person'}</span>
+                                    <span className="text-xs font-medium">
+                                        <span className="text-slate-400 mr-1">Supervisor:</span>
+                                        {company.contactPerson || 'Not provided'}
+                                    </span>
                                 </div>
                                 <div className="flex items-center gap-3 text-slate-500">
                                     <Mail size={16} className="text-slate-300" />
-                                    <span className="text-xs font-medium">{company.email || 'No email'}</span>
+                                    <span className="text-xs font-medium">
+                                        <span className="text-slate-400 mr-1">Email:</span>
+                                        {company.email || 'Not provided'}
+                                    </span>
                                 </div>
                                 <div className="flex items-center gap-3 text-slate-500">
                                     <Phone size={16} className="text-slate-300" />
-                                    <span className="text-xs font-medium">{company.phone || 'No phone'}</span>
+                                    <span className="text-xs font-medium">
+                                        <span className="text-slate-400 mr-1">Phone:</span>
+                                        {company.phone || 'Not provided'}
+                                    </span>
                                 </div>
                             </div>
 
@@ -418,7 +410,7 @@ const CompaniesPage = () => {
                         </div>
                         <div className="p-8 overflow-y-auto flex-1">
                             {(() => {
-                                const assigned = allStudents.filter(s => s.internship?.companyId === viewingStudentsFor._id || s.internship?.company?.name === viewingStudentsFor.name || s.internship?.companyName === viewingStudentsFor.name);
+                                const assigned = viewingStudentsFor.students || [];
                                 if (assigned.length === 0) {
                                     return (
                                         <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
@@ -439,9 +431,6 @@ const CompaniesPage = () => {
                                                         <p className="text-[10px] font-bold text-slate-400 uppercase">{s.studentId}</p>
                                                     </div>
                                                 </div>
-                                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${s.internship?.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
-                                                    {s.internship?.status || 'Unknown'}
-                                                </span>
                                             </div>
                                         ))}
                                     </div>

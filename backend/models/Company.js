@@ -46,7 +46,11 @@ const companySchema = new mongoose.Schema({
   departmentApprover: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
-  }
+  },
+  students: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Student'
+  }]
 }, {
   timestamps: true
 });

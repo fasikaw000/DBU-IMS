@@ -45,9 +45,22 @@ const studentSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Student year is required'],
     trim: true
+  },
+  assignedAdvisor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+studentSchema.virtual('internship', {
+  ref: 'Internship',
+  localField: '_id',
+  foreignField: 'student',
+  justOne: true
 });
 
 export default mongoose.model('Student', studentSchema);

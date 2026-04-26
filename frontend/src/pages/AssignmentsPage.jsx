@@ -10,7 +10,10 @@ import {
     Loader2,
     Briefcase,
     Building,
-    History
+    History,
+    Clock,
+    User,
+    X
 } from 'lucide-react';
 
 const AssignmentsPage = () => {
@@ -20,6 +23,10 @@ const AssignmentsPage = () => {
     const [search, setSearch] = useState('');
     const [actionLoading, setActionLoading] = useState(false);
     const [message, setMessage] = useState(null);
+    const [showHistory, setShowHistory] = useState(false);
+    const [selectedHistory, setSelectedHistory] = useState([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [selectedStudentName, setSelectedStudentName] = useState('');
 
     useEffect(() => {
         fetchData();
@@ -42,10 +49,16 @@ const AssignmentsPage = () => {
                     department: s.department?.name || s.department?.code,
                     assignedAdvisorId: s.internship.advisor_id || s.internship.advisor?._id,
                     assignedAdvisorName: s.internship.advisor?.name || 'Not Assigned',
-                    companyName: s.internship.companyName,
+                    companyName: s.internship.company?.name || s.internship.companyName || 'Unknown Company',
                     status: s.internship.status
                 }));
-            setAssignments(list);
+            
+            // Point 5: FIX ASSIGNMENTS PAGE - Only show APPROVED (awaiting assignment)
+            const filteredList = list.filter(item => 
+                ['Approved', 'APPROVED'].includes(item.status) && !item.assignedAdvisorId
+            );
+
+            setAssignments(filteredList);
             setAdvisors(advisorsRes.data.map(w => w.advisor));
         } catch (err) {
             console.error(err);
@@ -65,6 +78,23 @@ const AssignmentsPage = () => {
             setMessage({ type: 'error', text: err.response?.data?.message || 'Assignment failed' });
         } finally {
             setActionLoading(false);
+        }
+    };
+
+    const fetchHistory = async (internshipId, studentName) => {
+        if (!internshipId) return;
+        console.log("Fetching history for:", internshipId);
+        setHistoryLoading(true);
+        setSelectedStudentName(studentName);
+        setShowHistory(true);
+        try {
+            const res = await api.get(`/department/internship/${internshipId}/history`);
+            setSelectedHistory(res.data?.data || []);
+        } catch (err) {
+            console.error("History fetch error:", err);
+            setSelectedHistory([]);
+        } finally {
+            setHistoryLoading(false);
         }
     };
 
@@ -163,9 +193,9 @@ const AssignmentsPage = () => {
                                                         <span className="text-xs font-bold">{item.assignedAdvisorName}</span>
                                                     </div>
                                                 ) : (
-                                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-slate-400 rounded-lg border border-slate-100">
+                                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg border border-amber-100 animate-pulse">
                                                         <AlertCircle size={14} />
-                                                        <span className="text-xs font-bold italic">Not Assigned</span>
+                                                        <span className="text-xs font-bold uppercase tracking-tighter">Awaiting Assignment</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -188,7 +218,16 @@ const AssignmentsPage = () => {
                                                         <option key={adv._id} value={adv._id}>{adv.name}</option>
                                                     ))}
                                                 </select>
-                                                <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-dbu-primary transition" title="View History">
+                                                <button 
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        fetchHistory(item.internshipId, item.studentName);
+                                                    }}
+                                                    className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-dbu-primary transition" 
+                                                    title="View History"
+                                                >
                                                     <History size={18} />
                                                 </button>
                                             </div>
@@ -196,10 +235,70 @@ const AssignmentsPage = () => {
                                     </tr>
                                 ))
                             )}
+                            {assignments.length === 0 && (
+                                <tr>
+                                    <td colSpan="5" className="p-12 text-center text-slate-400 font-bold">
+                                        No approved students yet
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
             </div>
+            {/* History Modal */}
+            {showHistory && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in duration-200">
+                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                            <div>
+                                <h2 className="text-xl font-black text-slate-800 tracking-tight">Assignment History</h2>
+                                <p className="text-xs font-bold text-slate-400 mt-0.5">Timeline for {selectedStudentName}</p>
+                            </div>
+                            <button onClick={() => setShowHistory(false)} className="p-2 hover:bg-slate-200 rounded-xl transition text-slate-400">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        <div className="p-6 max-h-[60vh] overflow-y-auto">
+                            {historyLoading ? (
+                                <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-dbu-primary" /></div>
+                            ) : selectedHistory.length === 0 ? (
+                                <div className="py-12 text-center text-slate-400 font-bold italic">No history found for this internship.</div>
+                            ) : (
+                                <div className="space-y-8 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
+                                    {selectedHistory.map((log, idx) => (
+                                        <div key={log._id} className="relative pl-10">
+                                            <div className="absolute left-0 top-0 w-8 h-8 bg-white border-2 border-dbu-primary rounded-full flex items-center justify-center z-10 shadow-sm">
+                                                <Clock size={14} className="text-dbu-primary" />
+                                            </div>
+                                            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 hover:border-dbu-primary/20 transition-all">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-dbu-primary">{log.action.replace('_', ' ')}</span>
+                                                    <span className="text-[9px] font-bold text-slate-400">{new Date(log.createdAt).toLocaleString()}</span>
+                                                </div>
+                                                <p className="text-xs font-bold text-slate-700 leading-relaxed mb-3">{log.details}</p>
+                                                <div className="flex items-center gap-2 pt-3 border-t border-slate-200/50">
+                                                    <div className="w-5 h-5 bg-slate-200 rounded-full flex items-center justify-center">
+                                                        <User size={10} className="text-slate-500" />
+                                                    </div>
+                                                    <span className="text-[10px] font-bold text-slate-500">Performed by <span className="text-slate-800">{log.user?.name || 'System'}</span></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+                            <button onClick={() => setShowHistory(false)} className="px-6 py-2.5 bg-white border border-slate-200 rounded-xl font-black text-[10px] tracking-widest hover:bg-slate-100 transition shadow-sm">
+                                CLOSE HISTORY
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

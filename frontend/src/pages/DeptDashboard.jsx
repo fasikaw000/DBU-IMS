@@ -20,7 +20,8 @@ import {
     ArrowLeft,
     MessageSquare,
     Send,
-    Loader2
+    Loader2,
+    Eye
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
@@ -53,8 +54,12 @@ const DeptDashboard = () => {
         year: true,
         cbeAccount: true,
         phone: true,
-        status: true
     });
+    const [selectedApp, setSelectedApp] = useState(null);
+    const [showDetails, setShowDetails] = useState(false);
+    const [revisionReason, setRevisionReason] = useState('');
+    const [isRevising, setIsRevising] = useState(false);
+    const [actionType, setActionType] = useState('Revision Required');
 
     useEffect(() => {
         fetchData();
@@ -71,7 +76,7 @@ const DeptDashboard = () => {
             setStudents(studentsRes.data);
 
             const pending = studentsRes.data
-                .filter(s => s.internship && s.internship.status === 'PENDING_APPROVAL')
+                .filter(s => s.internship && ['PENDING', 'PENDING_APPROVAL', 'RESUBMITTED', 'REVISION_REQUIRED'].includes(s.internship.status))
                 .map(s => ({
                     ...s.internship,
                     studentName: s.user?.name,
@@ -91,16 +96,18 @@ const DeptDashboard = () => {
         }
     };
 
-    const handleAction = async (id, status) => {
+    const handleAction = async (id, status, revisionMessage = '') => {
         setActionLoading(true);
         try {
-            await api.put(`/department/internship/${id}`, { status });
-            setMessage({ type: 'success', text: `Application ${status.toLowerCase()}ed.` });
+            await api.put(`/department/internship/${id}`, { status, message: revisionMessage });
+            setMessage({ type: 'success', text: status === 'Revision Required' ? 'Revision request sent.' : `Application ${status.toLowerCase()}ed.` });
             fetchData();
         } catch (err) {
             setMessage({ type: 'error', text: err.response?.data?.message || err.message });
         } finally {
             setActionLoading(false);
+            setIsRevising(false);
+            setRevisionReason('');
         }
     };
 
@@ -150,7 +157,7 @@ const DeptDashboard = () => {
                 {[
                     { label: 'Pending Apps', value: stats.pendingApplications, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
                     { label: 'Dept Advisors', value: stats.totalAdvisors, icon: Users, color: 'text-blue-500', bg: 'bg-blue-50' },
-                    { label: 'No Placement', value: stats.awaitingAdvisor, icon: Briefcase, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+                    { label: 'Placement', value: stats.awaitingAdvisor, icon: Briefcase, color: 'text-indigo-500', bg: 'bg-indigo-50' },
                     { label: 'Active Field', value: stats.activeInternships, icon: ShieldCheck, color: 'text-emerald-500', bg: 'bg-emerald-50' }
                 ].map((card, i) => (
                     <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all group cursor-default">
@@ -218,8 +225,12 @@ const DeptDashboard = () => {
                                             </td>
                                             <td className="px-8 py-6">
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-slate-700 text-sm">{app.companyName}</span>
-                                                    <span className="text-[10px] text-dbu-primary font-black uppercase tracking-tighter">{app.field}</span>
+                                                    <span className="font-bold text-slate-700 text-sm">{app.company?.name || 'N/A'}</span>
+                                                    <span className={`text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 rounded ${
+                                                        app.status === 'RESUBMITTED' ? 'bg-indigo-100 text-indigo-700' : 'text-dbu-primary bg-dbu-primary/5'
+                                                    }`}>
+                                                        {app.status === 'RESUBMITTED' ? '★ RESUBMITTED' : app.field}
+                                                    </span>
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6">
@@ -229,8 +240,9 @@ const DeptDashboard = () => {
                                             </td>
                                             <td className="px-8 py-6 text-right">
                                                 <div className="flex justify-end gap-2">
-                                                    <button onClick={() => handleAction(app._id, 'Approved')} className="bg-emerald-500 text-white p-2 rounded-xl hover:bg-emerald-600 transition shadow-md"><CheckCircle size={16} /></button>
-                                                    <button onClick={() => handleAction(app._id, 'Rejected')} className="bg-red-500 text-white p-2 rounded-xl hover:bg-red-600 transition shadow-md"><X size={16} /></button>
+                                                    <button onClick={() => { setSelectedApp(app); setShowDetails(true); }} className="bg-slate-100 text-slate-500 p-2 rounded-xl hover:bg-dbu-primary hover:text-white transition shadow-sm" title="View Details"><Eye size={16} /></button>
+                                                    <button onClick={() => handleAction(app._id, 'Approved')} className="bg-emerald-500 text-white p-2 rounded-xl hover:bg-emerald-600 transition shadow-md" title="Approve"><CheckCircle size={16} /></button>
+                                                    <button onClick={() => handleAction(app._id, 'Rejected')} className="bg-red-500 text-white p-2 rounded-xl hover:bg-red-600 transition shadow-md" title="Reject"><X size={16} /></button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -276,9 +288,11 @@ const DeptDashboard = () => {
                                             <td className="px-8 py-6 text-[11px] font-mono font-bold text-slate-600">{s.cbeAccount || '---'}</td>
                                             <td className="px-8 py-6 text-[11px] font-bold text-slate-600">{s.phone || '---'}</td>
                                             <td className="px-8 py-6">
-                                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${s.internship?.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                        s.internship?.status === 'PENDING_APPROVAL' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                                                            'bg-slate-50 text-slate-400 border-slate-100'
+                                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                                                        s.internship?.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                        s.internship?.status === 'PENDING_APPROVAL' || s.internship?.status === 'RESUBMITTED' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                                        s.internship?.status === 'REVISION_REQUIRED' ? 'bg-red-50 text-red-600 border-red-100' :
+                                                        'bg-slate-50 text-slate-400 border-slate-100'
                                                     }`}>
                                                     {s.internship?.status || 'NOT APPLIED'}
                                                 </span>
@@ -301,6 +315,117 @@ const DeptDashboard = () => {
             </div>
 
             {/* Print Modal Removed */}
+            {/* Application Details Modal */}
+            {showDetails && selectedApp && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="bg-dbu-primary p-8 text-white flex justify-between items-start">
+                            <div>
+                                <h3 className="text-2xl font-black">Application Details</h3>
+                                <p className="text-dbu-light/80 text-xs font-bold uppercase tracking-widest mt-1">Reviewing: {selectedApp.studentName}</p>
+                            </div>
+                            <button onClick={() => setShowDetails(false)} className="p-2 hover:bg-white/10 rounded-full transition-all">
+                                <X size={24} />
+                            </button>
+                        </div>
+                        
+                        <div className="p-10 space-y-10">
+                            <div className="grid grid-cols-2 gap-10">
+                                <section className="space-y-4">
+                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100 pb-3">Placement Details</h4>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="text-[10px] text-slate-400 font-bold block uppercase mb-1">Company</label>
+                                            <p className="text-sm font-black text-slate-800">{selectedApp.company?.name || selectedApp.companyName}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] text-slate-400 font-bold block uppercase mb-1">Internship Field</label>
+                                            <p className="text-sm font-black text-slate-800">{selectedApp.field || 'General'}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] text-slate-400 font-bold block uppercase mb-1">Period</label>
+                                            <p className="text-sm font-black text-slate-800">
+                                                {new Date(selectedApp.startDate).toLocaleDateString()} - {new Date(selectedApp.endDate).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section className="space-y-4">
+                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100 pb-3">Company Supervisor</h4>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="text-[10px] text-slate-400 font-bold block uppercase mb-1">Full Name</label>
+                                            <p className="text-sm font-black text-slate-800">{selectedApp.companySupervisorName || 'Not provided'}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] text-slate-400 font-bold block uppercase mb-1">Email Address</label>
+                                            <p className="text-sm font-black text-slate-800">{selectedApp.companySupervisorEmail || 'Not provided'}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] text-slate-400 font-bold block uppercase mb-1">Phone Number</label>
+                                            <p className="text-sm font-black text-slate-800">{selectedApp.companySupervisorPhone || 'Not provided'}</p>
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+
+                            <div className="flex flex-col gap-6 pt-6 border-t border-slate-100">
+                                {isRevising ? (
+                                    <div className="space-y-4 animate-in slide-in-from-bottom-4">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            {actionType === 'Rejected' ? 'Reason for Rejection' : 'Correction Instructions for Student'}
+                                        </label>
+                                        <textarea 
+                                            autoFocus
+                                            value={revisionReason}
+                                            onChange={e => setRevisionReason(e.target.value)}
+                                            placeholder={actionType === 'Rejected' ? "Example: This company is not approved for internships..." : "Example: Please correct the supervisor email..."}
+                                            className={`w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 transition-all min-h-[100px] ${actionType === 'Rejected' ? 'focus:ring-red-500' : 'focus:ring-amber-500'}`}
+                                        />
+                                        <div className="flex gap-3">
+                                            <button 
+                                                onClick={() => { handleAction(selectedApp._id, actionType, revisionReason); setShowDetails(false); setIsRevising(false); }}
+                                                disabled={!revisionReason.trim()}
+                                                className={`flex-1 py-4 rounded-2xl font-black text-sm text-white transition-all shadow-lg disabled:opacity-50 ${actionType === 'Rejected' ? 'bg-red-600 shadow-red-600/20 hover:bg-red-700' : 'bg-amber-600 shadow-amber-600/20 hover:bg-amber-700'}`}
+                                            >
+                                                {actionType === 'Rejected' ? 'Confirm Rejection' : 'Send Correction Request'}
+                                            </button>
+                                            <button 
+                                                onClick={() => setIsRevising(false)}
+                                                className="px-6 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-4">
+                                        <button 
+                                            onClick={() => { handleAction(selectedApp._id, 'Approved'); setShowDetails(false); }}
+                                            className="flex-1 bg-emerald-500 text-white py-4 rounded-2xl font-black text-sm hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 uppercase tracking-widest"
+                                        >
+                                            Approve
+                                        </button>
+                                        <button 
+                                            onClick={() => { setActionType('Revision Required'); setIsRevising(true); }}
+                                            className="flex-1 bg-amber-500 text-white py-4 rounded-2xl font-black text-sm hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 uppercase tracking-widest"
+                                        >
+                                            Request Correction
+                                        </button>
+                                        <button 
+                                            onClick={() => { setActionType('Rejected'); setIsRevising(true); }}
+                                            className="bg-red-50 text-red-500 px-6 py-4 rounded-2xl font-black text-sm hover:bg-red-100 transition-all uppercase tracking-widest"
+                                        >
+                                            Reject
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

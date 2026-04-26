@@ -23,6 +23,7 @@ import {
   toggleUserStatus,
   getAllInternships,
   updateInternshipStatus,
+  assignAdvisor,
   getInternshipDashboardStats,
   getReportAnalytics,
   getSettings,
@@ -73,6 +74,7 @@ router.route('/departments/:id')
 // Internship Management
 router.get('/internships', getAllInternships);
 router.patch('/internships/:id/status', updateInternshipStatus);
+router.patch('/internships/:id/assign-advisor', assignAdvisor);
 router.get('/internships/dashboard-stats', getInternshipDashboardStats);
 
 // System Reports

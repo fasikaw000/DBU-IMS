@@ -11,7 +11,8 @@ import {
   Calendar,
   XCircle,
   FileText,
-  Activity
+  Activity,
+  Download
 } from 'lucide-react';
 
 const AdminInternships = () => {
@@ -46,6 +47,41 @@ const AdminInternships = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleExportCSV = () => {
+    if (internships.length === 0) return;
+    
+    const headers = [
+      'Student Name', 'Student ID', 'Department', 'Company', 
+      'Supervisor Name', 'Supervisor Email', 'Supervisor Phone', 
+      'Field', 'Start Date', 'End Date', 'Status', 'Advisor'
+    ].join(',');
+
+    const rows = internships.map(i => {
+      return [
+        `"${i.student?.name || ''}"`,
+        `"${i.student?.studentId || ''}"`,
+        `"${i.student?.department?.name || ''}"`,
+        `"${i.company?.name || ''}"`,
+        `"${i.companySupervisorName || ''}"`,
+        `"${i.companySupervisorEmail || ''}"`,
+        `"${i.companySupervisorPhone || ''}"`,
+        `"${i.field || ''}"`,
+        `"${new Date(i.startDate).toLocaleDateString()}"`,
+        `"${new Date(i.endDate).toLocaleDateString()}"`,
+        `"${i.status}"`,
+        `"${i.advisor_id?.name || 'Unassigned'}"`
+      ].join(',');
+    }).join('\n');
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + headers + '\n' + rows;
+    const link = document.createElement('a');
+    link.setAttribute('href', encodeURI(csvContent));
+    link.setAttribute('download', `Internship_Records_${new Date().toLocaleDateString().replace(/\//g, '-')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleStatusUpdate = async (id, newStatus) => {
@@ -88,6 +124,15 @@ const AdminInternships = () => {
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">Internship Management</h1>
           <p className="text-slate-500 text-sm">Monitor internship placements, approvals, and lifecycle status.</p>
+        </div>
+        <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportCSV}
+              className="bg-white text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center hover:bg-slate-50 transition-all shadow-sm"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </button>
         </div>
       </div>
 
@@ -220,8 +265,14 @@ const AdminInternships = () => {
                     <p className="text-sm font-bold text-slate-800">{selectedInternship.student?.name}</p>
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-400 block lowercase">University Advisor</label>
-                    <p className="text-sm font-bold text-slate-800">{selectedInternship.advisor_id?.name || 'Unassigned'}</p>
+                    <label className="text-[10px] text-slate-400 block lowercase">Internship Field</label>
+                    <p className="text-sm font-bold text-slate-800">{selectedInternship.field || 'General'}</p>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 block lowercase">Duration</label>
+                    <p className="text-sm font-bold text-slate-800">
+                      {new Date(selectedInternship.startDate).toLocaleDateString()} - {new Date(selectedInternship.endDate).toLocaleDateString()}
+                    </p>
                   </div>
                   <div>
                     <label className="text-[10px] text-slate-400 block lowercase">Status</label>
@@ -240,6 +291,10 @@ const AdminInternships = () => {
                   <div>
                     <label className="text-[10px] text-slate-400 block lowercase">Supervisor Name</label>
                     <p className="text-sm font-bold text-slate-800">{selectedInternship.companySupervisorName}</p>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 block lowercase">Supervisor Email</label>
+                    <p className="text-sm font-bold text-slate-800">{selectedInternship.companySupervisorEmail}</p>
                   </div>
                    <div>
                     <label className="text-[10px] text-slate-400 block lowercase">Supervisor Phone</label>

@@ -22,7 +22,13 @@ const internshipSchema = new mongoose.Schema({
   },
   endDate: {
     type: Date,
-    required: true
+    required: true,
+    validate: {
+      validator: function(value) {
+        return value > this.startDate;
+      },
+      message: 'End date must be after start date'
+    }
   },
   companySupervisorName: {
     type: String,
@@ -30,11 +36,16 @@ const internshipSchema = new mongoose.Schema({
   },
   companySupervisorEmail: {
     type: String,
-    required: false
+    required: [true, 'Company supervisor email is required'],
+    match: [
+      /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+      'Please fill a valid email address'
+    ]
   },
   companySupervisorPhone: {
     type: String,
-    required: true
+    required: [true, 'Company supervisor phone is required'],
+    match: [/^\+?[0-9]{10,15}$/, 'Please fill a valid phone number (10-15 digits)']
   },
   advisor_id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -49,8 +60,12 @@ const internshipSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['NOT_STARTED', 'PENDING_APPROVAL', 'APPROVED', 'ONGOING', 'SUBMITTED', 'EVALUATED', 'COMPLETED'],
-    default: 'NOT_STARTED'
+    enum: ['NOT_APPLIED', 'PENDING', 'PENDING_APPROVAL', 'RESUBMITTED', 'REVISION_REQUIRED', 'APPROVED', 'ACTIVE', 'ONGOING', 'REJECTED', 'SUBMITTED', 'EVALUATED', 'COMPLETED'],
+    default: 'PENDING'
+  },
+  revisionMessage: {
+    type: String,
+    trim: true
   },
   finalGrade: {
     advisorGrade: { type: Number, min: 0, max: 100 },

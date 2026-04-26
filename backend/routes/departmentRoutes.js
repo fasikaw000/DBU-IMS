@@ -5,7 +5,8 @@ import {
   processInternshipApp,
   assignAdvisor,
   getAdvisorWorkload,
-  getDepartmentStats
+  getDepartmentStats,
+  getInternshipHistory
 } from '../controllers/departmentController.js';
 import {
   getCompanies,
@@ -26,6 +27,7 @@ router.get('/advisors/workload', authorize('Dean'), getAdvisorWorkload);
 router.get('/stats', authorize('Dean'), getDepartmentStats);
 router.put('/internship/:internshipId', authorize('Dean'), processInternshipApp);
 router.put('/internship/:internshipId/advisor', authorize('Dean'), assignAdvisor);
+router.get('/internship/:internshipId/history', authorize('Dean'), getInternshipHistory);
 
 // Companies management
 router.get('/companies', authorize('Dean', 'Student'), getCompanies);

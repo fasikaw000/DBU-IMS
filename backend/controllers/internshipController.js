@@ -1,6 +1,9 @@
 import Internship from '../models/Internship.js';
 import Student from '../models/Student.js';
 import Company from '../models/Company.js';
+import Placement from '../models/Placement.js';
+import Report from '../models/Report.js';
+import Evaluation from '../models/Evaluation.js';
 import { notify } from './notificationController.js';
 import User from '../models/User.js';
 
@@ -13,17 +16,17 @@ export const applyInternship = async (req, res) => {
       companyName, company_name,
       location,
       field,
-      supervisorName, supervisor_name,
-      supervisorEmail, supervisor_email,
-      supervisorPhone, supervisor_phone,
+      supervisorName, supervisor_name, companySupervisorName,
+      supervisorEmail, supervisor_email, companySupervisorEmail,
+      supervisorPhone, supervisor_phone, companySupervisorPhone,
       startDate, start_date,
       endDate, end_date
     } = req.body;
 
     const finalCompanyName = companyName || company_name;
-    const finalSupervisorName = supervisorName || supervisor_name;
-    const finalSupervisorEmail = supervisorEmail || supervisor_email;
-    const finalSupervisorPhone = supervisorPhone || supervisor_phone;
+    const finalSupervisorName = supervisorName || supervisor_name || companySupervisorName;
+    const finalSupervisorEmail = supervisorEmail || supervisor_email || companySupervisorEmail;
+    const finalSupervisorPhone = supervisorPhone || supervisor_phone || companySupervisorPhone;
     const finalStartDate = startDate || start_date;
     const finalEndDate = endDate || end_date;
 
@@ -38,37 +41,57 @@ export const applyInternship = async (req, res) => {
     }
 
     // 2. Check if student already has an internship
-    // The model has unique: true on student field, so mongo would catch it anyway
     const existingInternship = await Internship.findOne({ student: student._id });
-    if (existingInternship) {
+    if (existingInternship && !['PENDING', 'PENDING_APPROVAL', 'RESUBMITTED', 'REVISION_REQUIRED', 'REJECTED'].includes(existingInternship.status)) {
       return res.status(400).json({
         success: false,
-        message: 'You already have an internship application',
+        message: 'You already have an active internship application that cannot be modified',
         data: null
       });
     }
 
-    // 3. Create Company first (Pending status)
-    const company = await Company.create({
-      name: finalCompanyName,
-      location,
-      industry: field, // Use field as a placeholder for industry if not provided
-      createdByStudent: true,
-      addedBy: req.user.id
-    });
+    // 3. Find or Create Company
+    let company = await Company.findOne({ name: finalCompanyName });
+    
+    if (!company) {
+      company = await Company.create({
+        name: finalCompanyName,
+        location,
+        industry: field || 'General',
+        createdByStudent: true,
+        addedBy: req.user._id || req.user.id
+      });
+    }
 
-    // 4. Create internship linking to the company
-    const internship = await Internship.create({
-      student: student._id,
-      company: company._id,
-      field,
-      startDate: finalStartDate,
-      endDate: finalEndDate,
-      companySupervisorName: finalSupervisorName,
-      companySupervisorEmail: finalSupervisorEmail,
-      companySupervisorPhone: finalSupervisorPhone,
-      status: 'PENDING_APPROVAL' 
-    });
+    // 4. Create or Update internship
+    let internship;
+    if (existingInternship && ['PENDING', 'PENDING_APPROVAL', 'RESUBMITTED', 'REVISION_REQUIRED'].includes(existingInternship.status)) {
+      existingInternship.company = company._id;
+      existingInternship.field = field;
+      existingInternship.startDate = finalStartDate;
+      existingInternship.endDate = finalEndDate;
+      existingInternship.companySupervisorName = finalSupervisorName;
+      existingInternship.companySupervisorEmail = finalSupervisorEmail;
+      existingInternship.companySupervisorPhone = finalSupervisorPhone;
+      
+      if (existingInternship.status === 'REVISION_REQUIRED') {
+        existingInternship.status = 'RESUBMITTED';
+        existingInternship.revisionMessage = ''; // Clear message after resubmission
+      }
+      internship = await existingInternship.save();
+    } else {
+      internship = await Internship.create({
+        student: student._id,
+        company: company._id,
+        field,
+        startDate: finalStartDate,
+        endDate: finalEndDate,
+        companySupervisorName: finalSupervisorName,
+        companySupervisorEmail: finalSupervisorEmail,
+        companySupervisorPhone: finalSupervisorPhone,
+        status: 'PENDING' 
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -89,10 +112,30 @@ export const applyInternship = async (req, res) => {
       }
     }
   } catch (error) {
-    console.error(error);
+    console.error('Internship Application Error:', error);
+    
+    // Handle Mongoose Validation Error
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: messages.join(', '),
+        data: null
+      });
+    }
+
+    // Handle Duplicate Key Error
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'You already have an internship application or some data is duplicated.',
+        data: null
+      });
+    }
+
     res.status(500).json({
       success: false,
-      message: error.message || 'Server Error',
+      message: error.message || 'An internal server error occurred during submission.',
       data: null
     });
   }
@@ -179,7 +222,7 @@ export const rejectInternship = async (req, res) => {
 // @access  Private/Department Dean
 export const getPendingInternships = async (req, res) => {
   try {
-    const internships = await Internship.find({ status: 'PENDING_APPROVAL' })
+    const internships = await Internship.find({ status: { $in: ['PENDING', 'PENDING_APPROVAL', 'RESUBMITTED'] } })
       .populate('student')
       .populate('company');
 
@@ -255,12 +298,13 @@ export const assignAdvisor = async (req, res) => {
 // @access  Private (Student)
 export const getStudentInternship = async (req, res) => {
   try {
-    const student = await Student.findOne({ user: req.user._id });
+    const student = await Student.findOne({ user: req.user._id || req.user.id });
     if (!student) {
         return res.status(404).json({ success: false, message: 'Student record not found' });
     }
 
     const internship = await Internship.findOne({ student: student._id })
+      .populate('company', 'name location industry')
       .populate('advisor_id', 'name email');
 
     if (!internship) {
@@ -271,9 +315,14 @@ export const getStudentInternship = async (req, res) => {
       });
     }
 
+    const placement = await Placement.findOne({ student: student._id })
+      .populate('company', 'name location industry')
+      .populate('advisor', 'name email');
+
     res.status(200).json({
       success: true,
-      data: internship
+      data: internship,
+      placement: placement || null
     });
   } catch (error) {
     console.error(error);
@@ -294,7 +343,7 @@ export const uploadEvaluation = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please upload a PDF file' });
     }
 
-    const student = await Student.findOne({ user: req.user._id });
+    const student = await Student.findOne({ user: req.user._id || req.user.id });
     if (!student) {
         return res.status(404).json({ success: false, message: 'Student record not found' });
     }

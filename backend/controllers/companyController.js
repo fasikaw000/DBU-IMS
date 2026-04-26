@@ -6,7 +6,18 @@ import AuditLog from '../models/AuditLog.js';
 // @access  Private
 export const getCompanies = async (req, res, next) => {
   try {
-    const companies = await Company.find().sort('-createdAt');
+    const companies = await Company.find().sort('-createdAt').lean();
+    
+    // Fetch from placements
+    const Placement = (await import('../models/Placement.js')).default;
+    for (let company of companies) {
+      const placements = await Placement.find({ company: company._id })
+        .populate({
+          path: 'student',
+          populate: { path: 'user', select: 'name email' }
+        });
+      company.students = placements.map(p => p.student).filter(Boolean);
+    }
     res.status(200).json({ success: true, count: companies.length, data: companies });
   } catch (error) {
     next(error);

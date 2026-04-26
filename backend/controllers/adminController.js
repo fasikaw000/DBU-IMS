@@ -10,6 +10,8 @@ import xlsx from 'xlsx';
 import Staff from '../models/Staff.js';
 import Settings from '../models/Settings.js';
 import Company from '../models/Company.js';
+import Placement from '../models/Placement.js';
+import Student from '../models/Student.js';
 
 // ─────────────────────────────────────────────────────────────
 // @desc    Emergency Admin Password Reset
@@ -51,7 +53,6 @@ export const emergencyAdminReset = async (req, res, next) => {
     next(err);
   }
 };
-import Student from '../models/Student.js';
 import { generateUsername } from '../utils/generateUsername.js';
 
 const IMPORTANT_ACTIVITY_ACTIONS = [
@@ -311,7 +312,11 @@ export const getAllStudents = async (req, res, next) => {
   try {
     const students = await Student.find({})
       .populate('user', 'name email isActivated activationStatus isActive status phoneNumber')
-      .populate('department', 'name code');
+      .populate('department', 'name code')
+      .populate({
+        path: 'internship',
+        populate: { path: 'company', select: 'name' }
+      });
 
     res.status(200).json({
       success: true,
@@ -331,6 +336,8 @@ export const getAllStudents = async (req, res, next) => {
         activationStatus: s.user?.isActivated ? 'Activated' : 'Pending',
         status: s.user?.status || 'active',
         isActive: s.user?.isActive !== false,
+        internshipStatus: s.internship?.status || 'NOT_APPLIED',
+        companyName: s.internship?.company?.name || 'N/A',
         createdAt: s.createdAt
       }))
     });
@@ -844,6 +851,26 @@ export const updateInternshipStatus = async (req, res, next) => {
     internship.status = status;
     await internship.save();
 
+    // Point 2: DEAN APPROVAL (CRITICAL FIX)
+    if (status === 'APPROVED') {
+      const studentProfile = await Student.findOne({ user: internship.student });
+      
+      // A. CREATE PLACEMENT RECORD
+      await Placement.create({
+        student: studentProfile?._id || internship.student,
+        company: internship.company,
+        department: internship.student_department || studentProfile?.department,
+        status: 'ACTIVE',
+        startDate: internship.startDate,
+        endDate: internship.endDate
+      });
+
+      // Point 3: LINK STUDENT TO COMPANY
+      await Company.findByIdAndUpdate(internship.company, {
+        $addToSet: { students: studentProfile?._id || internship.student }
+      });
+    }
+
     await AuditLog.create({
       user: req.user.id,
       action: 'internship_status_updated',
@@ -852,6 +879,50 @@ export const updateInternshipStatus = async (req, res, next) => {
     });
 
     res.status(200).json({ success: true, data: internship });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// @desc    Admin: Assign advisor to internship
+// @route   PATCH /api/admin/internships/:id/assign-advisor
+// @access  Private (Admin)
+// ─────────────────────────────────────────────────────────────
+export const assignAdvisor = async (req, res, next) => {
+  try {
+    const { advisorId } = req.body;
+    const internship = await Internship.findById(req.params.id);
+
+    if (!internship) return res.status(404).json({ success: false, message: 'Internship not found' });
+
+    // Update Internship
+    internship.advisor_id = advisorId;
+    await internship.save();
+
+    const studentProfile = await Student.findOne({ user: internship.student });
+
+    // Point 6: ASSIGN ADVISOR
+    // Update placement
+    await Placement.findOneAndUpdate(
+      { student: studentProfile?._id || internship.student, company: internship.company },
+      { advisor: advisorId }
+    );
+
+    // Update student
+    if (studentProfile) {
+      studentProfile.assignedAdvisor = advisorId;
+      await studentProfile.save();
+    }
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: 'advisor_assigned',
+      details: `Assigned advisor ${advisorId} to student ${internship.student}`,
+      ip: req.ip
+    });
+
+    res.status(200).json({ success: true, message: 'Advisor assigned successfully', data: internship });
   } catch (error) {
     next(error);
   }
