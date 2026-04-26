@@ -7,7 +7,7 @@ import AuditLog from '../models/AuditLog.js';
 export const getCompanies = async (req, res, next) => {
   try {
     const companies = await Company.find().sort('-createdAt').lean();
-    
+
     // Fetch from placements
     const Placement = (await import('../models/Placement.js')).default;
     for (let company of companies) {
@@ -42,7 +42,7 @@ export const approveCompany = async (req, res, next) => {
     company.approvalStatus = status;
     company.departmentApprover = req.user.id;
     if (status === 'APPROVED') company.isActive = true;
-    
+
     await company.save();
 
     await AuditLog.create({
@@ -156,6 +156,27 @@ export const deleteCompany = async (req, res, next) => {
     });
 
     res.status(200).json({ success: true, message: 'Company removed' });
+  } catch (error) {
+    next(error);
+  }
+};
+// @desc    Get all internship placements for a specific company
+// @route   GET /api/department/companies/:id/placements
+// @access  Private (Dean)
+export const getCompanyPlacements = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const Internship = (await import('../models/Internship.js')).default;
+
+    const internships = await Internship.find({ company: id })
+      .populate({
+        path: 'student',
+        populate: { path: 'user', select: 'name email' }
+      })
+      .select('student field companySupervisorName companySupervisorEmail companySupervisorPhone startDate endDate status')
+      .lean();
+
+    res.status(200).json({ success: true, count: internships.length, data: internships });
   } catch (error) {
     next(error);
   }

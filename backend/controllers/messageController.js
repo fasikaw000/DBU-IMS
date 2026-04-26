@@ -32,30 +32,35 @@ const getAllowedContactIds = async (currentUser) => {
   const allowedIds = new Set();
 
   if (role === 'Admin') {
-    const staff = await User.find({
+    // Admin can message all users
+    const allUsers = await User.find({
       _id: { $ne: currentUserId },
-      role: { $in: ['Dean', 'Advisor', 'Admin'] },
       isActive: { $ne: false }
     }).select('_id');
-    staff.forEach((u) => allowedIds.add(u._id.toString()));
+    allUsers.forEach((u) => allowedIds.add(u._id.toString()));
   } else if (role === 'Dean') {
-    const admins = await User.find({
-      _id: { $ne: currentUserId },
-      isActive: { $ne: false },
-      role: 'Admin'
-    }).select('_id');
+    // Dean can message: Admin, Advisors in department, Students in department
+    const admins = await User.find({ role: 'Admin', isActive: { $ne: false } }).select('_id');
     admins.forEach((u) => allowedIds.add(u._id.toString()));
 
     if (currentDept) {
-      const advisors = await User.find({
+      const deptStaff = await User.find({
         _id: { $ne: currentUserId },
-        isActive: { $ne: false },
+        department: currentDept,
         role: 'Advisor',
-        department: currentDept
+        isActive: { $ne: false }
       }).select('_id');
-      advisors.forEach((u) => allowedIds.add(u._id.toString()));
+      deptStaff.forEach((u) => allowedIds.add(u._id.toString()));
+
+      const deptStudents = await User.find({
+        department: currentDept,
+        role: 'Student',
+        isActive: { $ne: false }
+      }).select('_id');
+      deptStudents.forEach((u) => allowedIds.add(u._id.toString()));
     }
   } else if (role === 'Advisor') {
+    // Advisor can message: Assigned students, Dean, Admin
     const advisorInternships = await Internship.find({ advisor_id: currentUserId })
       .populate({ path: 'student', select: 'user' })
       .select('student');
@@ -72,7 +77,11 @@ const getAllowedContactIds = async (currentUser) => {
       }).select('_id');
       if (dean?._id) allowedIds.add(dean._id.toString());
     }
+
+    const admins = await User.find({ role: 'Admin', isActive: { $ne: false } }).select('_id');
+    admins.forEach((u) => allowedIds.add(u._id.toString()));
   } else if (role === 'Student') {
+    // Student can message: Assigned advisor, Dean, Admin
     const studentProfile = await Student.findOne({ user: currentUserId }).select('_id');
     if (studentProfile?._id) {
       const internship = await Internship.findOne({ 
@@ -81,6 +90,18 @@ const getAllowedContactIds = async (currentUser) => {
       }).select('advisor_id');
       if (internship?.advisor_id) allowedIds.add(internship.advisor_id.toString());
     }
+
+    if (currentDept) {
+      const dean = await User.findOne({
+        role: 'Dean',
+        department: currentDept,
+        isActive: { $ne: false }
+      }).select('_id');
+      if (dean?._id) allowedIds.add(dean._id.toString());
+    }
+
+    const admins = await User.find({ role: 'Admin', isActive: { $ne: false } }).select('_id');
+    admins.forEach((u) => allowedIds.add(u._id.toString()));
   }
 
   allowedIds.delete(currentUserId);
@@ -112,7 +133,7 @@ export const sendMessage = async (req, res, next) => {
     await Notification.create({
       user: receiverId,
       sender: senderId,
-      type: 'new_message',
+      type: 'NEW_MESSAGE',
       message: `You have a new message from ${req.user.name}: "${finalContent.substring(0, 30)}..."`,
       link: `/messages?userId=${senderId}`
     });

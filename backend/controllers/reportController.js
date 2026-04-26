@@ -74,9 +74,9 @@ export const uploadReport = async (req, res) => {
     if (internship.advisor_id) {
         await notify(
             internship.advisor_id, 
-            'report_submitted', 
+            'REPORT_SUBMITTED', 
             `Student ${req.user.name} submitted a report for Week ${week_number}.`,
-            `/advisor/reports`
+            `/advisor-dashboard`
         );
     }
 

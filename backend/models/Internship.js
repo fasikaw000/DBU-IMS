@@ -24,7 +24,7 @@ const internshipSchema = new mongoose.Schema({
     type: Date,
     required: true,
     validate: {
-      validator: function(value) {
+      validator: function (value) {
         return value > this.startDate;
       },
       message: 'End date must be after start date'

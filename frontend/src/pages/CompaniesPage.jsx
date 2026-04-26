@@ -38,8 +38,9 @@ const CompaniesPage = () => {
     const [submitting, setSubmitting] = useState(false);
     const [message, setMessage] = useState(null);
     const [statusFilter, setStatusFilter] = useState('all'); // all, active, inactive, pending
-    const [allStudents, setAllStudents] = useState([]);
     const [viewingStudentsFor, setViewingStudentsFor] = useState(null);
+    const [placements, setPlacements] = useState([]);
+    const [placementsLoading, setPlacementsLoading] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -47,16 +48,26 @@ const CompaniesPage = () => {
 
     const fetchData = async () => {
         try {
-            const [compRes, studRes] = await Promise.all([
-                api.get('/department/companies'),
-                api.get('/department/students')
-            ]);
+            const compRes = await api.get('/department/companies');
             setCompanies(compRes.data);
-            setAllStudents(studRes.data);
         } catch (err) {
             console.error(err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const openStudentPlacements = async (company) => {
+        setViewingStudentsFor(company);
+        setPlacements([]);
+        setPlacementsLoading(true);
+        try {
+            const res = await api.get(`/department/companies/${company._id}/placements`);
+            setPlacements(res.data || []);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setPlacementsLoading(false);
         }
     };
 
@@ -244,32 +255,32 @@ const CompaniesPage = () => {
                                     <MapPin size={16} className="text-slate-300" />
                                     <span className="text-xs font-medium">{company.location}</span>
                                 </div>
-                                <div className="flex items-center gap-3 text-slate-500">
-                                    <User size={16} className="text-slate-300" />
-                                    <span className="text-xs font-medium">
-                                        <span className="text-slate-400 mr-1">Supervisor:</span>
-                                        {company.contactPerson || 'Not provided'}
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3 text-slate-500">
-                                    <Mail size={16} className="text-slate-300" />
-                                    <span className="text-xs font-medium">
-                                        <span className="text-slate-400 mr-1">Email:</span>
-                                        {company.email || 'Not provided'}
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3 text-slate-500">
-                                    <Phone size={16} className="text-slate-300" />
-                                    <span className="text-xs font-medium">
-                                        <span className="text-slate-400 mr-1">Phone:</span>
-                                        {company.phone || 'Not provided'}
-                                    </span>
-                                </div>
+                                {company.contactPerson && (
+                                    <div className="flex items-center gap-3 text-slate-500">
+                                        <User size={16} className="text-slate-300" />
+                                        <span className="text-xs font-medium">
+                                            <span className="text-slate-400 mr-1">Contact:</span>
+                                            {company.contactPerson}
+                                        </span>
+                                    </div>
+                                )}
+                                {company.email && (
+                                    <div className="flex items-center gap-3 text-slate-500">
+                                        <Mail size={16} className="text-slate-300" />
+                                        <span className="text-xs font-medium truncate">{company.email}</span>
+                                    </div>
+                                )}
+                                {company.phone && (
+                                    <div className="flex items-center gap-3 text-slate-500">
+                                        <Phone size={16} className="text-slate-300" />
+                                        <span className="text-xs font-medium">{company.phone}</span>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="mt-4 pt-4 border-t border-slate-100">
                                 <button
-                                    onClick={() => setViewingStudentsFor(company)}
+                                    onClick={() => openStudentPlacements(company)}
                                     className="w-full py-2 bg-slate-50 text-dbu-primary rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-dbu-primary hover:text-white transition-all flex items-center justify-center gap-2"
                                 >
                                     <Users size={14} />
@@ -402,40 +413,64 @@ const CompaniesPage = () => {
                                 <h2 className="text-xl font-black tracking-tight flex items-center gap-2">
                                     <Users size={20} /> Students at {viewingStudentsFor.name}
                                 </h2>
-                                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-1">Active Placements</p>
+                                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-1">Internship Placements</p>
                             </div>
                             <button onClick={() => setViewingStudentsFor(null)} className="p-2 hover:bg-white/10 rounded-xl transition">
                                 <X size={20} />
                             </button>
                         </div>
                         <div className="p-8 overflow-y-auto flex-1">
-                            {(() => {
-                                const assigned = viewingStudentsFor.students || [];
-                                if (assigned.length === 0) {
-                                    return (
-                                        <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-                                            <p className="text-slate-400 font-bold text-sm">No students assigned to this company currently.</p>
-                                        </div>
-                                    );
-                                }
-                                return (
-                                    <div className="space-y-4">
-                                        {assigned.map(s => (
-                                            <div key={s._id} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-md transition">
+                            {placementsLoading ? (
+                                <div className="flex items-center justify-center py-16">
+                                    <Loader2 className="w-8 h-8 animate-spin text-dbu-primary" />
+                                </div>
+                            ) : placements.length === 0 ? (
+                                <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                                    <Users size={40} className="mx-auto text-slate-200 mb-3" />
+                                    <p className="text-slate-400 font-bold text-sm">No students assigned to this company yet.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {placements.map((intern) => (
+                                        <div key={intern._id} className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5 hover:shadow-md transition">
+                                            <div className="flex items-start justify-between gap-4">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 bg-dbu-primary/10 rounded-xl flex items-center justify-center text-dbu-primary font-black">
-                                                        {s.user?.name?.charAt(0) || 'S'}
+                                                    <div className="w-11 h-11 bg-dbu-primary/10 rounded-xl flex items-center justify-center text-dbu-primary font-black text-sm flex-shrink-0">
+                                                        {intern.student?.user?.name?.charAt(0) || 'S'}
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-black text-slate-800">{s.user?.name}</p>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase">{s.studentId}</p>
+                                                        <p className="font-black text-slate-800 text-sm">{intern.student?.user?.name || 'N/A'}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{intern.student?.studentId}</p>
+                                                        <p className="text-[10px] text-dbu-primary font-black uppercase tracking-wider mt-0.5">{intern.field}</p>
                                                     </div>
                                                 </div>
+                                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border flex-shrink-0 ${intern.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                        intern.status === 'COMPLETED' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                                            'bg-slate-50 text-slate-500 border-slate-100'
+                                                    }`}>{intern.status}</span>
                                             </div>
-                                        ))}
-                                    </div>
-                                );
-                            })()}
+                                            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-slate-50">
+                                                <div>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Supervisor</p>
+                                                    <p className="text-xs font-bold text-slate-700">{intern.companySupervisorName || '—'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Supervisor Email</p>
+                                                    <p className="text-xs font-bold text-slate-700 truncate">{intern.companySupervisorEmail || '—'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Duration</p>
+                                                    <p className="text-xs font-bold text-slate-700">
+                                                        {intern.startDate ? new Date(intern.startDate).toLocaleDateString() : '—'}
+                                                        {' → '}
+                                                        {intern.endDate ? new Date(intern.endDate).toLocaleDateString() : '—'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

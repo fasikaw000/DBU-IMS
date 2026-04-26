@@ -52,7 +52,7 @@ export const applyInternship = async (req, res) => {
 
     // 3. Find or Create Company
     let company = await Company.findOne({ name: finalCompanyName });
-    
+
     if (!company) {
       company = await Company.create({
         name: finalCompanyName,
@@ -73,7 +73,7 @@ export const applyInternship = async (req, res) => {
       existingInternship.companySupervisorName = finalSupervisorName;
       existingInternship.companySupervisorEmail = finalSupervisorEmail;
       existingInternship.companySupervisorPhone = finalSupervisorPhone;
-      
+
       if (existingInternship.status === 'REVISION_REQUIRED') {
         existingInternship.status = 'RESUBMITTED';
         existingInternship.revisionMessage = ''; // Clear message after resubmission
@@ -89,7 +89,7 @@ export const applyInternship = async (req, res) => {
         companySupervisorName: finalSupervisorName,
         companySupervisorEmail: finalSupervisorEmail,
         companySupervisorPhone: finalSupervisorPhone,
-        status: 'PENDING' 
+        status: 'PENDING'
       });
     }
 
@@ -105,15 +105,15 @@ export const applyInternship = async (req, res) => {
       if (dean) {
         await notify(
           dean._id,
-          'new_internship_application',
+          'NEW_INTERNSHIP_APPLICATION',
           `New internship application from ${req.user.name}.`,
-          '/dean/dashboard'
+          '/dept-dashboard'
         );
       }
     }
   } catch (error) {
     console.error('Internship Application Error:', error);
-    
+
     // Handle Mongoose Validation Error
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => err.message);
@@ -163,12 +163,12 @@ export const approveInternship = async (req, res) => {
     // Notify student
     const populatedInternship = await internship.populate('student');
     if (populatedInternship.student && populatedInternship.student.user) {
-        await notify(
-            populatedInternship.student.user, 
-            'internship_approved', 
-            `Your internship application for ${populatedInternship.field} has been approved!`,
-            `/internships/${internship._id}`
-        );
+      await notify(
+        populatedInternship.student.user,
+        'APPLICATION_APPROVED',
+        `Your internship application for ${populatedInternship.field} has been approved!`,
+        `/student-dashboard`
+      );
     }
 
     res.status(200).json({
@@ -272,10 +272,10 @@ export const assignAdvisor = async (req, res) => {
 
     // Notify advisor
     await notify(
-        advisor_id, 
-        'advisor_assigned', 
-        'You have been assigned as an advisor for a new internship.',
-        `/advisor/internships`
+      advisor_id,
+      'ADVISOR_ASSIGNED',
+      'You have been assigned as an advisor for a new internship.',
+      `/advisor-dashboard`
     );
 
     res.status(200).json({
@@ -300,7 +300,7 @@ export const getStudentInternship = async (req, res) => {
   try {
     const student = await Student.findOne({ user: req.user._id || req.user.id });
     if (!student) {
-        return res.status(404).json({ success: false, message: 'Student record not found' });
+      return res.status(404).json({ success: false, message: 'Student record not found' });
     }
 
     const internship = await Internship.findOne({ student: student._id })
@@ -308,10 +308,10 @@ export const getStudentInternship = async (req, res) => {
       .populate('advisor_id', 'name email');
 
     if (!internship) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
         message: 'No internship found for this student',
-        data: null 
+        data: null
       });
     }
 
@@ -326,10 +326,10 @@ export const getStudentInternship = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: 'Server error', 
-      error: error.message 
+      message: 'Server error',
+      error: error.message
     });
   }
 };
@@ -345,7 +345,7 @@ export const uploadEvaluation = async (req, res) => {
 
     const student = await Student.findOne({ user: req.user._id || req.user.id });
     if (!student) {
-        return res.status(404).json({ success: false, message: 'Student record not found' });
+      return res.status(404).json({ success: false, message: 'Student record not found' });
     }
 
     const internship = await Internship.findOne({ student: student._id });
@@ -360,12 +360,12 @@ export const uploadEvaluation = async (req, res) => {
 
     // Notify advisor
     if (internship.advisor_id) {
-        await notify(
-            internship.advisor_id, 
-            'evaluation_submitted', 
-            `Student ${req.user.name} has uploaded their company evaluation document.`,
-            `/advisor/internships`
-        );
+      await notify(
+        internship.advisor_id,
+        'EVALUATION_SUBMITTED',
+        `Student ${req.user.name} has uploaded their company evaluation document.`,
+        `/advisor-dashboard`
+      );
     }
 
     res.status(200).json({
@@ -375,39 +375,39 @@ export const uploadEvaluation = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error during upload', 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      message: 'Server error during upload',
+      error: error.message
     });
   }
 };
 // @desc    Check and finalize internship completion
 // @access  Private (Internal/Advisor)
 export const checkAndCompleteInternship = async (internshipId) => {
-    const Report = (await import('../models/Report.js')).default;
-    const Internship = (await import('../models/Internship.js')).default;
+  const Report = (await import('../models/Report.js')).default;
+  const Internship = (await import('../models/Internship.js')).default;
 
-    const internship = await Internship.findById(internshipId);
-    if (!internship) return false;
+  const internship = await Internship.findById(internshipId);
+  if (!internship) return false;
 
-    // 1. Check Weekly Reports (At least 1 for now, or specific count if defined)
-    const weeklyReports = await Report.countDocuments({ internship: internshipId, type: 'WEEKLY' });
-    if (weeklyReports === 0) return { success: false, message: 'Weekly reports missing' };
+  // 1. Check Weekly Reports (At least 1 for now, or specific count if defined)
+  const weeklyReports = await Report.countDocuments({ internship: internshipId, type: 'WEEKLY' });
+  if (weeklyReports === 0) return { success: false, message: 'Weekly reports missing' };
 
-    // 2. Check Final Report
-    const finalReport = await Report.findOne({ internship: internshipId, type: 'FINAL' });
-    if (!finalReport) return { success: false, message: 'Final report missing' };
+  // 2. Check Final Report
+  const finalReport = await Report.findOne({ internship: internshipId, type: 'FINAL' });
+  if (!finalReport) return { success: false, message: 'Final report missing' };
 
-    // 3. Check Company Evaluation
-    if (!internship.companyEvaluationUrl) return { success: false, message: 'Company evaluation document missing' };
+  // 3. Check Company Evaluation
+  if (!internship.companyEvaluationUrl) return { success: false, message: 'Company evaluation document missing' };
 
-    // 4. Check Presentation & Advisor Grades
-    if (!internship.presentationCompleted) return { success: false, message: 'Project presentation not marked as completed' };
-    if (!internship.finalGrade || !internship.finalGrade.total) return { success: false, message: 'Final evaluation grades missing' };
+  // 4. Check Presentation & Advisor Grades
+  if (!internship.presentationCompleted) return { success: false, message: 'Project presentation not marked as completed' };
+  if (!internship.finalGrade || !internship.finalGrade.total) return { success: false, message: 'Final evaluation grades missing' };
 
-    // All criteria met
-    internship.status = 'COMPLETED';
-    await internship.save();
-    return { success: true };
+  // All criteria met
+  internship.status = 'COMPLETED';
+  await internship.save();
+  return { success: true };
 };

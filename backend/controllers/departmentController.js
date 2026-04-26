@@ -108,11 +108,12 @@ export const processInternshipApp = async (req, res, next) => {
 
     // Notify student
     if (internship.student && internship.student.user) {
+      const type = status === 'Approved' ? 'APPLICATION_APPROVED' : 'APPLICATION_REJECTED';
       await notify(
         internship.student.user._id,
-        'internship_status_update',
+        type,
         `Your internship application has been ${status.toLowerCase()}.`,
-        '/student/dashboard'
+        '/student-dashboard'
       );
     }
 
@@ -146,8 +147,7 @@ export const assignAdvisor = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Advisor not found or invalid user role' });
     }
 
-    internship.advisor = advisor._id;
-    internship.advisor_id = advisor._id; // Keeping both for compatibility if needed
+    internship.advisor_id = advisor._id;
 
     // Update state to ACTIVE as the workflow is now fully assigned
     internship.status = 'ACTIVE';
@@ -180,7 +180,7 @@ export const assignAdvisor = async (req, res, next) => {
     // Notify advisor
     await notify(
       advisor._id,
-      'new_student_assigned',
+      'ADVISOR_ASSIGNED',
       `You have been assigned as an advisor for student ${internship.student?.user?.name || 'Unknown'}.`,
       '/advisor/dashboard'
     );
@@ -189,9 +189,9 @@ export const assignAdvisor = async (req, res, next) => {
     if (internship.student && internship.student.user) {
       await notify(
         internship.student.user._id,
-        'advisor_assigned',
+        'ADVISOR_ASSIGNED',
         `${advisor.name} has been assigned as your faculty advisor.`,
-        '/student/dashboard'
+        '/student-dashboard'
       );
     }
 
@@ -213,7 +213,7 @@ export const getAdvisorWorkload = async (req, res, next) => {
     const advisors = await User.find({ role: 'advisor', department: dean.department }).select('name username email');
 
     const workloads = await Promise.all(advisors.map(async (adv) => {
-      const activeInternships = await Internship.countDocuments({ advisor: adv._id, status: { $in: ['Active', 'Approved'] } });
+      const activeInternships = await Internship.countDocuments({ advisor_id: adv._id, status: { $in: ['Active', 'Approved'] } });
       return { advisor: adv, activeStudentsCount: activeInternships };
     }));
 

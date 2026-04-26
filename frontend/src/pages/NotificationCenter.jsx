@@ -1,7 +1,9 @@
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import { Bell, Check, Clock, MailOpen, Mail } from 'lucide-react';
+import { Bell, Check, Clock, MailOpen, Mail, ExternalLink } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
+import { getNotificationRoute } from '../utils/notificationRoutes';
 
 const NotificationCenter = () => {
   const { user } = useContext(AuthContext);
@@ -9,11 +11,6 @@ const NotificationCenter = () => {
   const [loading, setLoading] = useState(true);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [conversation, setConversation] = useState([]);
-  const [loadingConversation, setLoadingConversation] = useState(false);
-  const [replyContent, setReplyContent] = useState('');
-  const [sendingReply, setSendingReply] = useState(false);
-  const messagesEndRef = useRef(null);
 
   useEffect(() => {
     fetchNotifications();
@@ -39,79 +36,31 @@ const NotificationCenter = () => {
     }
   };
 
-  const isMessageNotification = (notification) => {
-    const t = String(notification?.type || '').toUpperCase();
-    return t === 'MESSAGE' || t === 'NEW_MESSAGE';
-  };
 
-  const fetchConversation = async (otherUserId) => {
-    if (!otherUserId) return;
-    setLoadingConversation(true);
-    try {
-      const res = await api.get(`/messages/conversation/${otherUserId}`);
-      setConversation(Array.isArray(res?.data) ? res.data : []);
-    } catch (err) {
-      setConversation([]);
-      console.error(err);
-    } finally {
-      setLoadingConversation(false);
-    }
-  };
+  const navigate = useNavigate();
 
-  const handleViewDetails = async (notification) => {
+  const handleViewDetails = async (notification, e) => {
+    if (e) e.stopPropagation(); // Prevent row click from firing
     setSelectedNotification(notification);
-    setReplyContent('');
-    setIsOpen(true);
-
-    // Mark notification as read immediately
+    
+    // Mark notification as read
     if (!notification.is_read) {
       handleMarkRead(notification._id);
     }
 
-    if (isMessageNotification(notification)) {
-      const otherUserId = notification?.sender?._id || notification?.sender;
-      // Mark entire conversation as read
-      try {
-        await api.put(`/messages/conversation/${otherUserId}/read`);
-      } catch (err) {
-        console.error("Error marking conversation as read", err);
-      }
-      fetchConversation(otherUserId);
-    } else {
-      setConversation([]);
-    }
+    setIsOpen(true);
   };
 
-  const handleSendReply = async (e) => {
-    e.preventDefault();
-    if (!selectedNotification || !isMessageNotification(selectedNotification) || !replyContent.trim() || sendingReply) return;
-    const receiverId = selectedNotification?.sender?._id || selectedNotification?.sender;
-    if (!receiverId) return;
-
-    setSendingReply(true);
-    try {
-      const res = await api.post('/messages', {
-        receiverId,
-        content: replyContent.trim()
-      });
-
-      if (res?.data) {
-        setConversation((prev) => [...prev, res.data]);
-      } else {
-        await fetchConversation(receiverId);
-      }
-      setReplyContent('');
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSendingReply(false);
+  const handleNotificationClick = (notification) => {
+    if (!notification.is_read) {
+      handleMarkRead(notification._id);
     }
+    const route = getNotificationRoute(notification.type, user?.role, notification.link);
+    // null means no dedicated page (e.g. ANNOUNCEMENT) → stay on notification center
+    navigate(route ?? '/notifications');
   };
 
-  useEffect(() => {
-    if (!isOpen) return;
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [conversation, isOpen]);
+
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -146,7 +95,11 @@ const NotificationCenter = () => {
         ) : (
           <div className="divide-y divide-slate-100">
             {notifications.map(notif => (
-              <div key={notif._id} className={`p-6 transition hover:bg-slate-50 flex items-start gap-4 ${!notif.is_read ? 'bg-dbu-primary/5' : ''}`}>
+              <div 
+                key={notif._id} 
+                onClick={() => handleNotificationClick(notif)}
+                className={`p-6 transition hover:bg-slate-50 flex items-start gap-4 cursor-pointer border-b border-slate-50 last:border-0 ${!notif.is_read ? 'bg-dbu-primary/5' : ''}`}
+              >
                 <div className={`p-2.5 rounded-full mt-1 ${!notif.is_read ? 'bg-dbu-primary text-white shadow-md' : 'bg-slate-100 text-slate-400'}`}>
                   {!notif.is_read ? <Mail className="w-5 h-5 shadow-inner" /> : <MailOpen className="w-5 h-5" />}
                 </div>
@@ -157,20 +110,23 @@ const NotificationCenter = () => {
                     </p>
                     <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center bg-slate-50 px-2 py-1 rounded-md border border-slate-100 whitespace-nowrap ml-4">
                       <Clock className="w-3 h-3 mr-1" />
-                      {new Date(notif.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      {new Date(notif.created_at || notif.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     </span>
                   </div>
                   <div className="flex items-center gap-6 mt-3">
                     <button
                       type="button"
-                      onClick={() => handleViewDetails(notif)}
+                      onClick={(e) => handleViewDetails(notif, e)}
                       className="text-[10px] font-black tracking-widest text-dbu-primary hover:text-dbu-accent transition-colors"
                     >
                       VIEW DETAILS
                     </button>
                     {!notif.is_read && (
                       <button
-                        onClick={() => handleMarkRead(notif._id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMarkRead(notif._id);
+                        }}
                         className="text-[10px] font-black tracking-widest text-slate-400 hover:text-dbu-primary flex items-center transition-colors"
                       >
                         <Check className="w-3.5 h-3.5 mr-1" />
@@ -200,93 +156,72 @@ const NotificationCenter = () => {
                   CLOSE
                 </button>
               </div>
-              <div className="p-6 space-y-4">
-                {isMessageNotification(selectedNotification) ? (
-                  <>
-                    <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/60">
-                      <p className="text-sm font-black text-slate-800">
-                        {selectedNotification.sender?.name || selectedNotification.sender?.username || 'Message Sender'}
-                      </p>
-                      <p className="text-[11px] text-slate-500 mt-1">
-                        {new Date(selectedNotification.created_at || selectedNotification.createdAt).toLocaleString()}
-                      </p>
-                    </div>
+              <div className="p-8 space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase tracking-[0.2em] font-black text-slate-400">Notification Type</p>
+                    <p className="text-sm font-black text-dbu-primary bg-dbu-primary/5 px-4 py-2 rounded-xl inline-block border border-dbu-primary/10">
+                      {String(selectedNotification.type || 'General').replace(/_/g, ' ')}
+                    </p>
+                  </div>
+                  <div className="space-y-1 text-right md:text-left">
+                    <p className="text-[10px] uppercase tracking-[0.2em] font-black text-slate-400">Date & Time</p>
+                    <p className="text-sm font-bold text-slate-700">
+                      {new Date(selectedNotification.created_at || selectedNotification.createdAt).toLocaleString(undefined, { dateStyle: 'long', timeStyle: 'short' })}
+                    </p>
+                  </div>
+                </div>
 
-                    <div className="h-80 overflow-y-auto bg-slate-50/50 rounded-2xl border border-slate-100 p-6 space-y-4 shadow-inner">
-                      {loadingConversation ? (
-                        <div className="flex flex-col items-center justify-center h-full gap-2 opacity-50">
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-dbu-primary"></div>
-                          <p className="text-[10px] font-black uppercase tracking-widest">Loading history...</p>
-                        </div>
-                      ) : conversation.length === 0 ? (
-                        <p className="text-center text-slate-400 text-xs italic py-10">No conversation history found.</p>
-                      ) : (
-                        conversation.map((msg, idx) => {
-                          const currentUserId = user?.id || user?._id;
-                          const msgSenderId = msg?.sender?._id || msg?.sender;
-                          const isMe = String(msgSenderId) === String(currentUserId);
-                          const senderName = msg?.sender?.name || 'User';
+                <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100 shadow-inner">
+                  <p className="text-[10px] uppercase tracking-[0.2em] font-black text-slate-400 mb-4">Message Content</p>
+                  <p className="text-base text-slate-700 leading-relaxed font-medium">
+                    {selectedNotification.message}
+                  </p>
+                </div>
 
-                          return (
-                            <div key={msg._id || idx} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1 px-1">
-                                {isMe ? 'You' : senderName} ({new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
-                              </span>
-                              <div className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm shadow-sm ${isMe ? 'bg-dbu-primary text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none'}`}>
-                                <p className="leading-relaxed">{msg.content}</p>
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
-                      <div ref={messagesEndRef} />
-                    </div>
-
-                    <form onSubmit={handleSendReply} className="flex gap-3">
-                      <input
-                        type="text"
-                        value={replyContent}
-                        onChange={(e) => setReplyContent(e.target.value)}
-                        className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary"
-                        placeholder="Type your reply..."
-                      />
-                      <button
-                        type="submit"
-                        disabled={!replyContent.trim() || sendingReply}
-                        className="px-5 py-3 rounded-xl bg-dbu-primary text-white text-sm font-bold hover:bg-dbu-accent disabled:opacity-50"
-                      >
-                        {sendingReply ? 'Sending...' : 'Send'}
-                      </button>
-                    </form>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <p className="text-[10px] uppercase tracking-widest font-black text-slate-400 mb-1">Type</p>
-                      <p className="text-sm font-bold text-slate-700">
-                        {String(selectedNotification.type || 'General').replace(/_/g, ' ')}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] uppercase tracking-widest font-black text-slate-400 mb-1">Message</p>
-                      <p className="text-sm text-slate-700 leading-relaxed">{selectedNotification.message}</p>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-[10px] uppercase tracking-widest font-black text-slate-400 mb-1">Date & Time</p>
-                        <p className="text-sm font-medium text-slate-700">
-                          {new Date(selectedNotification.created_at || selectedNotification.createdAt).toLocaleString()}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] uppercase tracking-widest font-black text-slate-400 mb-1">Sender</p>
-                        <p className="text-sm font-medium text-slate-700">
-                          {selectedNotification.sender?.name || 'System'}
-                        </p>
-                      </div>
-                    </div>
-                  </>
-                )}
+                <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                  <div className="w-10 h-10 bg-dbu-primary/10 rounded-full flex items-center justify-center text-dbu-primary">
+                    <Bell size={18} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.2em] font-black text-slate-400">Sender / Source</p>
+                    <p className="text-sm font-black text-slate-800">
+                      {selectedNotification.sender?.name || selectedNotification.sender?.fullName || 'System Automated Alert'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="pt-6 border-t border-slate-100 flex justify-end gap-3">
+                    <button
+                        onClick={() => setIsOpen(false)}
+                        className="px-6 py-2.5 bg-white border border-slate-200 rounded-xl font-black text-[10px] tracking-widest hover:bg-slate-50 transition"
+                    >
+                        CLOSE
+                    </button>
+                    {(() => {
+                        const relatedRoute = getNotificationRoute(selectedNotification.type, user?.role, selectedNotification.link);
+                        if (!relatedRoute) {
+                            // ANNOUNCEMENT or no route: show informational text instead of a button
+                            return (
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest self-center">
+                                    No related page
+                                </span>
+                            );
+                        }
+                        return (
+                            <button
+                                onClick={() => {
+                                    setIsOpen(false);
+                                    navigate(relatedRoute);
+                                }}
+                                className="flex items-center gap-2 px-6 py-2.5 bg-dbu-primary text-white rounded-xl font-black text-[10px] tracking-widest hover:bg-dbu-accent transition shadow-lg shadow-dbu-primary/20"
+                            >
+                                <ExternalLink size={12} />
+                                GO TO RELATED PAGE
+                            </button>
+                        );
+                    })()}
+                </div>
               </div>
             </div>
           </div>

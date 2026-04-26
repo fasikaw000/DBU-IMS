@@ -77,11 +77,7 @@ const AdvisorStudentsPage = () => {
             ]);
             setReports(reportsRes.data);
             // Filter logbooks for this specific student if the API returns all
-            const studentLogbooks = logbooksRes.data.filter(l => 
-                l.student_id?._id === internship.student?.user?._id || 
-                l.student_id === internship.student?.user?._id
-            );
-            setLogbooks(studentLogbooks);
+            setLogbooks(logbooksRes.data);
 
             // If internship is already graded, populate form
             if (internship.finalGrade) {
@@ -124,11 +120,7 @@ const AdvisorStudentsPage = () => {
             await api.post(`/logbooks/${logId}/comment`, { text });
             // Refresh logbooks
             const res = await api.get(`/logbooks/assigned-logbooks?studentId=${selectedInternship.student?._id}`);
-            const studentLogbooks = res.data.filter(l => 
-                l.student_id?._id === selectedInternship.student?.user?._id || 
-                l.student_id === selectedInternship.student?.user?._id
-            );
-            setLogbooks(studentLogbooks);
+            setLogbooks(res.data);
         } catch (err) {
             console.error(err);
         } finally {
@@ -246,7 +238,7 @@ const AdvisorStudentsPage = () => {
                                                 </td>
                                                 <td className="p-6">
                                                     <div className="flex flex-col gap-1">
-                                                        <span className="font-bold text-slate-700 text-sm">{intern.companyName}</span>
+                                                        <span className="font-bold text-slate-700 text-sm">{intern.company?.name || 'N/A'}</span>
                                                         <span className="text-[10px] text-dbu-primary font-black uppercase tracking-wider">{intern.field}</span>
                                                     </div>
                                                 </td>
@@ -299,7 +291,7 @@ const AdvisorStudentsPage = () => {
                             </button>
                             <div>
                                 <h2 className="text-xl font-black text-slate-800 tracking-tight">{selectedInternship.student?.user?.name}</h2>
-                                <p className="text-xs text-slate-500 font-medium">{selectedInternship.student?.studentId} • {selectedInternship.companyName}</p>
+                                <p className="text-xs text-slate-500 font-medium">{selectedInternship.student?.studentId} • {selectedInternship.company?.name || 'N/A'}</p>
                             </div>
                         </div>
                         <div className="flex bg-slate-100 p-1 rounded-xl">
@@ -369,7 +361,7 @@ const AdvisorStudentsPage = () => {
                                         <div className="grid grid-cols-2 gap-8">
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Company</p>
-                                                <p className="text-sm font-bold text-slate-700">{selectedInternship.companyName}</p>
+                                                <p className="text-sm font-bold text-slate-700">{selectedInternship.company?.name || 'N/A'}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Internship Field</p>

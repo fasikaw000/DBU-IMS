@@ -60,17 +60,14 @@ export const getStudentLogbooks = async (req, res) => {
 export const getAssignedStudentLogbooks = async (req, res) => {
   try {
     const { studentId } = req.query;
-    let query = {};
+    // Find internships assigned to this advisor
+    const internships = await Internship.find({ advisor_id: req.user.id }).select('_id');
+    const internshipIds = internships.map(i => i._id);
+
+    let query = { internship: { $in: internshipIds } };
     
     if (studentId) {
         query.student = studentId;
-    } else {
-        // Find internships assigned to this advisor
-        const internships = await Internship.find({ 
-            $or: [{ advisor: req.user.id }, { advisor_id: req.user.id }] 
-        }).select('_id');
-        const internshipIds = internships.map(i => i._id);
-        query.internship = { $in: internshipIds };
     }
 
     const logbooks = await Logbook.find(query)

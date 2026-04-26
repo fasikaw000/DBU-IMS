@@ -11,6 +11,7 @@ import {
   Check
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { getNotificationRoute } from '../../utils/notificationRoutes';
 
 const Topbar = () => {
   const { user, logout } = useContext(AuthContext);
@@ -110,14 +111,15 @@ const Topbar = () => {
                           if (!notif.is_read) {
                             try {
                               await api.put(`/notifications/${notif._id}/read`);
-                              // Optimistically update local state
                               setNotifications(prev => prev.map(n => n._id === notif._id ? { ...n, is_read: true } : n));
                               setUnreadCount(prev => Math.max(0, prev - 1));
                             } catch (err) {
                               console.error("Error marking notification as read", err);
                             }
                           }
-                          if (notif.link) navigate(notif.link);
+                          const route = getNotificationRoute(notif.type, user?.role, notif.link);
+                          // null = ANNOUNCEMENT, no redirect — send to notification center instead
+                          navigate(route ?? '/notifications');
                           setShowNotifications(false);
                         }}
                       >

@@ -120,7 +120,7 @@ const Messaging = () => {
         try {
             const res = await api.get(`/messages/conversation/${contactId}`);
             setConversation(Array.isArray(res?.data) ? res.data : []);
-            if (!isBackground) {
+            if (!isBackground || selectedContact?._id === contactId) {
                 await api.put(`/messages/conversation/${contactId}/read`);
             }
         } catch (err) {
@@ -363,23 +363,28 @@ const Messaging = () => {
                         </div>
 
                         <div className="p-6 border-t border-slate-100 bg-white">
-                            <form onSubmit={handleSendMessage} className="flex gap-4">
-                                <input
-                                    type="text"
-                                    placeholder="Type a message..."
-                                    className="flex-1 px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all shadow-inner font-bold"
-                                    value={messageContent}
-                                    onChange={e => setMessageContent(e.target.value)}
-                                    disabled={sending}
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={!messageContent.trim() || sending}
-                                    className="w-14 h-14 bg-dbu-primary text-white rounded-2xl flex items-center justify-center shadow-lg hover:bg-dbu-accent transition-all disabled:opacity-50"
-                                >
-                                    {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                                </button>
-                            </form>
+                            <div className="flex flex-col gap-2">
+                                <form onSubmit={handleSendMessage} className="flex gap-4">
+                                    <input
+                                        type="text"
+                                        placeholder="Type a message..."
+                                        className="flex-1 px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all shadow-inner font-bold"
+                                        value={messageContent}
+                                        onChange={e => setMessageContent(e.target.value)}
+                                        disabled={sending}
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={!messageContent.trim() || sending}
+                                        className="w-14 h-14 bg-dbu-primary text-white rounded-2xl flex items-center justify-center shadow-lg hover:bg-dbu-accent transition-all disabled:opacity-50"
+                                    >
+                                        {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                                    </button>
+                                </form>
+                                {!messageContent.trim() && messageContent.length > 0 && (
+                                    <p className="text-[10px] text-red-500 font-bold ml-4 uppercase tracking-widest animate-pulse">Cannot send empty message</p>
+                                )}
+                            </div>
                         </div>
                     </>
                 ) : (

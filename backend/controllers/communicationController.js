@@ -40,7 +40,7 @@ export const sendCommunication = async (req, res, next) => {
       await Notification.create({
         user: receiverId,
         sender: senderId,
-        type: 'new_message',
+        type: 'NEW_MESSAGE',
         message: `Admin/Dean: ${content.substring(0, 50)}`,
         link: '/messages'
       });
@@ -101,7 +101,7 @@ export const sendCommunication = async (req, res, next) => {
     const notifications = recipients.map(r => ({
       user: r._id,
       sender: senderId,
-      type: 'announcement',
+      type: 'ANNOUNCEMENT',
       message: `${isDean ? 'Department' : 'System'} Announcement: ${title || content.substring(0, 30)}`,
       link: '/notifications'
     }));

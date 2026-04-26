@@ -38,9 +38,7 @@ export const getAssignedStudents = async (req, res, next) => {
     const advisorId = req.user.id;
 
     // Find all internships assigned to this advisor
-    const internships = await Internship.find({ 
-      $or: [{ advisor: advisorId }, { advisor_id: advisorId }] 
-    })
+    const internships = await Internship.find({ advisor_id: advisorId })
       .populate({
         path: 'student',
         populate: { path: 'user', select: 'name email username isActivated phoneNumber' }
@@ -75,9 +73,7 @@ export const getAdvisorStats = async (req, res, next) => {
   try {
     const advisorId = req.user.id;
 
-    const internships = await Internship.find({ 
-      $or: [{ advisor: advisorId }, { advisor_id: advisorId }] 
-    });
+    const internships = await Internship.find({ advisor_id: advisorId });
     
     const studentUserIds = internships.map(i => i.student);
 
@@ -176,7 +172,7 @@ export const evaluateStudent = async (req, res, next) => {
       advisorComment 
     } = req.body;
 
-    const internship = await Internship.findOne({ _id: internshipId, advisor: req.user.id });
+    const internship = await Internship.findOne({ _id: internshipId, advisor_id: req.user.id });
     if (!internship) {
       return res.status(404).json({ success: false, message: 'Internship not found or not assigned to you' });
     }
