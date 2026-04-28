@@ -28,7 +28,7 @@ export const getDepartmentStudents = async (req, res, next) => {
     for (let student of students) {
       const internship = await Internship.findOne({ student: student._id })
         .populate('advisor_id', 'name email')
-        .populate('company', 'name location');
+        .populate('company', 'name country city subcity');
       student.internship = internship || null;
     }
 
@@ -84,17 +84,19 @@ export const processInternshipApp = async (req, res, next) => {
         department: studentProfile?.department,
         status: 'AWAITING_ASSIGNMENT',
         startDate: internship.startDate,
-        endDate: internship.endDate
+        endDate: internship.endDate,
+        // Carry over supervisor info to placement if we decide to store it there too
+        supervisorName: internship.companySupervisorName,
+        supervisorEmail: internship.companySupervisorEmail,
+        supervisorPhone: internship.companySupervisorPhone
       });
 
-      // Point 3: LINK STUDENT TO COMPANY & APPROVE COMPANY WITH DETAILS
+      // Point 3: LINK STUDENT TO COMPANY & APPROVE COMPANY (CLEAN)
       await Company.findByIdAndUpdate(internship.company, {
         $addToSet: { students: studentProfile?._id || internship.student },
         approvalStatus: 'APPROVED',
-        isActive: true,
-        contactPerson: internship.companySupervisorName,
-        email: internship.companySupervisorEmail,
-        phone: internship.companySupervisorPhone
+        isActive: true
+        // REMOVED: contactPerson, email, phone overwrite
       });
     }
 

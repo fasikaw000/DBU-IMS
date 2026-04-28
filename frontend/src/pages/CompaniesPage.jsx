@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import {
     Building2,
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react';
 
 const CompaniesPage = () => {
+    const navigate = useNavigate();
     const [companies, setCompanies] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -28,11 +30,9 @@ const CompaniesPage = () => {
     const [editingCompany, setEditingCompany] = useState(null);
     const [formData, setFormData] = useState({
         name: '',
-        location: '',
-        industry: '',
-        contactPerson: '',
-        email: '',
-        phone: '',
+        country: '',
+        city: '',
+        subcity: '',
         description: ''
     });
     const [submitting, setSubmitting] = useState(false);
@@ -57,18 +57,8 @@ const CompaniesPage = () => {
         }
     };
 
-    const openStudentPlacements = async (company) => {
-        setViewingStudentsFor(company);
-        setPlacements([]);
-        setPlacementsLoading(true);
-        try {
-            const res = await api.get(`/department/companies/${company._id}/placements`);
-            setPlacements(res.data || []);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setPlacementsLoading(false);
-        }
+    const openStudentPlacements = (company) => {
+        navigate(`/companies/${company._id}/students`);
     };
 
     const handleToggleStatus = async (id) => {
@@ -114,7 +104,7 @@ const CompaniesPage = () => {
             }
             setIsModalOpen(false);
             setEditingCompany(null);
-            setFormData({ name: '', location: '', industry: '', contactPerson: '', email: '', phone: '', description: '' });
+            setFormData({ name: '', country: '', city: '', subcity: '', description: '' });
             fetchData();
         } catch (err) {
             setMessage({ type: 'error', text: err.response?.data?.message || 'Something went wrong' });
@@ -128,11 +118,9 @@ const CompaniesPage = () => {
         setEditingCompany(company);
         setFormData({
             name: company.name,
-            location: company.location,
-            industry: company.industry,
-            contactPerson: company.contactPerson || '',
-            email: company.email || '',
-            phone: company.phone || '',
+            country: company.country || '',
+            city: company.city || '',
+            subcity: company.subcity || '',
             description: company.description || ''
         });
         setIsModalOpen(true);
@@ -143,8 +131,9 @@ const CompaniesPage = () => {
         if (c.approvalStatus !== 'APPROVED') return false;
 
         const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
-            c.industry.toLowerCase().includes(search.toLowerCase()) ||
-            c.location.toLowerCase().includes(search.toLowerCase());
+            (c.country && c.country.toLowerCase().includes(search.toLowerCase())) ||
+            (c.city && c.city.toLowerCase().includes(search.toLowerCase())) ||
+            (c.subcity && c.subcity.toLowerCase().includes(search.toLowerCase()));
 
         let matchesStatus = true;
         if (statusFilter === 'active') matchesStatus = c.isActive;
@@ -173,7 +162,7 @@ const CompaniesPage = () => {
                 <button
                     onClick={() => {
                         setEditingCompany(null);
-                        setFormData({ name: '', location: '', industry: '', contactPerson: '', email: '', phone: '', description: '' });
+                        setFormData({ name: '', country: '', city: '', subcity: '', description: '' });
                         setIsModalOpen(true);
                     }}
                     className="flex items-center gap-2 px-6 py-3 bg-dbu-primary text-white rounded-xl font-black text-xs tracking-widest hover:bg-dbu-accent transition shadow-lg shadow-dbu-primary/20"
@@ -189,7 +178,7 @@ const CompaniesPage = () => {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input
                         type="text"
-                        placeholder="Search companies by name, industry or location..."
+                        placeholder="Search companies by name, country, or city..."
                         className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
@@ -246,46 +235,25 @@ const CompaniesPage = () => {
                             <div className="flex items-center gap-2 mb-1">
                                 <h3 className="text-lg font-black text-slate-800">{company.name}</h3>
                             </div>
-                            <span className="text-[10px] font-black text-dbu-primary uppercase tracking-widest bg-dbu-primary/5 px-2 py-0.5 rounded">
-                                {company.industry}
-                            </span>
 
-                            <div className="mt-6 space-y-3">
+                            <div className="mt-4 space-y-2">
                                 <div className="flex items-center gap-3 text-slate-500">
                                     <MapPin size={16} className="text-slate-300" />
-                                    <span className="text-xs font-medium">{company.location}</span>
+                                    <span className="text-xs font-medium">
+                                        {company.country}, {company.city}
+                                        {company.subcity && ` (${company.subcity})`}
+                                    </span>
                                 </div>
-                                {company.contactPerson && (
-                                    <div className="flex items-center gap-3 text-slate-500">
-                                        <User size={16} className="text-slate-300" />
-                                        <span className="text-xs font-medium">
-                                            <span className="text-slate-400 mr-1">Contact:</span>
-                                            {company.contactPerson}
-                                        </span>
-                                    </div>
-                                )}
-                                {company.email && (
-                                    <div className="flex items-center gap-3 text-slate-500">
-                                        <Mail size={16} className="text-slate-300" />
-                                        <span className="text-xs font-medium truncate">{company.email}</span>
-                                    </div>
-                                )}
-                                {company.phone && (
-                                    <div className="flex items-center gap-3 text-slate-500">
-                                        <Phone size={16} className="text-slate-300" />
-                                        <span className="text-xs font-medium">{company.phone}</span>
-                                    </div>
-                                )}
                             </div>
 
                             <div className="mt-4 pt-4 border-t border-slate-100">
-                                <button
-                                    onClick={() => openStudentPlacements(company)}
-                                    className="w-full py-2 bg-slate-50 text-dbu-primary rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-dbu-primary hover:text-white transition-all flex items-center justify-center gap-2"
-                                >
-                                    <Users size={14} />
-                                    View Assigned Students
-                                </button>
+                                    <button
+                                        onClick={() => openStudentPlacements(company)}
+                                        className="w-full py-2.5 bg-dbu-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-dbu-accent transition-all flex items-center justify-center gap-2 shadow-sm"
+                                    >
+                                        <Users size={14} />
+                                        View Students
+                                    </button>
                             </div>
                         </div>
                     ))
@@ -324,79 +292,63 @@ const CompaniesPage = () => {
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Industry / Field</label>
-                                    <input
-                                        required
-                                        type="text"
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm"
-                                        value={formData.industry}
-                                        onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                                    />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Country</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm"
+                                            value={formData.country}
+                                            onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">City</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm"
+                                            value={formData.city}
+                                            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Location</label>
-                                    <input
-                                        required
-                                        type="text"
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm"
-                                        value={formData.location}
-                                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contact Person</label>
-                                    <input
-                                        type="text"
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm"
-                                        value={formData.contactPerson}
-                                        onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email Address</label>
-                                    <input
-                                        type="email"
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm"
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Phone Number</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Subcity (Optional)</label>
                                     <input
                                         type="text"
                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm"
-                                        value={formData.phone}
-                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                        value={formData.subcity}
+                                        onChange={(e) => setFormData({ ...formData, subcity: e.target.value })}
                                     />
                                 </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Company Description</label>
-                                <textarea
-                                    rows="3"
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm resize-none"
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                ></textarea>
+                                <div className="space-y-2 md:col-span-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Company Description (Optional)</label>
+                                    <textarea
+                                        rows="3"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm resize-none"
+                                        value={formData.description}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    />
+                                </div>
                             </div>
 
-                            <div className="flex gap-4 pt-4">
+                            <div className="flex justify-end gap-4 pt-6 border-t border-slate-100">
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="flex-1 px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs tracking-widest hover:bg-slate-200 transition"
+                                    className="px-6 py-3 text-slate-500 font-black text-[10px] uppercase tracking-widest hover:text-slate-700 transition"
                                 >
                                     CANCEL
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={submitting}
-                                    className="flex-1 px-6 py-4 bg-dbu-primary text-white rounded-2xl font-black text-xs tracking-widest hover:bg-dbu-accent transition shadow-lg shadow-dbu-primary/20 flex items-center justify-center gap-2"
+                                    className="px-8 py-3 bg-dbu-primary text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-dbu-accent transition shadow-lg shadow-dbu-primary/20 disabled:opacity-50 flex items-center gap-2"
                                 >
-                                    {submitting && <Loader2 size={16} className="animate-spin" />}
-                                    {editingCompany ? 'UPDATE COMPANY' : 'SAVE COMPANY'}
+                                    {submitting && <Loader2 size={14} className="animate-spin" />}
+                                    {submitting ? 'PROCESSING...' : (editingCompany ? 'UPDATE COMPANY' : 'SAVE COMPANY')}
                                 </button>
                             </div>
                         </form>
@@ -404,77 +356,6 @@ const CompaniesPage = () => {
                 </div>
             )}
 
-            {/* View Students Modal */}
-            {viewingStudentsFor && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[2.5rem] w-full max-w-3xl overflow-hidden shadow-2xl animate-in zoom-in duration-200 flex flex-col max-h-[90vh]">
-                        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-800 text-white">
-                            <div>
-                                <h2 className="text-xl font-black tracking-tight flex items-center gap-2">
-                                    <Users size={20} /> Students at {viewingStudentsFor.name}
-                                </h2>
-                                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-1">Internship Placements</p>
-                            </div>
-                            <button onClick={() => setViewingStudentsFor(null)} className="p-2 hover:bg-white/10 rounded-xl transition">
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <div className="p-8 overflow-y-auto flex-1">
-                            {placementsLoading ? (
-                                <div className="flex items-center justify-center py-16">
-                                    <Loader2 className="w-8 h-8 animate-spin text-dbu-primary" />
-                                </div>
-                            ) : placements.length === 0 ? (
-                                <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-                                    <Users size={40} className="mx-auto text-slate-200 mb-3" />
-                                    <p className="text-slate-400 font-bold text-sm">No students assigned to this company yet.</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {placements.map((intern) => (
-                                        <div key={intern._id} className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5 hover:shadow-md transition">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-11 h-11 bg-dbu-primary/10 rounded-xl flex items-center justify-center text-dbu-primary font-black text-sm flex-shrink-0">
-                                                        {intern.student?.user?.name?.charAt(0) || 'S'}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-black text-slate-800 text-sm">{intern.student?.user?.name || 'N/A'}</p>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{intern.student?.studentId}</p>
-                                                        <p className="text-[10px] text-dbu-primary font-black uppercase tracking-wider mt-0.5">{intern.field}</p>
-                                                    </div>
-                                                </div>
-                                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border flex-shrink-0 ${intern.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                        intern.status === 'COMPLETED' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                                            'bg-slate-50 text-slate-500 border-slate-100'
-                                                    }`}>{intern.status}</span>
-                                            </div>
-                                            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-slate-50">
-                                                <div>
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Supervisor</p>
-                                                    <p className="text-xs font-bold text-slate-700">{intern.companySupervisorName || '—'}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Supervisor Email</p>
-                                                    <p className="text-xs font-bold text-slate-700 truncate">{intern.companySupervisorEmail || '—'}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Duration</p>
-                                                    <p className="text-xs font-bold text-slate-700">
-                                                        {intern.startDate ? new Date(intern.startDate).toLocaleDateString() : '—'}
-                                                        {' → '}
-                                                        {intern.endDate ? new Date(intern.endDate).toLocaleDateString() : '—'}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

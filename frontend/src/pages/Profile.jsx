@@ -22,7 +22,6 @@ const Profile = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [studentProfile, setStudentProfile] = useState(null);
   const [cbeAccount, setCbeAccount] = useState('');
-  const [savingCbe, setSavingCbe] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -101,13 +100,18 @@ const Profile = () => {
       await api.put('/users/me', {
         name: fullName,
         email,
-        phoneNumber
+        phoneNumber,
+        cbeAccount: user?.role === 'Student' ? cbeAccount : undefined
       });
       
       // Critical Fix: Fetch current user to ensure UI reflects changes instantly
       const updatedUserRes = await api.get('/users/me');
       if (updatedUserRes?.data) {
         setUser(updatedUserRes.data);
+        if (updatedUserRes.data.studentProfile) {
+            setStudentProfile(updatedUserRes.data.studentProfile);
+            setCbeAccount(updatedUserRes.data.studentProfile.cbeAccount || '');
+        }
       }
       
       setMessage('Profile updated successfully');
@@ -118,31 +122,6 @@ const Profile = () => {
     }
   };
 
-  const handleSaveCbe = async (e) => {
-    if (e) e.preventDefault();
-    if (!cbeAccount || cbeAccount.length !== 13) {
-      setError("CBE Account must be 13 digits");
-      setErrors({ ...errors, cbeAccount: "Must be 13 digits" });
-      return;
-    }
-    setSavingCbe(true);
-    setMessage('');
-    setError('');
-    try {
-      const res = await api.put('/users/me/student-profile/cbe', { cbeAccount });
-      setStudentProfile(res?.data || { cbeAccount, cbeEditable: true });
-      setCbeAccount(res?.data?.cbeAccount || cbeAccount);
-      setMessage(res?.message || 'CBE account updated');
-      
-      // Update global user state with latest data
-      const updatedUserRes = await api.get('/users/me');
-      if (updatedUserRes?.data) setUser(updatedUserRes.data);
-    } catch (err) {
-      setError(err.message || 'Failed to save CBE account');
-    } finally {
-      setSavingCbe(false);
-    }
-  };
 
   const handlePhotoUpload = async (file) => {
     if (!file) return;
@@ -308,14 +287,19 @@ const Profile = () => {
                   {errors.phoneNumber && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.phoneNumber}</p>}
                 </div>
 
-                {user?.role === 'Student' && (
+                 {user?.role === 'Student' && (
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CBE Account (13 Digits)</label>
+                    <div className="flex items-center justify-between ml-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CBE Account Number</label>
+                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${cbeAccount ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                            {cbeAccount ? 'Completed' : 'Not Linked'}
+                        </span>
+                    </div>
                     <div className="relative">
                       <Landmark className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input
                         value={cbeAccount}
-                        onChange={e => { setCbeAccount(e.target.value.replace(/\D/g, '').slice(0, 13)); setErrors({ ...errors, cbeAccount: null }); }}
+                        onChange={e => { setCbeAccount(e.target.value.replace(/\D/g, '').slice(0, 16)); setErrors({ ...errors, cbeAccount: null }); }}
                         className={`w-full pl-12 pr-4 py-3 bg-slate-50 border rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary font-mono ${errors.cbeAccount ? 'border-red-500' : 'border-slate-100'}`}
                         placeholder="1000XXXXXXXXX"
                       />
@@ -325,7 +309,7 @@ const Profile = () => {
                 )}
               </div>
 
-              <div className="pt-4 flex gap-4">
+               <div className="pt-4 flex gap-4">
                 <button
                   type="submit"
                   disabled={saving}
@@ -334,17 +318,6 @@ const Profile = () => {
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   Update Profile
                 </button>
-                {user?.role === 'Student' && cbeAccount.length === 13 && (
-                  <button
-                    type="button"
-                    onClick={handleSaveCbe}
-                    disabled={savingCbe}
-                    className="flex-1 py-4 bg-slate-800 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center justify-center gap-3"
-                  >
-                    {savingCbe ? <Loader2 className="w-4 h-4 animate-spin" /> : <Landmark className="w-4 h-4" />}
-                    Sync CBE Info
-                  </button>
-                )}
               </div>
             </form>
           </div>

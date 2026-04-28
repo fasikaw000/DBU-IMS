@@ -47,7 +47,9 @@ const StudentDashboard = () => {
     // Form State
     const [applyData, setApplyData] = useState({
         companyName: '',
-        location: '',
+        country: 'Ethiopia',
+        city: '',
+        subcity: '',
         field: '',
         startDate: '',
         endDate: '',
@@ -65,7 +67,7 @@ const StudentDashboard = () => {
         try {
             const [intRes, actRes, compRes] = await Promise.all([
                 api.get('/internships/my-internship'),
-                api.get('/student/activity'),
+                api.get('/users/activity'),
                 api.get('/department/companies')
             ]);
             setInternship(intRes.data);
@@ -85,7 +87,7 @@ const StudentDashboard = () => {
 
         // Validation
         let newErrors = {};
-        const required = ['companyName', 'location', 'field', 'startDate', 'endDate', 'companySupervisorName', 'companySupervisorPhone', 'companySupervisorEmail'];
+        const required = ['companyName', 'country', 'city', 'field', 'startDate', 'endDate', 'companySupervisorName', 'companySupervisorPhone', 'companySupervisorEmail'];
         
         required.forEach(field => {
             if (!applyData[field]) {
@@ -124,7 +126,9 @@ const StudentDashboard = () => {
             setMessage({ type: 'success', text: 'Application submitted successfully!' });
             setApplyData({
                 companyName: '',
-                location: '',
+                country: 'Ethiopia',
+                city: '',
+                subcity: '',
                 field: '',
                 startDate: '',
                 endDate: '',
@@ -187,7 +191,9 @@ const StudentDashboard = () => {
                                 if (internship) {
                                     setApplyData({
                                         companyName: internship.company?.name || '',
-                                        location: internship.company?.location || '',
+                                        country: internship.company?.country || 'Ethiopia',
+                                        city: internship.company?.city || '',
+                                        subcity: internship.company?.subcity || '',
                                         field: internship.field || '',
                                         startDate: internship.startDate ? new Date(internship.startDate).toISOString().split('T')[0] : '',
                                         endDate: internship.endDate ? new Date(internship.endDate).toISOString().split('T')[0] : '',
@@ -265,7 +271,13 @@ const StudentDashboard = () => {
                                                 onChange={e => {
                                                     const selected = companies.find(c => c.name === e.target.value);
                                                     if (selected) {
-                                                        setApplyData({ ...applyData, companyName: selected.name, location: selected.location || '' });
+                                                        setApplyData({ 
+                                                            ...applyData, 
+                                                            companyName: selected.name, 
+                                                            country: selected.country || 'Ethiopia',
+                                                            city: selected.city || '',
+                                                            subcity: selected.subcity || ''
+                                                        });
                                                     } else {
                                                         setApplyData({ ...applyData, companyName: e.target.value });
                                                     }
@@ -288,9 +300,21 @@ const StudentDashboard = () => {
                                         )}
                                         {errors.companyName && <p className="text-[10px] text-red-500 font-bold ml-2">{errors.companyName}</p>}
                                     </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] font-black text-slate-400 uppercase ml-2">Country</label>
+                                            <input placeholder="Country" className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.country ? 'border-red-500' : 'border-slate-200'}`} value={applyData.country} onChange={e => { setApplyData({ ...applyData, country: e.target.value }); setErrors({ ...errors, country: null }); }} />
+                                            {errors.country && <p className="text-[10px] text-red-500 font-bold ml-2">{errors.country}</p>}
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] font-black text-slate-400 uppercase ml-2">City</label>
+                                            <input placeholder="City" className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.city ? 'border-red-500' : 'border-slate-200'}`} value={applyData.city} onChange={e => { setApplyData({ ...applyData, city: e.target.value }); setErrors({ ...errors, city: null }); }} />
+                                            {errors.city && <p className="text-[10px] text-red-500 font-bold ml-2">{errors.city}</p>}
+                                        </div>
+                                    </div>
                                     <div className="space-y-1">
-                                        <input placeholder="Location" className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.location ? 'border-red-500' : 'border-slate-200'}`} value={applyData.location} onChange={e => { setApplyData({ ...applyData, location: e.target.value }); setErrors({ ...errors, location: null }); }} />
-                                        {errors.location && <p className="text-[10px] text-red-500 font-bold ml-2">{errors.location}</p>}
+                                        <label className="text-[9px] font-black text-slate-400 uppercase ml-2">Subcity (Optional)</label>
+                                        <input placeholder="Subcity" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold" value={applyData.subcity} onChange={e => setApplyData({ ...applyData, subcity: e.target.value })} />
                                     </div>
                                     <div className="space-y-1">
                                         <input placeholder="Field (e.g Website Dev)" className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.field ? 'border-red-500' : 'border-slate-200'}`} value={applyData.field} onChange={e => { setApplyData({ ...applyData, field: e.target.value }); setErrors({ ...errors, field: null }); }} />
@@ -425,7 +449,9 @@ const StudentDashboard = () => {
                                                     if (internship) {
                                                         setApplyData({
                                                             companyName: internship.company?.name || internship.companyName || '',
-                                                            location: internship.company?.location || internship.location || '',
+                                                            country: internship.company?.country || 'Ethiopia',
+                                                            city: internship.company?.city || '',
+                                                            subcity: internship.company?.subcity || '',
                                                             field: internship.field || '',
                                                             startDate: internship.startDate ? new Date(internship.startDate).toISOString().split('T')[0] : '',
                                                             endDate: internship.endDate ? new Date(internship.endDate).toISOString().split('T')[0] : '',
@@ -459,7 +485,10 @@ const StudentDashboard = () => {
                                                 </div>
                                                 <div className="space-y-1 col-span-2 sm:col-span-1">
                                                     <p className="text-[9px] font-black text-slate-400 uppercase">Location</p>
-                                                    <p className="text-sm font-bold text-slate-700">{internship.company?.location || internship.location || 'N/A'}</p>
+                                                    <p className="text-sm font-bold text-slate-700">
+                                                        {internship.company?.country || 'N/A'}, {internship.company?.city || 'N/A'}
+                                                        {internship.company?.subcity && ` (${internship.company.subcity})`}
+                                                    </p>
                                                 </div>
                                                 <div className="space-y-1 col-span-2">
                                                     <p className="text-[9px] font-black text-slate-400 uppercase">Field</p>
@@ -603,21 +632,27 @@ const StudentDashboard = () => {
 
                         {/* Recent Activity */}
                         <div className="bg-white rounded-3xl border border-slate-200 p-8 space-y-6">
-                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recent Activity</h3>
+                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <Activity size={12} className="text-dbu-primary" />
+                                Recent Activity
+                            </h3>
                             <div className="space-y-6">
                                 {activities.length === 0 ? (
-                                    <p className="text-xs text-slate-400 italic">No activity recorded yet.</p>
+                                    <p className="text-[11px] text-slate-400 italic">No recent activity.</p>
                                 ) : (
-                                    activities.slice(0, 5).map((act, i) => (
-                                        <div key={i} className="flex gap-4 relative">
-                                            {i < 4 && <div className="absolute left-4 top-8 bottom-[-24px] w-px bg-slate-100"></div>}
-                                            <div className="w-8 h-8 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 relative z-10">
-                                                <div className="w-2 h-2 rounded-full bg-dbu-primary"></div>
+                                    activities.map((act, i) => (
+                                        <div key={act.id || i} className="flex gap-4 group">
+                                            <div className="w-8 h-8 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 group-hover:bg-dbu-primary/5 transition-colors">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-dbu-primary group-hover:scale-125 transition-transform"></div>
                                             </div>
-                                            <div>
-                                                <p className="text-xs font-bold text-slate-800">{act.action.replace('_', ' ').toUpperCase()}</p>
-                                                <p className="text-[10px] text-slate-500 mt-0.5">{act.details}</p>
-                                                <p className="text-[9px] text-slate-300 font-bold mt-1 uppercase tracking-tighter">{new Date(act.createdAt).toLocaleString()}</p>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-[11px] font-black text-slate-700 leading-relaxed mb-0.5">{act.message}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">{new Date(act.time).toLocaleDateString()}</span>
+                                                    <span className="text-[8px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        {act.type.replace(/_/g, ' ')}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     ))

@@ -42,7 +42,7 @@ const NotificationCenter = () => {
   const handleViewDetails = async (notification, e) => {
     if (e) e.stopPropagation(); // Prevent row click from firing
     setSelectedNotification(notification);
-    
+
     // Mark notification as read
     if (!notification.is_read) {
       handleMarkRead(notification._id);
@@ -95,8 +95,8 @@ const NotificationCenter = () => {
         ) : (
           <div className="divide-y divide-slate-100">
             {notifications.map(notif => (
-              <div 
-                key={notif._id} 
+              <div
+                key={notif._id}
                 onClick={() => handleNotificationClick(notif)}
                 className={`p-6 transition hover:bg-slate-50 flex items-start gap-4 cursor-pointer border-b border-slate-50 last:border-0 ${!notif.is_read ? 'bg-dbu-primary/5' : ''}`}
               >
@@ -190,37 +190,37 @@ const NotificationCenter = () => {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="pt-6 border-t border-slate-100 flex justify-end gap-3">
-                    <button
-                        onClick={() => setIsOpen(false)}
-                        className="px-6 py-2.5 bg-white border border-slate-200 rounded-xl font-black text-[10px] tracking-widest hover:bg-slate-50 transition"
-                    >
-                        CLOSE
-                    </button>
-                    {(() => {
-                        const relatedRoute = getNotificationRoute(selectedNotification.type, user?.role, selectedNotification.link);
-                        if (!relatedRoute) {
-                            // ANNOUNCEMENT or no route: show informational text instead of a button
-                            return (
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest self-center">
-                                    No related page
-                                </span>
-                            );
-                        }
-                        return (
-                            <button
-                                onClick={() => {
-                                    setIsOpen(false);
-                                    navigate(relatedRoute);
-                                }}
-                                className="flex items-center gap-2 px-6 py-2.5 bg-dbu-primary text-white rounded-xl font-black text-[10px] tracking-widest hover:bg-dbu-accent transition shadow-lg shadow-dbu-primary/20"
-                            >
-                                <ExternalLink size={12} />
-                                GO TO RELATED PAGE
-                            </button>
-                        );
-                    })()}
+                  <button
+                    onClick={() => setIsOpen(false)}
+                    className="px-6 py-2.5 bg-white border border-slate-200 rounded-xl font-black text-[10px] tracking-widest hover:bg-slate-50 transition"
+                  >
+                    CLOSE
+                  </button>
+                  {(() => {
+                    const relatedRoute = getNotificationRoute(selectedNotification.type, user?.role, selectedNotification.link);
+                    if (!relatedRoute) {
+                      // ANNOUNCEMENT or no route: show informational text instead of a button
+                      return (
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest self-center">
+                          No related page
+                        </span>
+                      );
+                    }
+                    return (
+                      <button
+                        onClick={() => {
+                          setIsOpen(false);
+                          navigate(relatedRoute);
+                        }}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-dbu-primary text-white rounded-xl font-black text-[10px] tracking-widest hover:bg-dbu-accent transition shadow-lg shadow-dbu-primary/20"
+                      >
+                        <ExternalLink size={12} />
+                        GO TO RELATED PAGE
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

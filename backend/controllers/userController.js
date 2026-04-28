@@ -98,8 +98,30 @@ export const updateMe = async (req, res, next) => {
     let studentProfile = null;
     if (normalizeRole(user.role) === 'Student') {
       studentProfile = await Student.findOne({ user: user._id });
-      if (studentProfile && updates.phoneNumber) {
-        studentProfile.phone = updates.phoneNumber;
+      if (studentProfile) {
+        if (updates.phoneNumber) {
+          studentProfile.phone = updates.phoneNumber;
+        }
+
+        // Consolidated CBE Update
+        if (req.body.cbeAccount !== undefined) {
+          const cbe = String(req.body.cbeAccount || '').trim();
+          if (cbe) {
+            if (!/^\d{10,16}$/.test(cbe)) {
+              return res.status(400).json({ success: false, message: 'CBE account must be between 10 and 16 digits' });
+            }
+
+            // Check duplicate
+            const existing = await Student.findOne({ cbeAccount: cbe });
+            if (existing && existing._id.toString() !== studentProfile._id.toString()) {
+              return res.status(400).json({ success: false, message: 'This CBE account is already registered' });
+            }
+            studentProfile.cbeAccount = cbe;
+          } else {
+            studentProfile.cbeAccount = undefined;
+          }
+        }
+        
         await studentProfile.save();
       }
     }
@@ -277,7 +299,7 @@ export const changeMyPassword = async (req, res, next) => {
     if (!isMatch) {
       return res.status(400).json({ success: false, message: 'Current password is incorrect' });
     }
-
+    
     const isPrev = await user.isPreviousPassword(newPassword);
     if (isPrev) {
       return res.status(400).json({ success: false, message: 'You cannot reuse a previously used password. Please choose a new password.' });
@@ -299,3 +321,79 @@ export const changeMyPassword = async (req, res, next) => {
   }
 };
 
+export const getRecentActivity = async (req, res, next) => {
+  try {
+    const role = normalizeRole(req.user.role);
+    let query = {};
+    let limit = 3;
+    let maxLogins = 2;
+    
+    if (role === 'Student') {
+      const student = await Student.findOne({ user: req.user.id });
+      const Internship = (await import('../models/Internship.js')).default;
+      const internship = student ? await Internship.findOne({ student: student._id }) : null;
+      
+      query = {
+        $or: [
+          { user: req.user.id },
+          { 'targetResource.documentId': internship?._id }
+        ]
+      };
+    } else if (role === 'Admin') {
+      query = {}; // Admin sees all
+      maxLogins = 1;
+    } else {
+      query = { user: req.user.id };
+    }
+
+    const logs = await AuditLog.find(query)
+      .sort({ createdAt: -1 })
+      .limit(30) // Fetch more to allow filtering noise
+      .lean();
+
+    const translate = (log) => {
+      const { action, details } = log;
+      switch (action) {
+        case 'login': return 'Logged into the system';
+        case 'profile_updated': return 'Profile updated';
+        case 'cbe_account_added': return 'CBE account added';
+        case 'cbe_account_updated': return 'CBE account updated';
+        case 'report_submitted': return 'Report uploaded successfully';
+        case 'internship_pending_approval':
+        case 'internship_application_submitted': return 'Internship application submitted';
+        case 'internship_approved': return 'Internship application approved';
+        case 'internship_rejected': return 'Internship application rejected';
+        case 'advisor_assigned': return 'Advisor assigned successfully';
+        case 'user_created':
+        case 'created_student':
+        case 'created_staff': return details || 'New user account created';
+        case 'user_deactivated': return details || 'User account deactivated';
+        case 'dept_created': return details || 'New department created';
+        case 'dept_updated': return details || 'Department details updated';
+        case 'broadcast_message_sent': return 'Broadcast message sent to all users';
+        default: return details || action.replace(/_/g, ' ');
+      }
+    };
+
+    let loginCount = 0;
+    const filtered = logs.filter(log => {
+      if (log.action === 'login') {
+        loginCount++;
+        return loginCount <= maxLogins;
+      }
+      // For Admin, filter for high-value if needed, but for now just show all meaningful
+      return true;
+    }).slice(0, limit);
+
+    const formatted = filtered.map(log => ({
+      id: log._id,
+      message: translate(log),
+      time: log.createdAt,
+      type: log.action
+    }));
+
+    res.status(200).json({ success: true, data: formatted });
+  } catch (err) {
+    next(err);
+  }
+};

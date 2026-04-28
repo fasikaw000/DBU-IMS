@@ -11,6 +11,7 @@ import CollegeHeadDashboard from './pages/CollegeHeadDashboard';
 import SupervisorDashboard from './pages/SupervisorDashboard';
 import ReportsPage from './pages/ReportsPage';
 import CompaniesPage from './pages/CompaniesPage';
+import CompanyStudentsPage from './pages/CompanyStudentsPage';
 import AssignmentsPage from './pages/AssignmentsPage';
 import AdvisorStudentsPage from './pages/AdvisorStudentsPage';
 import NotFound from './pages/NotFound';
@@ -57,6 +58,7 @@ function App() {
           <Route path="/dept-dashboard" element={<DeptDashboard />} />
           <Route path="/dean/students" element={<DeanStudents />} />
           <Route path="/companies" element={<CompaniesPage />} />
+          <Route path="/companies/:id/students" element={<CompanyStudentsPage />} />
           <Route path="/assignments" element={<AssignmentsPage />} />
         </Route>
 

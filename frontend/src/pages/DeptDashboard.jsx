@@ -21,7 +21,8 @@ import {
     MessageSquare,
     Send,
     Loader2,
-    Eye
+    Eye,
+    Activity
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
@@ -39,8 +40,7 @@ const DeptDashboard = () => {
     const [students, setStudents] = useState([]);
     const [applications, setApplications] = useState([]);
     const [departmentName, setDepartmentName] = useState('');
-    const [loading, setLoading] = useState(true);
-    const [actionLoading, setActionLoading] = useState(false);
+    const [activities, setActivities] = useState([]);
     const [message, setMessage] = useState(null);
     const [search, setSearch] = useState('');
     const [view, setView] = useState('overview'); // overview, students
@@ -67,13 +67,15 @@ const DeptDashboard = () => {
 
     const fetchData = async () => {
         try {
-            const [statsRes, studentsRes] = await Promise.all([
+            const [statsRes, studentsRes, activityRes] = await Promise.all([
                 api.get('/department/stats'),
-                api.get('/department/students')
+                api.get('/department/students'),
+                api.get('/users/activity')
             ]);
 
             setStats(statsRes.data);
             setStudents(studentsRes.data);
+            setActivities(activityRes.data || []);
 
             const pending = studentsRes.data
                 .filter(s => s.internship && ['PENDING', 'PENDING_APPROVAL', 'RESUBMITTED', 'REVISION_REQUIRED'].includes(s.internship.status))
@@ -152,26 +154,51 @@ const DeptDashboard = () => {
                 </div>
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                    { label: 'Pending Apps', value: stats.pendingApplications, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-                    { label: 'Dept Advisors', value: stats.totalAdvisors, icon: Users, color: 'text-blue-500', bg: 'bg-blue-50' },
-                    { label: 'Placement', value: stats.awaitingAdvisor, icon: Briefcase, color: 'text-indigo-500', bg: 'bg-indigo-50' },
-                    { label: 'Active Field', value: stats.activeInternships, icon: ShieldCheck, color: 'text-emerald-500', bg: 'bg-emerald-50' }
-                ].map((card, i) => (
-                    <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all group cursor-default">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">{card.label}</p>
-                                <h3 className="text-4xl font-black text-slate-800">{card.value}</h3>
-                            </div>
-                            <div className={`${card.bg} ${card.color} p-4 rounded-2xl group-hover:rotate-12 transition-transform shadow-sm`}>
-                                <card.icon size={24} strokeWidth={3} />
+            {/* Summary & Activity Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[
+                        { label: 'Pending Apps', value: stats.pendingApplications, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
+                        { label: 'Dept Advisors', value: stats.totalAdvisors, icon: Users, color: 'text-blue-500', bg: 'bg-blue-50' },
+                        { label: 'Placement', value: stats.awaitingAdvisor, icon: Briefcase, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+                        { label: 'Active Field', value: stats.activeInternships, icon: ShieldCheck, color: 'text-emerald-500', bg: 'bg-emerald-50' }
+                    ].map((card, i) => (
+                        <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all group cursor-default">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">{card.label}</p>
+                                    <h3 className="text-4xl font-black text-slate-800">{card.value}</h3>
+                                </div>
+                                <div className={`${card.bg} ${card.color} p-4 rounded-2xl group-hover:rotate-12 transition-transform shadow-sm`}>
+                                    <card.icon size={24} strokeWidth={3} />
+                                </div>
                             </div>
                         </div>
+                    ))}
+                </div>
+
+                {/* Recent Activity Sidebar */}
+                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                        <Activity className="w-3 h-3 text-dbu-primary" />
+                        Recent Activity
+                    </h3>
+                    <div className="space-y-4">
+                        {activities.length === 0 ? (
+                            <p className="text-[11px] text-slate-400 italic">No recent activity.</p>
+                        ) : (
+                            activities.map((act, i) => (
+                                <div key={act.id || i} className="flex gap-3 items-start group">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-dbu-primary mt-1.5 shrink-0 group-hover:scale-150 transition-transform"></div>
+                                    <div className="min-w-0">
+                                        <p className="text-[11px] font-black text-slate-700 leading-relaxed truncate">{act.message}</p>
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">{new Date(act.time).toLocaleDateString()}</span>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
-                ))}
+                </div>
             </div>
 
             {/* Main Content Tabs */}

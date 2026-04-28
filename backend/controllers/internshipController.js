@@ -14,7 +14,7 @@ export const applyInternship = async (req, res) => {
   try {
     const {
       companyName, company_name,
-      location,
+      country, city, subcity, location,
       field,
       supervisorName, supervisor_name, companySupervisorName,
       supervisorEmail, supervisor_email, companySupervisorEmail,
@@ -24,6 +24,9 @@ export const applyInternship = async (req, res) => {
     } = req.body;
 
     const finalCompanyName = companyName || company_name;
+    const finalCountry = country || 'Ethiopia';
+    const finalCity = city || location || 'N/A';
+    const finalSubcity = subcity || '';
     const finalSupervisorName = supervisorName || supervisor_name || companySupervisorName;
     const finalSupervisorEmail = supervisorEmail || supervisor_email || companySupervisorEmail;
     const finalSupervisorPhone = supervisorPhone || supervisor_phone || companySupervisorPhone;
@@ -56,8 +59,9 @@ export const applyInternship = async (req, res) => {
     if (!company) {
       company = await Company.create({
         name: finalCompanyName,
-        location,
-        industry: field || 'General',
+        country: finalCountry,
+        city: finalCity,
+        subcity: finalSubcity,
         createdByStudent: true,
         addedBy: req.user._id || req.user.id
       });

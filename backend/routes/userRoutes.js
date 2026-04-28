@@ -8,7 +8,8 @@ import {
   uploadMyPhoto,
   verifyEmailChange,
   getMyStudentProfile,
-  updateMyCbeAccount
+  updateMyCbeAccount,
+  getRecentActivity
 } from '../controllers/userController.js';
 
 const router = express.Router();
@@ -18,6 +19,7 @@ router.get('/verify-email/:token', verifyEmailChange);
 router.use(protect);
 
 router.get('/me', getMe);
+router.get('/activity', getRecentActivity);
 router.put('/me', updateMe);
 router.post('/me/photo', imageUpload.single('photo'), uploadMyPhoto);
 router.put('/me/password', changeMyPassword);

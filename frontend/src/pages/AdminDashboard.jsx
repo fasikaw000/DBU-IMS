@@ -30,11 +30,16 @@ const AdminDashboard = () => {
     });
     const [loading, setLoading] = useState(true);
 
+    const [activities, setActivities] = useState([]);
+
     useEffect(() => {
-        const fetchStats = async () => {
+        const fetchDashboardData = async () => {
             try {
-                const res = await api.get('/admin/stats');
-                const payload = res?.data || {};
+                const [statsRes, activityRes] = await Promise.all([
+                    api.get('/admin/stats'),
+                    api.get('/users/activity')
+                ]);
+                const payload = statsRes?.data || {};
                 setStats({
                     totalStudents: payload.totalStudents ?? 0,
                     totalAdmins: payload.totalAdmins ?? 0,
@@ -45,32 +50,17 @@ const AdminDashboard = () => {
                     activeInternships: payload.activeInternships ?? 0,
                     completedInternships: payload.completedInternships ?? 0,
                     departmentStats: Array.isArray(payload.departmentStats) ? payload.departmentStats : [],
-                    recentActivity: Array.isArray(payload.recentActivity) ? payload.recentActivity : []
                 });
+                setActivities(activityRes.data || []);
             } catch (err) {
-                console.error("Failed to load stats", err);
+                console.error("Failed to load dashboard data", err);
             } finally {
                 setLoading(false);
             }
         };
-        fetchStats();
+        fetchDashboardData();
     }, []);
 
-    const actionLabels = {
-        created_student: 'User Created (Student)',
-        created_staff: 'User Created (Staff)',
-        bulk_students_uploaded: 'Users Created (Students Bulk Upload)',
-        bulk_staff_uploaded: 'Users Created (Staff Bulk Upload)',
-        account_activated: 'Account Activated',
-        user_status_toggled: 'User Status Changed',
-        dept_created: 'Department Created',
-        dept_updated: 'Department Updated',
-        advisor_assigned: 'Student Assigned To Advisor',
-        report_submitted: 'Report Submitted',
-        report_reviewed: 'Report Reviewed',
-        grade_assigned: 'Grade Assigned',
-        student_evaluated: 'Grade Assigned'
-    };
 
     const statCards = [
         { title: 'Total Students', value: stats.totalStudents, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -133,39 +123,31 @@ const AdminDashboard = () => {
                         </button>
                     </div>
                     <div className="divide-y divide-slate-50">
-                        {stats.recentActivity.length === 0 ? (
+                        {activities.length === 0 ? (
                             <div className="p-8 text-center text-slate-400 italic">No recent activity found.</div>
                         ) : (
-                            stats.recentActivity.map((log, idx) => {
-                                const actionStr = log.action || '';
-                                let targetRoute = '/admin/logs';
-                                if (actionStr.includes('student')) targetRoute = '/admin/students';
-                                else if (actionStr.includes('staff')) targetRoute = '/admin/staff';
-                                else if (actionStr.includes('dept')) targetRoute = '/admin/departments';
-
-                                return (
-                                    <div
-                                        key={idx}
-                                        onClick={() => navigate(targetRoute)}
-                                        className="p-4 hover:bg-slate-50/50 transition-colors flex items-start gap-4 cursor-pointer"
-                                    >
-                                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
-                                            <Clock className="w-5 h-5" />
+                            activities.map((log, idx) => (
+                                <div
+                                    key={log.id || idx}
+                                    className="p-5 hover:bg-slate-50/50 transition-colors flex items-start gap-4"
+                                >
+                                    <div className="w-10 h-10 rounded-2xl bg-dbu-primary/10 flex items-center justify-center text-dbu-primary shrink-0">
+                                        <Clock className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm font-black text-slate-800">{log.message}</p>
+                                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                                {new Date(log.time).toLocaleDateString()}
+                                            </span>
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between">
-                                                <p className="text-sm font-bold text-slate-800">{actionLabels[actionStr] || actionStr.replace(/_/g, ' ').toUpperCase()}</p>
-                                                <span className="text-[10px] text-slate-400 font-medium">{new Date(log.createdAt).toLocaleString()}</span>
-                                            </div>
-                                            <p className="text-sm text-slate-500 mt-0.5">{log.details}</p>
-                                            <div className="flex items-center mt-2 text-[10px] uppercase font-black tracking-widest text-slate-400">
-                                                <span className="text-dbu-primary mr-2">Admin:</span>
-                                                {log.user?.name || 'System'}
-                                            </div>
+                                        <div className="flex items-center mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                                            <Activity className="w-3 h-3 mr-1" />
+                                            {log.type.replace(/_/g, ' ')}
                                         </div>
                                     </div>
-                                );
-                            })
+                                </div>
+                            ))
                         )}
                     </div>
                 </div>

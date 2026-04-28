@@ -8,16 +8,22 @@ export const getCompanies = async (req, res, next) => {
   try {
     const companies = await Company.find().sort('-createdAt').lean();
 
-    // Fetch from placements
-    const Placement = (await import('../models/Placement.js')).default;
+    // Fetch from internships for counts and details
+    const Internship = (await import('../models/Internship.js')).default;
+    
     for (let company of companies) {
-      const placements = await Placement.find({ company: company._id })
-        .populate({
-          path: 'student',
-          populate: { path: 'user', select: 'name email' }
-        });
-      company.students = placements.map(p => p.student).filter(Boolean);
+      const internships = await Internship.find({ company: company._id });
+      
+      company.stats = {
+        total: internships.length,
+        active: internships.filter(i => i.status === 'ACTIVE' || i.status === 'ONGOING').length,
+        completed: internships.filter(i => i.status === 'COMPLETED' || i.status === 'EVALUATED').length
+      };
+
+      // Optional: keep students list if needed, but the stats are more important now
+      company.students = internships.map(i => i.student);
     }
+    
     res.status(200).json({ success: true, count: companies.length, data: companies });
   } catch (error) {
     next(error);

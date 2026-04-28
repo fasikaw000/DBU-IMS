@@ -12,7 +12,8 @@ import {
     Calendar,
     ChevronRight,
     Loader2,
-    Book
+    Book,
+    Activity
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
@@ -28,6 +29,7 @@ const AdvisorDashboard = () => {
         unreadMessages: 0
     });
     const [students, setStudents] = useState([]);
+    const [activities, setActivities] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -36,12 +38,14 @@ const AdvisorDashboard = () => {
 
     const fetchDashboardData = async () => {
         try {
-            const [statsRes, studentsRes] = await Promise.all([
+            const [statsRes, studentsRes, activityRes] = await Promise.all([
                 api.get('/advisor/stats'),
-                api.get('/advisor/students')
+                api.get('/advisor/students'),
+                api.get('/users/activity')
             ]);
             setStats(statsRes.data);
             setStudents(studentsRes.data);
+            setActivities(activityRes.data || []);
         } catch (err) {
             console.error(err);
         } finally {
@@ -74,26 +78,51 @@ const AdvisorDashboard = () => {
                 <TrendingUp size={120} className="absolute -right-8 -bottom-8 text-slate-50 opacity-[0.03] rotate-12" />
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                    { label: 'Assigned Students', value: stats.totalStudents, icon: Users, color: 'text-blue-500', bg: 'bg-blue-50' },
-                    { label: 'Active Internships', value: stats.activeInternships, icon: Briefcase, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                    { label: 'Pending Reports', value: stats.pendingReports, icon: FileText, color: 'text-amber-500', bg: 'bg-amber-50' },
-                    { label: 'Unread Messages', value: stats.unreadMessages, icon: MessageSquare, color: 'text-indigo-500', bg: 'bg-indigo-50' }
-                ].map((card, i) => (
-                    <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">{card.label}</p>
-                                <h3 className="text-3xl font-black text-slate-800">{card.value}</h3>
-                            </div>
-                            <div className={`${card.bg} ${card.color} p-3 rounded-xl group-hover:scale-110 transition-transform`}>
-                                <card.icon size={24} />
+            {/* Summary & Activity Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[
+                        { label: 'Assigned Students', value: stats.totalStudents, icon: Users, color: 'text-blue-500', bg: 'bg-blue-50' },
+                        { label: 'Active Internships', value: stats.activeInternships, icon: Briefcase, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                        { label: 'Pending Reports', value: stats.pendingReports, icon: FileText, color: 'text-amber-500', bg: 'bg-amber-50' },
+                        { label: 'Unread Messages', value: stats.unreadMessages, icon: MessageSquare, color: 'text-indigo-500', bg: 'bg-indigo-50' }
+                    ].map((card, i) => (
+                        <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">{card.label}</p>
+                                    <h3 className="text-3xl font-black text-slate-800">{card.value}</h3>
+                                </div>
+                                <div className={`${card.bg} ${card.color} p-3 rounded-xl group-hover:scale-110 transition-transform`}>
+                                    <card.icon size={24} />
+                                </div>
                             </div>
                         </div>
+                    ))}
+                </div>
+
+                {/* Recent Activity Sidebar */}
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                        <Activity className="w-3 h-3 text-dbu-primary" />
+                        Recent Activity
+                    </h3>
+                    <div className="space-y-4">
+                        {activities.length === 0 ? (
+                            <p className="text-[11px] text-slate-400 italic">No recent activity.</p>
+                        ) : (
+                            activities.map((act, i) => (
+                                <div key={act.id || i} className="flex gap-3 items-start group">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-dbu-primary mt-1.5 shrink-0 group-hover:scale-150 transition-transform"></div>
+                                    <div className="min-w-0">
+                                        <p className="text-[11px] font-black text-slate-700 leading-relaxed truncate">{act.message}</p>
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">{new Date(act.time).toLocaleDateString()}</span>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
-                ))}
+                </div>
             </div>
 
             {/* Recent Students Table / List */}

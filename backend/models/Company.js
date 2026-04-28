@@ -6,21 +6,15 @@ const companySchema = new mongoose.Schema({
     required: [true, 'Company name is required'],
     trim: true
   },
-  location: {
+  country: {
     type: String,
-    required: [true, 'Company location is required']
+    required: [true, 'Country is required']
   },
-  industry: {
+  city: {
     type: String,
-    required: [true, 'Industry type is required']
+    required: [true, 'City is required']
   },
-  contactPerson: {
-    type: String
-  },
-  email: {
-    type: String
-  },
-  phone: {
+  subcity: {
     type: String
   },
   description: {

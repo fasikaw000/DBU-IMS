@@ -11,12 +11,12 @@
 export const getNotificationRoute = (type, role, link) => {
   // 1. Normalize saved link if present (fixes legacy/incorrect paths).
   if (link) {
-    if (link.includes('/student/dashboard'))   return '/student-dashboard';
-    if (link.includes('/advisor/dashboard'))   return '/advisor-dashboard';
+    if (link.includes('/student/dashboard')) return '/student-dashboard';
+    if (link.includes('/advisor/dashboard')) return '/advisor-dashboard';
     if (link.includes('/advisor/internships')) return '/advisor-dashboard';
-    if (link.includes('/advisor/reports'))     return '/advisor-dashboard';
-    if (link.includes('/dean/dashboard'))      return '/dept-dashboard';
-    if (link.includes('/admin/dashboard'))     return '/admin-dashboard';
+    if (link.includes('/advisor/reports')) return '/advisor-dashboard';
+    if (link.includes('/dean/dashboard')) return '/dept-dashboard';
+    if (link.includes('/admin/dashboard')) return '/admin-dashboard';
     // Validate the saved link is a real route before using it
     const knownPrefixes = [
       '/student-dashboard', '/advisor-dashboard', '/dept-dashboard',

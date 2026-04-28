@@ -31,6 +31,15 @@ const placementSchema = new mongoose.Schema({
   },
   endDate: {
     type: Date
+  },
+  supervisorName: {
+    type: String
+  },
+  supervisorEmail: {
+    type: String
+  },
+  supervisorPhone: {
+    type: String
   }
 }, {
   timestamps: true
