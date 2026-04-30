@@ -223,7 +223,7 @@ const AdminStudents = () => {
       let val = '';
       if (f === 'department') val = s.department?.name || s.department?.code || 'N/A';
       else if (f === 'cbeAccount') val = s.studentProfile?.cbeAccount || s.cbeAccount || 'N/A';
-      else if (f === 'phone') val = s.phoneNumber || s.phone || 'N/A';
+      else if (f === 'phone') val = s.phone || 'N/A';
       else val = s[f] || 'N/A';
 
       const isMono = ['studentId', 'username', 'cbeAccount', 'phone'].includes(f);
@@ -266,7 +266,7 @@ const AdminStudents = () => {
         let val = '';
         if (f === 'department') val = s.department?.name || s.department?.code || '';
         else if (f === 'cbeAccount') val = s.studentProfile?.cbeAccount || s.cbeAccount || '';
-        else if (f === 'phone') val = s.phoneNumber || s.phone || '';
+        else if (f === 'phone') val = s.phone || 'N/A';
         else val = s[f] || '';
         return `"${val}"`;
       }).join(',');
@@ -449,9 +449,9 @@ const AdminStudents = () => {
                     <td className="px-6 py-4 text-[10px] font-mono text-slate-500">{student.username}</td>
                     <td className="px-6 py-4 text-[10px] font-black text-slate-600">{student.department?.code || student.department?.name || 'N/A'}</td>
                     <td className="px-6 py-4 text-center text-[10px] font-bold text-slate-500">{student.year || 'N/A'}</td>
-                    <td className="px-6 py-4 text-[10px] font-bold text-slate-600">{student.phoneNumber || student.phone || 'N/A'}</td>
+                    <td className="px-6 py-4 text-[10px] font-bold text-slate-600">{student.phone || 'N/A'}</td>
                      <td className="px-6 py-4 text-[10px] font-mono font-bold text-dbu-primary bg-slate-50/50 px-2 py-1 rounded">
-                      {student.studentProfile?.cbeAccount || student.cbeAccount || 'Not provided'}
+                      {student.studentProfile?.cbeAccount || student.cbeAccount || 'N/A'}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">

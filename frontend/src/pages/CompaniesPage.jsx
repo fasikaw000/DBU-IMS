@@ -252,7 +252,7 @@ const CompaniesPage = () => {
                                         className="w-full py-2.5 bg-dbu-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-dbu-accent transition-all flex items-center justify-center gap-2 shadow-sm"
                                     >
                                         <Users size={14} />
-                                        View Students
+                                        View Assigned Students
                                     </button>
                             </div>
                         </div>

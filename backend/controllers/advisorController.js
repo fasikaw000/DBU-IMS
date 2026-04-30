@@ -41,7 +41,7 @@ export const getAssignedStudents = async (req, res, next) => {
     const internships = await Internship.find({ advisor_id: advisorId })
       .populate({
         path: 'student',
-        populate: { path: 'user', select: 'name email username isActivated phoneNumber' }
+        populate: { path: 'user', select: 'name email username isActivated phone' }
       })
       .populate('company');
 

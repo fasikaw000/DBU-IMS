@@ -89,6 +89,32 @@ const CompanyStudentsPage = () => {
                 </div>
             </div>
 
+            {/* Placement Summary */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Students</span>
+                    <span className="text-2xl font-black text-slate-800">{placements.length}</span>
+                </div>
+                <div className="bg-emerald-50/30 p-6 rounded-[2rem] border border-emerald-100/50 shadow-sm flex flex-col gap-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600/60">Active</span>
+                    <span className="text-2xl font-black text-emerald-600">
+                        {placements.filter(p => p.status === 'ACTIVE' || p.status === 'ONGOING').length}
+                    </span>
+                </div>
+                <div className="bg-blue-50/30 p-6 rounded-[2rem] border border-blue-100/50 shadow-sm flex flex-col gap-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-blue-600/60">Completed</span>
+                    <span className="text-2xl font-black text-blue-600">
+                        {placements.filter(p => p.status === 'COMPLETED' || p.status === 'EVALUATED').length}
+                    </span>
+                </div>
+                <div className="bg-amber-50/30 p-6 rounded-[2rem] border border-amber-100/50 shadow-sm flex flex-col gap-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-600/60">Pending</span>
+                    <span className="text-2xl font-black text-amber-600">
+                        {placements.filter(p => ['PENDING', 'PENDING_APPROVAL', 'APPROVED', 'SUBMITTED'].includes(p.status)).length}
+                    </span>
+                </div>
+            </div>
+
             {/* Search */}
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative">
                 <Search className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-400" size={18} />

@@ -311,7 +311,7 @@ export const getAllUsers = async (req, res, next) => {
 export const getAllStudents = async (req, res, next) => {
   try {
     const students = await Student.find({})
-      .populate('user', 'name email isActivated activationStatus isActive status phoneNumber')
+      .populate('user', 'name email isActivated activationStatus isActive status phone')
       .populate('department', 'name code')
       .populate({
         path: 'internship',
@@ -326,7 +326,7 @@ export const getAllStudents = async (req, res, next) => {
         userId: s.user?._id,
         name: s.user?.name,
         email: s.user?.email,
-        phoneNumber: s.user?.phoneNumber || s.phone,
+        phone: s.user?.phone || s.phone,
         username: s.username,
         studentId: s.studentId,
         department: s.department,
@@ -349,7 +349,7 @@ export const getAllStudents = async (req, res, next) => {
 export const getAllStaff = async (req, res, next) => {
   try {
     const staffMembers = await Staff.find({})
-      .populate('user', 'name email isActivated activationStatus isActive status phoneNumber')
+      .populate('user', 'name email isActivated activationStatus isActive status phone')
       .populate('department', 'name code');
 
     res.status(200).json({
@@ -360,7 +360,7 @@ export const getAllStaff = async (req, res, next) => {
         userId: s.user?._id,
         name: s.fullName,
         email: s.user?.email,
-        phoneNumber: s.user?.phoneNumber,
+        phone: s.user?.phone,
         username: s.username,
         department: s.department,
         role: s.role, // 'dean' or 'advisor'

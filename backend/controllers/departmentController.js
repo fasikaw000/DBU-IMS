@@ -4,6 +4,7 @@ import Internship from '../models/Internship.js';
 import AuditLog from '../models/AuditLog.js';
 import Company from '../models/Company.js';
 import Placement from '../models/Placement.js';
+import Department from '../models/Department.js';
 import { notify } from './notificationController.js';
 
 // ─────────────────────────────────────────────────────────────
@@ -14,25 +15,71 @@ import { notify } from './notificationController.js';
 export const getDepartmentStudents = async (req, res, next) => {
   try {
     const deanId = req.user.id;
-    const dean = await User.findById(deanId);
+    // Populate department to get the name and other details
+    const dean = await User.findById(deanId).populate('department');
 
-    if (!dean.department) {
-      return res.status(400).json({ success: false, message: 'Dean is not assigned to a department' });
+    if (!dean || !dean.department) {
+      return res.status(200).json({ success: true, count: 0, data: [], message: 'Dean is not assigned to a department' });
     }
 
-    const students = await Student.find({ department: dean.department })
-      .populate('user', 'name email isActivated role phoneNumber')
+    const deptId = dean.department._id || dean.department;
+    const deptName = dean.department.name || 'Department';
+
+    // Find all department IDs with same name (handle duplicates)
+    const similarDepts = await Department.find({ name: deptName }).select('_id');
+    const allDeptIds = similarDepts.map(d => d._id);
+
+    // Find student user IDs in these departments
+    const studentUsers = await User.find({ 
+      department: { $in: allDeptIds },
+      role: { $regex: /^student$/i }
+    }).select('_id');
+    const userIds = studentUsers.map(u => u._id);
+
+    // Find student profiles
+    const students = await Student.find({
+      $or: [
+        { department: { $in: allDeptIds } },
+        { user: { $in: userIds } }
+      ]
+    })
+      .populate('user', 'name email username isActivated role phone isActive status')
+      .populate('department', 'name code')
       .lean();
 
-    // Attach internship info for these students
-    for (let student of students) {
-      const internship = await Internship.findOne({ student: student._id })
-        .populate('advisor_id', 'name email')
-        .populate('company', 'name country city subcity');
-      student.internship = internship || null;
-    }
+    // Standardize mapping to match Admin view and user requirements
+    const mappedStudents = await Promise.all(students.map(async (s) => {
+      try {
+        const internship = await Internship.findOne({ student: s._id })
+          .populate('company', 'name');
+        
+        return {
+          _id: s._id,
+          userId: s.user?._id,
+          fullName: s.user?.name || 'N/A', // Mapping 'name' to 'fullName' as requested
+          email: s.user?.email || 'N/A',
+          username: s.username || s.user?.username || 'N/A',
+          studentId: s.studentId || 'N/A',
+          department: s.department?.name || deptName || 'N/A',
+          year: s.year || 'N/A',
+          phone: s.phone || s.user?.phone || 'N/A',
+          cbeAccount: s.cbeAccount || 'N/A',
+          isActivated: s.user?.isActivated || false,
+          isActive: s.user?.isActive !== false,
+          accountStatus: s.user?.isActive === false ? 'Inactive' : 'Active',
+          internshipStatus: internship?.status || 'NOT_APPLIED',
+          status: internship?.status || 'NOT_APPLIED', // Adding generic 'status' for compatibility
+          companyName: internship?.company?.name || 'N/A',
+          createdAt: s.createdAt
+        };
+      } catch (err) {
+        return null;
+      }
+    }));
 
-    res.status(200).json({ success: true, count: students.length, data: students });
+    const finalData = mappedStudents.filter(s => s !== null);
+
+    res.status(200).json({ success: true, count: finalData.length, data: finalData });
   } catch (error) {
     next(error);
   }
@@ -73,11 +120,9 @@ export const processInternshipApp = async (req, res, next) => {
 
     await internship.save();
 
-    // Point 2: DEAN APPROVAL (CRITICAL FIX)
     if (status === 'Approved') {
       const studentProfile = internship.student;
 
-      // A. CREATE PLACEMENT RECORD
       await Placement.create({
         student: studentProfile?._id,
         company: internship.company,
@@ -85,18 +130,15 @@ export const processInternshipApp = async (req, res, next) => {
         status: 'AWAITING_ASSIGNMENT',
         startDate: internship.startDate,
         endDate: internship.endDate,
-        // Carry over supervisor info to placement if we decide to store it there too
         supervisorName: internship.companySupervisorName,
         supervisorEmail: internship.companySupervisorEmail,
         supervisorPhone: internship.companySupervisorPhone
       });
 
-      // Point 3: LINK STUDENT TO COMPANY & APPROVE COMPANY (CLEAN)
       await Company.findByIdAndUpdate(internship.company, {
         $addToSet: { students: studentProfile?._id || internship.student },
         approvalStatus: 'APPROVED',
         isActive: true
-        // REMOVED: contactPerson, email, phone overwrite
       });
     }
 
@@ -108,7 +150,6 @@ export const processInternshipApp = async (req, res, next) => {
       ip: req.ip
     });
 
-    // Notify student
     if (internship.student && internship.student.user) {
       const type = status === 'Approved' ? 'APPLICATION_APPROVED' : 'APPLICATION_REJECTED';
       await notify(
@@ -150,22 +191,17 @@ export const assignAdvisor = async (req, res, next) => {
     }
 
     internship.advisor_id = advisor._id;
-
-    // Update state to ACTIVE as the workflow is now fully assigned
     internship.status = 'ACTIVE';
 
     await internship.save();
 
-    // Point 6: ASSIGN ADVISOR
     const studentProfile = await Student.findOne({ user: internship.student?._id || internship.student });
 
-    // Update placement
     await Placement.findOneAndUpdate(
       { student: studentProfile?._id || internship.student, company: internship.company },
       { advisor: advisor._id, status: 'ASSIGNED' }
     );
 
-    // Update student
     if (studentProfile) {
       studentProfile.assignedAdvisor = advisor._id;
       await studentProfile.save();
@@ -179,7 +215,6 @@ export const assignAdvisor = async (req, res, next) => {
       ip: req.ip
     });
 
-    // Notify advisor
     await notify(
       advisor._id,
       'ADVISOR_ASSIGNED',
@@ -187,7 +222,6 @@ export const assignAdvisor = async (req, res, next) => {
       '/advisor/dashboard'
     );
 
-    // Notify student
     if (internship.student && internship.student.user) {
       await notify(
         internship.student.user._id,
@@ -202,7 +236,6 @@ export const assignAdvisor = async (req, res, next) => {
     next(error);
   }
 };
-
 
 // ─────────────────────────────────────────────────────────────
 // @desc    Get advisor workload in the department
@@ -239,27 +272,22 @@ export const getDepartmentStats = async (req, res, next) => {
 
     const deptId = dean.department;
 
-    // 1. Total Advisors in department
     const totalAdvisors = await User.countDocuments({ role: 'advisor', department: deptId });
 
-    // 2. Students in department
     const students = await Student.find({ department: deptId }).select('_id');
     const studentIds = students.map(s => s._id);
 
-    // 3. Pending Applications (PENDING_APPROVAL)
     const pendingApplications = await Internship.countDocuments({
       student: { $in: studentIds },
       status: { $in: ['PENDING', 'PENDING_APPROVAL', 'RESUBMITTED', 'REVISION_REQUIRED'] }
     });
 
-    // 4. Students Awaiting Placement Approval (same as pending applications in this context, but let's say "Awaiting Advisor")
     const awaitingAdvisor = await Internship.countDocuments({
       student: { $in: studentIds },
       status: 'APPROVED',
       advisor_id: { $exists: false }
     });
 
-    // 5. Active Internships
     const activeInternships = await Internship.countDocuments({
       student: { $in: studentIds },
       status: 'ACTIVE'
@@ -288,13 +316,11 @@ export const getInternshipHistory = async (req, res, next) => {
   try {
     const { internshipId } = req.params;
 
-    // 1. Fetch the internship to get its creation date
     const internship = await Internship.findById(internshipId);
     if (!internship) {
       return res.status(404).json({ success: false, message: 'Internship not found' });
     }
 
-    // 2. Search for logs using both the documentId and the string details
     const logs = await AuditLog.find({
       $or: [
         { 'targetResource.documentId': internshipId },
@@ -304,10 +330,7 @@ export const getInternshipHistory = async (req, res, next) => {
       .populate('user', 'name role')
       .sort({ createdAt: -1 });
 
-    // 3. Always include at least the creation event (for backward compatibility)
     const history = [...logs];
-
-    // Check if we already have a submission log
     const hasSubmission = logs.some(l => l.action.includes('submitted') || l.action.includes('apply'));
 
     if (!hasSubmission) {

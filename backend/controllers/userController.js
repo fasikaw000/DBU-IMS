@@ -43,12 +43,12 @@ export const updateMe = async (req, res, next) => {
       updates.name = trimmed;
     }
 
-    if (req.body.phoneNumber !== undefined) {
-      const phone = String(req.body.phoneNumber || '').trim();
+    if (req.body.phone !== undefined) {
+      const phone = String(req.body.phone || '').trim();
       if (phone && !/^\d{10,15}$/.test(phone)) {
         return res.status(400).json({ success: false, message: 'Phone number must be between 10 and 15 digits' });
       }
-      updates.phoneNumber = phone;
+      updates.phone = phone;
     }
 
     if (typeof email === 'string' && email.trim() !== '') {
@@ -99,8 +99,8 @@ export const updateMe = async (req, res, next) => {
     if (normalizeRole(user.role) === 'Student') {
       studentProfile = await Student.findOne({ user: user._id });
       if (studentProfile) {
-        if (updates.phoneNumber) {
-          studentProfile.phone = updates.phoneNumber;
+        if (updates.phone) {
+          studentProfile.phone = updates.phone;
         }
 
         // Consolidated CBE Update
@@ -326,66 +326,123 @@ export const getRecentActivity = async (req, res, next) => {
     const role = normalizeRole(req.user.role);
     let query = {};
     let limit = 3;
-    let maxLogins = 2;
     
-    if (role === 'Student') {
+    // We dynamically load models needed for scoping
+    const User = (await import('../models/User.js')).default;
+    const Student = (await import('../models/Student.js')).default;
+    const Internship = (await import('../models/Internship.js')).default;
+
+    if (role === 'Admin') {
+      const allowedActions = [
+        'user_created', 'created_student', 'created_staff',
+        'user_deactivated', 'user_activated',
+        'internship_approved', 'internship_rejected',
+        'advisor_assigned',
+        'dept_created', 'dept_updated',
+        'broadcast_message_sent', 'communication_sent'
+      ];
+      query = { action: { $in: allowedActions } };
+    } 
+    else if (role === 'Dean') {
+      // Find all users in the dean's department
+      const currentUser = await User.findById(req.user.id);
+      const deptUsers = await User.find({ department: currentUser.department }).select('_id');
+      const deptUserIds = deptUsers.map(u => u._id);
+
+      const allowedActions = [
+        'internship_application_submitted', 'internship_pending_approval',
+        'internship_approved', 'internship_rejected',
+        'advisor_assigned', 'communication_sent'
+      ];
+
+      query = { 
+        user: { $in: deptUserIds },
+        action: { $in: allowedActions } 
+      };
+    } 
+    else if (role === 'Advisor') {
+      // Find students assigned to this advisor
+      const internships = await Internship.find({ advisor_id: req.user.id });
+      const studentIds = internships.map(i => i.student);
+      const students = await Student.find({ _id: { $in: studentIds } });
+      const studentUserIds = students.map(s => s.user);
+
+      const allowedActions = [
+        'advisor_assigned', 
+        'report_submitted', 
+        'message_sent', 'new_message', 'message_received'
+      ];
+
+      query = {
+        $or: [
+          { user: req.user.id }, // e.g., advisor assigned to themselves, or messages
+          { user: { $in: studentUserIds }, action: 'report_submitted' }
+        ],
+        action: { $in: allowedActions }
+      };
+    } 
+    else if (role === 'Student') {
+      const allowedActions = [
+        'internship_application_submitted', 'internship_pending_approval',
+        'advisor_assigned', 
+        'report_submitted', 
+        'profile_updated', 'cbe_account_added', 'cbe_account_updated'
+      ];
+
       const student = await Student.findOne({ user: req.user.id });
-      const Internship = (await import('../models/Internship.js')).default;
       const internship = student ? await Internship.findOne({ student: student._id }) : null;
       
       query = {
         $or: [
           { user: req.user.id },
           { 'targetResource.documentId': internship?._id }
-        ]
+        ],
+        action: { $in: allowedActions }
       };
-    } else if (role === 'Admin') {
-      query = {}; // Admin sees all
-      maxLogins = 1;
-    } else {
-      query = { user: req.user.id };
+    } 
+    else {
+      // Fallback for any other role
+      query = { 
+        user: req.user.id,
+        action: { $ne: 'login' } 
+      };
     }
 
     const logs = await AuditLog.find(query)
       .sort({ createdAt: -1 })
-      .limit(30) // Fetch more to allow filtering noise
+      .limit(limit)
       .lean();
 
     const translate = (log) => {
       const { action, details } = log;
       switch (action) {
-        case 'login': return 'Logged into the system';
-        case 'profile_updated': return 'Profile updated';
-        case 'cbe_account_added': return 'CBE account added';
-        case 'cbe_account_updated': return 'CBE account updated';
+        case 'profile_updated': return 'Profile updated successfully';
+        case 'cbe_account_added': 
+        case 'cbe_account_updated': return 'Profile updated (CBE account)';
         case 'report_submitted': return 'Report uploaded successfully';
         case 'internship_pending_approval':
         case 'internship_application_submitted': return 'Internship application submitted';
         case 'internship_approved': return 'Internship application approved';
         case 'internship_rejected': return 'Internship application rejected';
-        case 'advisor_assigned': return 'Advisor assigned successfully';
+        case 'advisor_assigned': 
+          if (role === 'Student') return 'Advisor assigned to you';
+          return 'Advisor assigned';
         case 'user_created':
         case 'created_student':
-        case 'created_staff': return details || 'New user account created';
-        case 'user_deactivated': return details || 'User account deactivated';
-        case 'dept_created': return details || 'New department created';
-        case 'dept_updated': return details || 'Department details updated';
-        case 'broadcast_message_sent': return 'Broadcast message sent to all users';
+        case 'created_staff': return 'New user account created';
+        case 'user_deactivated': return 'User account deactivated';
+        case 'dept_created': return 'New department created';
+        case 'dept_updated': return 'Department updated';
+        case 'broadcast_message_sent':
+        case 'communication_sent': return 'Broadcast message sent';
+        case 'message_sent':
+        case 'new_message':
+        case 'message_received': return 'Message received';
         default: return details || action.replace(/_/g, ' ');
       }
     };
 
-    let loginCount = 0;
-    const filtered = logs.filter(log => {
-      if (log.action === 'login') {
-        loginCount++;
-        return loginCount <= maxLogins;
-      }
-      // For Admin, filter for high-value if needed, but for now just show all meaningful
-      return true;
-    }).slice(0, limit);
-
-    const formatted = filtered.map(log => ({
+    const formatted = logs.map(log => ({
       id: log._id,
       message: translate(log),
       time: log.createdAt,

@@ -19,7 +19,7 @@ const Profile = () => {
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phone, setPhone] = useState('');
   const [studentProfile, setStudentProfile] = useState(null);
   const [cbeAccount, setCbeAccount] = useState('');
 
@@ -50,8 +50,8 @@ const Profile = () => {
   useEffect(() => {
     setFullName(user?.name || '');
     setEmail(user?.email || '');
-    setPhoneNumber(user?.phoneNumber || '');
-  }, [user?._id, user?.name, user?.email, user?.phoneNumber]);
+    setPhone(user?.phone || '');
+  }, [user?._id, user?.name, user?.email, user?.phone]);
 
   useEffect(() => {
     const fetchStudentProfile = async () => {
@@ -85,7 +85,7 @@ const Profile = () => {
     let newErrors = {};
     if (!fullName.trim()) newErrors.fullName = "Please fill out all required fields";
     if (!email.trim()) newErrors.email = "Please fill out all required fields";
-    if (!phoneNumber.trim()) newErrors.phoneNumber = "Please fill out all required fields";
+    if (!phone.trim()) newErrors.phone = "Please fill out all required fields";
     
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -100,7 +100,7 @@ const Profile = () => {
       await api.put('/users/me', {
         name: fullName,
         email,
-        phoneNumber,
+        phone,
         cbeAccount: user?.role === 'Student' ? cbeAccount : undefined
       });
       
@@ -165,8 +165,8 @@ const Profile = () => {
 
   const isProfileComplete = useMemo(() => {
     if (user?.role !== 'Student') return true;
-    return phoneNumber && cbeAccount && email;
-  }, [user?.role, phoneNumber, cbeAccount, email]);
+    return phone && cbeAccount && email;
+  }, [user?.role, phone, cbeAccount, email]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -220,7 +220,7 @@ const Profile = () => {
                   onClick={() => setShowPasswordModal(true)}
                   className="w-full py-3 bg-slate-50 text-slate-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all border border-slate-100"
                 >
-                  Change Security Password
+                  Change Password
                 </button>
               </div>
             </div>
@@ -277,14 +277,14 @@ const Profile = () => {
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
-                      value={phoneNumber}
-                      onChange={e => { setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 15)); setErrors({ ...errors, phoneNumber: null }); }}
-                      className={`w-full pl-12 pr-4 py-3 bg-slate-50 border rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary ${errors.phoneNumber ? 'border-red-500' : 'border-slate-100'}`}
+                      value={phone}
+                      onChange={e => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 15)); setErrors({ ...errors, phone: null }); }}
+                      className={`w-full pl-12 pr-4 py-3 bg-slate-50 border rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary ${errors.phone ? 'border-red-500' : 'border-slate-100'}`}
                       placeholder="Enter your phone number"
                       type="tel"
                     />
                   </div>
-                  {errors.phoneNumber && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.phoneNumber}</p>}
+                  {errors.phone && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.phone}</p>}
                 </div>
 
                  {user?.role === 'Student' && (
@@ -340,7 +340,7 @@ const Profile = () => {
               </div>
               {passwordError && <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest">{passwordError}</p>}
               <button type="submit" disabled={changingPassword} className="w-full py-4 bg-slate-800 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-900 transition-all">
-                Update Security Key
+                Update Password
               </button>
             </form>
           </div>

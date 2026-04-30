@@ -109,11 +109,11 @@ const DeanStudents = () => {
                             ${students.map(s => `
                                 <tr>
                                     ${activeFields.map(f => {
-                                        if (f === 'name') return `<td>${s.user?.name}</td>`;
-                                        if (f === 'status') return `<td>${s.internship?.status || 'NOT APPLIED'}</td>`;
-                                        if (f === 'phone') return `<td>${s.phone || s.phoneNumber || 'N/A'}</td>`;
-                                        return `<td>${s[f] || 'N/A'}</td>`;
-                                    }).join('')}
+            if (f === 'name') return `<td>${s.user?.name}</td>`;
+            if (f === 'status') return `<td>${s.internship?.status || 'NOT APPLIED'}</td>`;
+            if (f === 'phone') return `<td>${s.phone || s.user?.phone || 'N/A'}</td>`;
+            return `<td>${s[f] || 'N/A'}</td>`;
+        }).join('')}
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -139,7 +139,7 @@ const DeanStudents = () => {
         }));
 
         const headers = Object.keys(csvData[0]).join(",");
-        const rows = csvData.map((row) => 
+        const rows = csvData.map((row) =>
             Object.values(row).map(val => `"${val}"`).join(",")
         );
 
@@ -206,57 +206,58 @@ const DeanStudents = () => {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50/50">
-                                <th className="px-8 py-4">Student</th>
-                                <th className="px-8 py-4">Email</th>
-                                <th className="px-8 py-4">Username</th>
-                                <th className="px-8 py-4 text-center">Year</th>
-                                <th className="px-8 py-4">CBE Account</th>
-                                <th className="px-8 py-4">Phone</th>
-                                <th className="px-8 py-4 text-center">Status</th>
-                                <th className="px-8 py-4 text-right">Actions</th>
+                                <th className="px-6 py-4">Student</th>
+                                <th className="px-6 py-4">Username</th>
+                                <th className="px-6 py-4">Email</th>
+                                <th className="px-6 py-4">Department</th>
+                                <th className="px-6 py-4 text-center">Year</th>
+                                <th className="px-6 py-4">Phone</th>
+                                <th className="px-6 py-4">CBE Account</th>
+                                <th className="px-6 py-4 text-center">Internship</th>
+                                <th className="px-6 py-4 text-center">Account</th>
+                                <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                             {filteredStudents.map(s => (
                                 <tr key={s._id} className="hover:bg-slate-50/50 transition-colors">
-                                    <td className="px-8 py-6">
+                                    <td className="px-6 py-6">
                                         <div className="flex flex-col">
-                                            <span className="font-black text-slate-800 text-sm">{s.user?.name}</span>
+                                            <span className="font-black text-slate-800 text-sm">{s.fullName}</span>
                                             <span className="text-[10px] text-slate-400 font-bold uppercase">{s.studentId}</span>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-6 text-[10px] font-bold text-slate-500">{s.user?.email || 'N/A'}</td>
-                                    <td className="px-8 py-6 text-[10px] font-mono text-slate-500">{s.user?.username}</td>
-                                    <td className="px-8 py-6 text-center text-[11px] font-bold text-slate-600">{s.year || 'N/A'}</td>
-                                    <td className="px-8 py-6 text-[11px] font-mono font-bold text-dbu-primary">{s.cbeAccount || 'Not provided'}</td>
-                                    <td className="px-8 py-6 text-[11px] font-bold text-slate-600">{s.phoneNumber || 'Not provided'}</td>
-                                    <td className="px-8 py-6 text-center">
+                                    <td className="px-6 py-6 text-[10px] font-mono font-bold text-slate-500">{s.username}</td>
+                                    <td className="px-6 py-6 text-[10px] font-bold text-slate-500">{s.email}</td>
+                                    <td className="px-6 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{s.department}</td>
+                                    <td className="px-6 py-6 text-center text-[11px] font-bold text-slate-600">{s.year}</td>
+                                    <td className="px-6 py-6 text-[11px] font-bold text-slate-600">{s.phone}</td>
+                                    <td className="px-6 py-6 text-[11px] font-mono font-bold text-dbu-primary">{s.cbeAccount}</td>
+                                    <td className="px-6 py-6 text-center">
+                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                                            s.internshipStatus === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                            s.internshipStatus === 'PENDING_APPROVAL' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                            'bg-slate-50 text-slate-400 border-slate-100'
+                                        }`}>
+                                            {s.internshipStatus?.replace('_', ' ') || 'NOT APPLIED'}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-6 text-center">
                                         <div className="flex flex-col items-center gap-1">
-                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                                                s.internship?.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                s.internship?.status === 'PENDING_APPROVAL' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                                                'bg-slate-50 text-slate-400 border-slate-100'
-                                            }`}>
-                                                {s.internship?.status || 'NOT APPLIED'}
+                                            {s.isActivated ? (
+                                                <span className="bg-emerald-50 text-emerald-600 text-[8px] font-black uppercase px-2 py-0.5 rounded-full border border-emerald-100">Activated</span>
+                                            ) : (
+                                                <span className="bg-amber-50 text-amber-600 text-[8px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-100">Pending</span>
+                                            )}
+                                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full border ${s.isActive ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                                                {s.isActive ? 'Active' : 'Inactive'}
                                             </span>
-                                            <div className="flex gap-1">
-                                                {s.user?.isActivated ? (
-                                                    <span className="bg-emerald-50 text-emerald-600 text-[8px] font-black uppercase px-2 py-1 rounded-full border border-emerald-100">Activated</span>
-                                                ) : (
-                                                    <span className="bg-amber-50 text-amber-600 text-[8px] font-black uppercase px-2 py-1 rounded-full border border-amber-100">Pending</span>
-                                                )}
-                                                {s.user?.isActive === false ? (
-                                                    <span className="bg-red-50 text-red-600 text-[8px] font-black uppercase px-2 py-1 rounded-full border border-red-100">Inactive</span>
-                                                ) : (
-                                                    <span className="bg-blue-50 text-blue-600 text-[8px] font-black uppercase px-2 py-1 rounded-full border border-blue-100">Active</span>
-                                                )}
-                                            </div>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-6 text-right">
+                                    <td className="px-6 py-6 text-right">
                                         <div className="flex items-center justify-end gap-2">
                                             <button
-                                                onClick={() => navigate(`/messages?userId=${s.user?._id}`)}
+                                                onClick={() => navigate(`/messages?userId=${s.userId}`)}
                                                 className="p-2.5 bg-dbu-primary/10 text-dbu-primary rounded-xl hover:bg-dbu-primary hover:text-white transition-all shadow-sm hover:scale-110 cursor-pointer"
                                                 title="Send Message"
                                             >
@@ -294,7 +295,7 @@ const DeanStudents = () => {
                                     </label>
                                 ))}
                             </div>
-                            
+
                             <div className="flex flex-col gap-3">
                                 <button onClick={handlePrint} className="w-full py-4 bg-dbu-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-dbu-primary/20 hover:bg-dbu-accent transition-all flex items-center justify-center gap-2">
                                     <FileText className="w-4 h-4" />

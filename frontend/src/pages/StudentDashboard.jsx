@@ -604,15 +604,15 @@ const StudentDashboard = () => {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${user?.phoneNumber ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'}`}><Phone size={18} /></div>
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${user?.phone ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'}`}><Phone size={18} /></div>
                                     <div className="flex-1">
                                         <div className="flex items-center justify-between">
                                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Phone</p>
-                                            <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${user?.phoneNumber ? 'text-emerald-500 bg-emerald-50' : 'text-red-500 bg-red-50'}`}>
-                                                {user?.phoneNumber ? 'Completed' : 'Missing'}
+                                            <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${user?.phone ? 'text-emerald-500 bg-emerald-50' : 'text-red-500 bg-red-50'}`}>
+                                                {user?.phone ? 'Completed' : 'N/A'}
                                             </span>
                                         </div>
-                                        <p className={`text-xs font-bold ${user?.phoneNumber ? 'text-slate-700' : 'text-red-500 italic'}`}>{user?.phoneNumber || 'Missing'}</p>
+                                        <p className={`text-xs font-bold ${user?.phone ? 'text-slate-700' : 'text-red-500 italic'}`}>{user?.phone || 'N/A'}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -621,10 +621,10 @@ const StudentDashboard = () => {
                                         <div className="flex items-center justify-between">
                                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">CBE Account</p>
                                             <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${(user?.cbeAccount || user?.studentProfile?.cbeAccount) ? 'text-emerald-500 bg-emerald-50' : 'text-red-500 bg-red-50'}`}>
-                                                {(user?.cbeAccount || user?.studentProfile?.cbeAccount) ? 'Completed' : 'Missing'}
+                                                {(user?.cbeAccount || user?.studentProfile?.cbeAccount) ? 'Completed' : 'N/A'}
                                             </span>
                                         </div>
-                                        <p className={`text-xs font-bold ${(user?.cbeAccount || user?.studentProfile?.cbeAccount) ? 'text-slate-700' : 'text-red-500 italic'}`}>{(user?.cbeAccount || user?.studentProfile?.cbeAccount) || 'Missing'}</p>
+                                        <p className={`text-xs font-bold ${(user?.cbeAccount || user?.studentProfile?.cbeAccount) ? 'text-slate-700' : 'text-red-500 italic'}`}>{(user?.cbeAccount || user?.studentProfile?.cbeAccount) || 'N/A'}</p>
                                     </div>
                                 </div>
                             </div>

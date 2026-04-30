@@ -343,7 +343,7 @@ const AdvisorStudentsPage = () => {
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Phone</p>
-                                                <p className="text-sm font-bold text-slate-700">{selectedInternship.student?.user?.phoneNumber || selectedInternship.student?.phone || 'N/A'}</p>
+                                                <p className="text-sm font-bold text-slate-700">{selectedInternship.student?.user?.phone || selectedInternship.student?.phone || 'N/A'}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Department</p>

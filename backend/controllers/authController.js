@@ -82,15 +82,15 @@ export const loginUser = async (req, res, next) => {
     const token = generateToken(user._id, user.role);
     let studentId = undefined;
     let cbeAccount = undefined;
-    let phoneNumber = user.phoneNumber;
+    let phone = user.phone;
 
     if (normalizeRole(user.role) === 'Student') {
       const student = await Student.findOne({ user: user._id });
       if (student) {
         studentId = student.studentId;
         cbeAccount = student.cbeAccount;
-        // Fallback to student phone if user phoneNumber is missing
-        if (!phoneNumber) phoneNumber = student.phone;
+        // Fallback to student phone if user phone is missing
+        if (!phone) phone = student.phone;
       }
     }
 
@@ -109,7 +109,7 @@ export const loginUser = async (req, res, next) => {
       name: user.name,
       username: user.username,
       email: user.email,
-      phoneNumber,
+      phone,
       cbeAccount,
       activationStatus: user.activationStatus || (user.isActivated ? 'Activated' : 'Pending'),
       isActive: user.isActive !== false,

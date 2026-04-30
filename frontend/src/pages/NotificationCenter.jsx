@@ -14,6 +14,22 @@ const NotificationCenter = () => {
 
   useEffect(() => {
     fetchNotifications();
+
+    const handleNotificationRead = (e) => {
+      setNotifications(prev => prev.map(n => n._id === e.detail.id ? { ...n, is_read: true } : n));
+    };
+
+    const handleNotificationsReadAll = () => {
+      fetchNotifications();
+    };
+
+    window.addEventListener('notification-read', handleNotificationRead);
+    window.addEventListener('notifications-read-all', handleNotificationsReadAll);
+
+    return () => {
+      window.removeEventListener('notification-read', handleNotificationRead);
+      window.removeEventListener('notifications-read-all', handleNotificationsReadAll);
+    };
   }, []);
 
   const fetchNotifications = async () => {
@@ -30,7 +46,8 @@ const NotificationCenter = () => {
   const handleMarkRead = async (id) => {
     try {
       await api.put(`/notifications/${id}/read`);
-      setNotifications(notifications.map(n => n._id === id ? { ...n, is_read: true } : n));
+      setNotifications(prev => prev.map(n => n._id === id ? { ...n, is_read: true } : n));
+      window.dispatchEvent(new CustomEvent('notification-read', { detail: { id } }));
     } catch (err) {
       console.error(err);
     }
@@ -40,7 +57,7 @@ const NotificationCenter = () => {
   const navigate = useNavigate();
 
   const handleViewDetails = async (notification, e) => {
-    if (e) e.stopPropagation(); // Prevent row click from firing
+    if (e) e.stopPropagation();
     setSelectedNotification(notification);
 
     // Mark notification as read
@@ -49,15 +66,6 @@ const NotificationCenter = () => {
     }
 
     setIsOpen(true);
-  };
-
-  const handleNotificationClick = (notification) => {
-    if (!notification.is_read) {
-      handleMarkRead(notification._id);
-    }
-    const route = getNotificationRoute(notification.type, user?.role, notification.link);
-    // null means no dedicated page (e.g. ANNOUNCEMENT) → stay on notification center
-    navigate(route ?? '/notifications');
   };
 
 
@@ -97,7 +105,7 @@ const NotificationCenter = () => {
             {notifications.map(notif => (
               <div
                 key={notif._id}
-                onClick={() => handleNotificationClick(notif)}
+                onClick={(e) => handleViewDetails(notif, e)}
                 className={`p-6 transition hover:bg-slate-50 flex items-start gap-4 cursor-pointer border-b border-slate-50 last:border-0 ${!notif.is_read ? 'bg-dbu-primary/5' : ''}`}
               >
                 <div className={`p-2.5 rounded-full mt-1 ${!notif.is_read ? 'bg-dbu-primary text-white shadow-md' : 'bg-slate-100 text-slate-400'}`}>
@@ -106,11 +114,19 @@ const NotificationCenter = () => {
                 <div className="flex-1">
                   <div className="flex justify-between items-start mb-1">
                     <p className={`text-sm leading-relaxed ${!notif.is_read ? 'font-bold text-slate-800' : 'font-medium text-slate-500'}`}>
-                      {notif.message}
+                      {notif.message.length > 80 ? notif.message.substring(0, 80) + '...' : notif.message}
                     </p>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center bg-slate-50 px-2 py-1 rounded-md border border-slate-100 whitespace-nowrap ml-4">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center bg-slate-50 px-2 py-1 rounded-md border border-slate-100 whitespace-nowrap ml-4 shrink-0">
                       <Clock className="w-3 h-3 mr-1" />
                       {new Date(notif.created_at || notif.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-dbu-primary bg-dbu-primary/5 px-2 py-0.5 rounded border border-dbu-primary/10">
+                      {String(notif.type || 'General').replace(/_/g, ' ')}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
+                      From: {notif.sender?.name || notif.sender?.fullName || 'System'}
                     </span>
                   </div>
                   <div className="flex items-center gap-6 mt-3">
@@ -199,9 +215,23 @@ const NotificationCenter = () => {
                     CLOSE
                   </button>
                   {(() => {
-                    const relatedRoute = getNotificationRoute(selectedNotification.type, user?.role, selectedNotification.link);
-                    if (!relatedRoute) {
-                      // ANNOUNCEMENT or no route: show informational text instead of a button
+                    const getRoute = (type) => {
+                      switch (type) {
+                        case "ADVISOR_ASSIGNED":
+                          return "/student-dashboard";
+                        case "NEW_MESSAGE":
+                          return "/messages";
+                        case "APPLICATION_UPDATE":
+                          return "/student-dashboard";
+                        case "ANNOUNCEMENT":
+                          return "/notifications";
+                        default:
+                          return "/notifications";
+                      }
+                    };
+
+                    const relatedRoute = getRoute(selectedNotification.type);
+                    if (relatedRoute === "/notifications") {
                       return (
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest self-center">
                           No related page

@@ -35,15 +35,33 @@ const Topbar = () => {
 
   useEffect(() => {
     fetchNotifications();
-    // Poll for new notifications every 3 seconds for real-time feel
-    const interval = setInterval(fetchNotifications, 10000); // Poll every 10s instead of 3s
-    return () => clearInterval(interval);
+    // Poll for new notifications every 10 seconds
+    const interval = setInterval(fetchNotifications, 10000); 
+
+    const handleNotificationRead = (e) => {
+      setNotifications(prev => prev.map(n => n._id === e.detail.id ? { ...n, is_read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    };
+
+    const handleNotificationsReadAll = () => {
+      fetchNotifications();
+    };
+
+    window.addEventListener('notification-read', handleNotificationRead);
+    window.addEventListener('notifications-read-all', handleNotificationsReadAll);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notification-read', handleNotificationRead);
+      window.removeEventListener('notifications-read-all', handleNotificationsReadAll);
+    };
   }, []);
 
   const handleMarkAllRead = async () => {
     try {
       await api.put('/notifications/read-all');
       fetchNotifications();
+      window.dispatchEvent(new Event('notifications-read-all'));
     } catch (err) {
       console.error(err);
     }
@@ -85,7 +103,15 @@ const Topbar = () => {
               <div className="fixed inset-0 z-10" onClick={() => setShowNotifications(false)}></div>
               <div className="absolute right-0 mt-3 w-80 bg-white border border-slate-100 rounded-3xl shadow-2xl z-20 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Notifications</h3>
+                  <h3 
+                    className="text-sm font-black text-slate-800 uppercase tracking-widest cursor-pointer hover:text-dbu-primary transition-colors"
+                    onClick={() => {
+                      navigate('/notifications');
+                      setShowNotifications(false);
+                    }}
+                  >
+                    Notifications
+                  </h3>
                   {unreadCount > 0 && (
                     <button
                       onClick={handleMarkAllRead}
@@ -113,13 +139,12 @@ const Topbar = () => {
                               await api.put(`/notifications/${notif._id}/read`);
                               setNotifications(prev => prev.map(n => n._id === notif._id ? { ...n, is_read: true } : n));
                               setUnreadCount(prev => Math.max(0, prev - 1));
+                              window.dispatchEvent(new CustomEvent('notification-read', { detail: { id: notif._id } }));
                             } catch (err) {
                               console.error("Error marking notification as read", err);
                             }
                           }
-                          const route = getNotificationRoute(notif.type, user?.role, notif.link);
-                          // null = ANNOUNCEMENT, no redirect — send to notification center instead
-                          navigate(route ?? '/notifications');
+                          navigate('/notifications');
                           setShowNotifications(false);
                         }}
                       >

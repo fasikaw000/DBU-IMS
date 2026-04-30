@@ -44,6 +44,8 @@ const DeptDashboard = () => {
     const [message, setMessage] = useState(null);
     const [search, setSearch] = useState('');
     const [view, setView] = useState('overview'); // overview, students
+    const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState(false);
 
     // Print Modal State
     const [showPrintModal, setShowPrintModal] = useState(false);
@@ -312,8 +314,8 @@ const DeptDashboard = () => {
                                                     <span className="text-[10px] text-slate-400 font-bold uppercase">{s.studentId}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-8 py-6 text-[11px] font-mono font-bold text-slate-600">{s.cbeAccount || '---'}</td>
-                                            <td className="px-8 py-6 text-[11px] font-bold text-slate-600">{s.phone || '---'}</td>
+                                            <td className="px-8 py-6 text-[11px] font-mono font-bold text-slate-600">{s.cbeAccount || 'N/A'}</td>
+                                            <td className="px-8 py-6 text-[11px] font-bold text-slate-600">{s.phone || 'N/A'}</td>
                                             <td className="px-8 py-6">
                                                 <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
                                                         s.internship?.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
@@ -383,15 +385,15 @@ const DeptDashboard = () => {
                                     <div className="space-y-4">
                                         <div>
                                             <label className="text-[10px] text-slate-400 font-bold block uppercase mb-1">Full Name</label>
-                                            <p className="text-sm font-black text-slate-800">{selectedApp.companySupervisorName || 'Not provided'}</p>
+                                            <p className="text-sm font-black text-slate-800">{selectedApp.companySupervisorName || 'N/A'}</p>
                                         </div>
                                         <div>
                                             <label className="text-[10px] text-slate-400 font-bold block uppercase mb-1">Email Address</label>
-                                            <p className="text-sm font-black text-slate-800">{selectedApp.companySupervisorEmail || 'Not provided'}</p>
+                                            <p className="text-sm font-black text-slate-800">{selectedApp.companySupervisorEmail || 'N/A'}</p>
                                         </div>
                                         <div>
                                             <label className="text-[10px] text-slate-400 font-bold block uppercase mb-1">Phone Number</label>
-                                            <p className="text-sm font-black text-slate-800">{selectedApp.companySupervisorPhone || 'Not provided'}</p>
+                                            <p className="text-sm font-black text-slate-800">{selectedApp.companySupervisorPhone || 'N/A'}</p>
                                         </div>
                                     </div>
                                 </section>
