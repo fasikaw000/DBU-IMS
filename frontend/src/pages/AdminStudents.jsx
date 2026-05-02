@@ -292,15 +292,15 @@ const AdminStudents = () => {
       setMessage('please select to print');
       return;
     }
-    
+
     // Pre-fill fields based on type
     if (type === 'all') {
       const allTrue = Object.keys(printFields).reduce((acc, key) => ({ ...acc, [key]: true }), {});
       setPrintFields(allTrue);
     } else {
-      const defaultFields = Object.keys(printFields).reduce((acc, key) => ({ 
-        ...acc, 
-        [key]: !['cbeAccount', 'email', 'phone'].includes(key) 
+      const defaultFields = Object.keys(printFields).reduce((acc, key) => ({
+        ...acc,
+        [key]: !['cbeAccount', 'email', 'phone'].includes(key)
       }), {});
       setPrintFields(defaultFields);
     }
@@ -323,20 +323,31 @@ const AdminStudents = () => {
     setActionLoading(true);
     setMessage('');
     try {
-      if (!uploadFile) return;
+      if (!uploadFile) {
+        setMessageType('error');
+        setMessage('Please select a file first.');
+        return;
+      }
       const formData = new FormData();
       formData.append('file', uploadFile);
       const res = await api.post('/admin/students/bulk-upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setMessageType('success');
-      setMessage(`Success: ${res?.message || 'Students uploaded.'}`);
-      setUploadSummary(res?.data || null);
+      setMessage(res.data?.message || 'Upload completed successfully');
+      setUploadSummary(res.data);
       setUploadFile(null);
       await fetchData();
     } catch (err) {
       setMessageType('error');
-      setMessage(`Failed: ${err.message}`);
+      const errorMsg = err.response?.data?.message || err.message;
+      const detailErrors = err.response?.data?.errors;
+
+      if (Array.isArray(detailErrors) && detailErrors.length > 0) {
+        setMessage(`${errorMsg}\n${detailErrors.slice(0, 5).join('\n')}${detailErrors.length > 5 ? '\n...' : ''}`);
+      } else {
+        setMessage(errorMsg.replace(/^Failed: /i, ''));
+      }
     } finally {
       setActionLoading(false);
     }
@@ -388,7 +399,7 @@ const AdminStudents = () => {
       </div>
 
       {message && (
-        <div className={`p-4 rounded-xl font-bold text-sm border ${messageType === 'success' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
+        <div className={`p-4 rounded-xl font-bold text-sm border whitespace-pre-line ${messageType === 'success' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
           {message}
         </div>
       )}
@@ -425,7 +436,7 @@ const AdminStudents = () => {
                   <th className="px-6 py-4">Username</th>
                   <th className="px-6 py-4">Department</th>
                   <th className="px-6 py-4 text-center">Year</th>
-                   <th className="px-6 py-4">Phone</th>
+                  <th className="px-6 py-4">Phone</th>
                   <th className="px-6 py-4">CBE Account</th>
                   <th className="px-6 py-4">Internship</th>
                   <th className="px-6 py-4 text-center">Status</th>
@@ -450,16 +461,15 @@ const AdminStudents = () => {
                     <td className="px-6 py-4 text-[10px] font-black text-slate-600">{student.department?.code || student.department?.name || 'N/A'}</td>
                     <td className="px-6 py-4 text-center text-[10px] font-bold text-slate-500">{student.year || 'N/A'}</td>
                     <td className="px-6 py-4 text-[10px] font-bold text-slate-600">{student.phone || 'N/A'}</td>
-                     <td className="px-6 py-4 text-[10px] font-mono font-bold text-dbu-primary bg-slate-50/50 px-2 py-1 rounded">
+                    <td className="px-6 py-4 text-[10px] font-mono font-bold text-dbu-primary bg-slate-50/50 px-2 py-1 rounded">
                       {student.studentProfile?.cbeAccount || student.cbeAccount || 'N/A'}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full w-fit ${
-                          student.internshipStatus === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600' :
-                          student.internshipStatus === 'NOT_APPLIED' ? 'bg-slate-50 text-slate-400' :
-                          'bg-blue-50 text-blue-600'
-                        }`}>
+                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full w-fit ${student.internshipStatus === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600' :
+                            student.internshipStatus === 'NOT_APPLIED' ? 'bg-slate-50 text-slate-400' :
+                              'bg-blue-50 text-blue-600'
+                          }`}>
                           {student.internshipStatus.replace('_', ' ')}
                         </span>
                         <span className="text-[10px] font-bold text-slate-600 mt-1 truncate max-w-[100px]">{student.companyName}</span>

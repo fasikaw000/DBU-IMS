@@ -71,7 +71,7 @@ const Topbar = () => {
     if (!name) return 'U';
     const cleaned = String(name).trim().replace(/\.+/g, '.');
     const parts = cleaned.split(/\s+/).filter(Boolean);
-    const honorifics = new Set(['dr', 'dr.', 'mr', 'mr.', 'ms', 'ms.', 'mrs', 'mrs.', 'prof', 'prof.']);
+    const honorifics = new Set(['dr', 'dr.', 'mr', 'mr.', 'ms', 'ms.', 'mrs', 'mrs.', 'prof', 'prof.', 'dean', 'ato', 'w/ro', 'w/t', 'wrt', 'head', 'hod', 'director']);
     const first = parts.find((p) => !honorifics.has(p.toLowerCase())) || parts[0];
     return (first?.charAt(0) || 'U').toUpperCase();
   };

@@ -10,7 +10,8 @@ import {
     Calendar,
     Search,
     MapPin,
-    User
+    User,
+    UserCheck
 } from 'lucide-react';
 
 const CompanyStudentsPage = () => {
@@ -18,8 +19,10 @@ const CompanyStudentsPage = () => {
     const navigate = useNavigate();
     const [company, setCompany] = useState(null);
     const [placements, setPlacements] = useState([]);
+    const [advisorsWorkload, setAdvisorsWorkload] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const MAX_WORKLOAD = 5;
 
     useEffect(() => {
         const fetchCompanyAndPlacements = async () => {
@@ -30,8 +33,12 @@ const CompanyStudentsPage = () => {
                 setCompany(currentComp);
 
                 // Fetch placements
-                const placementsRes = await api.get(`/department/companies/${id}/placements`);
+                const [placementsRes, workloadRes] = await Promise.all([
+                    api.get(`/department/companies/${id}/placements`),
+                    api.get('/department/advisors/workload')
+                ]);
                 setPlacements(placementsRes.data || []);
+                setAdvisorsWorkload(workloadRes.data || []);
             } catch (err) {
                 console.error(err);
             } finally {
@@ -115,6 +122,85 @@ const CompanyStudentsPage = () => {
                 </div>
             </div>
 
+            {/* Advisor Workload Summary - Redesigned for Scalability */}
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                        <UserCheck className="w-5 h-5 text-dbu-primary" />
+                        University Advisor Workload
+                    </h3>
+                    <div className="flex gap-4">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Available</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Almost Full</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Full</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    {advisorsWorkload.map((w, idx) => {
+                        const percentage = (w.count / MAX_WORKLOAD) * 100;
+                        let statusColor = "bg-emerald-500";
+                        let statusText = "Available";
+                        let textColor = "text-emerald-600";
+                        let bgColor = "bg-emerald-50";
+
+                        if (w.count >= MAX_WORKLOAD) {
+                            statusColor = "bg-red-500";
+                            statusText = "Full";
+                            textColor = "text-red-600";
+                            bgColor = "bg-red-50";
+                        } else if (w.count === 4) {
+                            statusColor = "bg-amber-500";
+                            statusText = "Almost Full";
+                            textColor = "text-amber-600";
+                            bgColor = "bg-amber-50";
+                        }
+
+                        return (
+                            <div key={idx} className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-100 hover:border-dbu-primary/20 transition-all">
+                                <div className="md:w-1/3">
+                                    <p className="text-sm font-black text-slate-700">{w.advisor?.name}</p>
+                                    <p className="text-[10px] font-mono text-slate-400">({w.advisor?.username})</p>
+                                </div>
+                                
+                                <div className="flex-1 space-y-2">
+                                    <div className="flex justify-between items-end">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase">Capacity Usage</span>
+                                        <span className="text-xs font-black text-slate-700">{w.count} / {MAX_WORKLOAD}</span>
+                                    </div>
+                                    <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                                        <div 
+                                            className={`h-full ${statusColor} transition-all duration-1000 ease-out`} 
+                                            style={{ width: `${Math.min(100, percentage)}%` }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="md:w-32 flex justify-end">
+                                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${bgColor} ${textColor} border-current opacity-80`}>
+                                        {statusText}
+                                    </span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {advisorsWorkload.length === 0 && (
+                        <div className="py-12 text-center text-slate-400 italic bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                            No university advisors found.
+                        </div>
+                    )}
+                </div>
+            </div>
+
             {/* Search */}
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative">
                 <Search className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -158,22 +244,37 @@ const CompanyStudentsPage = () => {
                                     <div className="flex items-center gap-3">
                                         <User size={14} className="text-slate-400" />
                                         <div>
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Supervisor</p>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Company Supervisor</p>
                                             <p className="text-xs font-bold text-slate-700">{intern.companySupervisorName || '—'}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <Mail size={14} className="text-slate-400" />
                                         <div className="truncate">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Supervisor Email</p>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Company Supervisor Email</p>
                                             <p className="text-xs font-bold text-slate-700 truncate">{intern.companySupervisorEmail || '—'}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <Phone size={14} className="text-slate-400" />
                                         <div>
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Supervisor Phone</p>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Company Supervisor Phone</p>
                                             <p className="text-xs font-bold text-slate-700">{intern.companySupervisorPhone || '—'}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* University Advisor Info */}
+                                    <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
+                                        <UserCheck size={14} className="text-dbu-primary" />
+                                        <div>
+                                            <p className="text-[9px] font-black text-dbu-primary uppercase tracking-widest">University Advisor</p>
+                                            {intern.advisor_id ? (
+                                                <p className="text-xs font-bold text-slate-700">
+                                                    {intern.advisor_id.name} <span className="text-[9px] text-slate-400 font-mono">({intern.advisor_id.username})</span>
+                                                </p>
+                                            ) : (
+                                                <p className="text-xs font-bold text-amber-600 italic">Pending Assignment</p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

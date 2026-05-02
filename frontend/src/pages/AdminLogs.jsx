@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import {
   Terminal,
@@ -8,10 +9,12 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  ArrowLeft
 } from 'lucide-react';
 
 const AdminLogs = () => {
+  const navigate = useNavigate();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,9 +59,18 @@ const AdminLogs = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight">Audit Logs</h1>
-          <p className="text-slate-500 text-sm">Meaningful system activity only (creation, activation, status, department, assignment, reports, grades).</p>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate('/admin-dashboard')}
+            className="p-2 hover:bg-slate-100 rounded-xl transition-all group"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft className="w-6 h-6 text-slate-400 group-hover:text-dbu-primary group-hover:-translate-x-1 transition-all" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight">Audit Logs</h1>
+            <p className="text-slate-500 text-sm">Meaningful system activity only (creation, activation, status, department, assignment, reports, grades).</p>
+          </div>
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />

@@ -27,7 +27,7 @@ const staffSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['dean', 'advisor'],
+    enum: ['dean', 'advisor', 'admin'],
     required: [true, 'Role is required']
   }
 }, {

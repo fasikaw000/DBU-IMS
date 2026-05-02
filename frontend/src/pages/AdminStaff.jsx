@@ -169,7 +169,7 @@ const AdminStaff = () => {
         e.preventDefault();
         if (!uploadFile) {
             setMessageType('error');
-            setMessage('Failed: Please select a file first.');
+            setMessage('Please select a file first.');
             return;
         }
 
@@ -182,13 +182,20 @@ const AdminStaff = () => {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             setMessageType('success');
-            setMessage(`Success: Bulk upload completed.`);
+            setMessage(res.data?.message || 'Upload completed successfully');
             setUploadSummary(res.data);
             setUploadFile(null);
             fetchData();
         } catch (err) {
             setMessageType('error');
-            setMessage(`Failed: ${err.response?.data?.message || err.message}`);
+            const errorMsg = err.response?.data?.message || err.message;
+            const detailErrors = err.response?.data?.errors;
+
+            if (Array.isArray(detailErrors) && detailErrors.length > 0) {
+                setMessage(`${errorMsg}\n${detailErrors.slice(0, 5).join('\n')}${detailErrors.length > 5 ? '\n...' : ''}`);
+            } else {
+                setMessage(errorMsg.replace(/^Failed: /i, ''));
+            }
         } finally {
             setActionLoading(false);
         }
@@ -360,7 +367,7 @@ const AdminStaff = () => {
             </div>
 
             {message && (
-                <div className={`p-4 rounded-xl font-bold text-sm transition-opacity duration-300 ${messageType === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                <div className={`p-4 rounded-xl font-bold text-sm transition-opacity duration-300 whitespace-pre-line ${messageType === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
                     {message}
                 </div>
             )}
@@ -490,7 +497,7 @@ const AdminStaff = () => {
                             </button>
                         </form>
                         <p className="text-[11px] text-slate-500 mt-3">
-                            Required columns: Full Name, Department, Role
+                            Required columns: Full Name, Department, Role (Advisor, Dean)
                         </p>
                         {uploadSummary && (
                             <div className="mt-4 text-xs bg-slate-50 border border-slate-100 rounded-xl p-3">
@@ -620,7 +627,7 @@ const AdminStaff = () => {
                                             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all"
                                             required
                                         >
-                                            <option value="advisor">Advisor</option>
+                                            <option value="advisor">University Advisor</option>
                                             <option value="department_dean">Department Dean</option>
                                         </select>
                                     </div>

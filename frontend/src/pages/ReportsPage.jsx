@@ -267,7 +267,7 @@ const ReportsPage = () => {
                                                 <div className="p-4 bg-slate-900 rounded-2xl text-white space-y-2">
                                                     <div className="flex items-center gap-2 text-dbu-accent">
                                                         <History size={12} />
-                                                        <span className="text-[9px] font-black uppercase tracking-widest">Advisor Feedback</span>
+                                                        <span className="text-[9px] font-black uppercase tracking-widest">University Advisor Feedback</span>
                                                     </div>
                                                     <p className="text-xs italic text-white/70 leading-relaxed font-medium">"{report.feedback}"</p>
                                                 </div>

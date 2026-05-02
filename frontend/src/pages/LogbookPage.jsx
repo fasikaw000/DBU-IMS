@@ -210,13 +210,13 @@ const LogbookPage = () => {
                                         </div>
 
                                         <div className="space-y-4">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Advisor Feedback</label>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">University Advisor Feedback</label>
                                             {log.comment?.text ? (
                                                 <div className="p-6 bg-slate-900 rounded-3xl text-white relative overflow-hidden group">
                                                     <div className="relative z-10">
                                                         <div className="flex items-center gap-2 mb-2">
                                                             <MessageSquare size={14} className="text-dbu-accent" />
-                                                            <span className="text-[10px] font-black text-dbu-accent uppercase tracking-widest">Feedback Received</span>
+                                                            <span className="text-[9px] font-black uppercase tracking-widest">University Advisor Feedback</span>
                                                         </div>
                                                         <p className="text-sm italic text-white/80 leading-relaxed">"{log.comment.text}"</p>
                                                         <p className="text-[9px] text-white/30 mt-4 font-black uppercase tracking-widest">
@@ -244,7 +244,7 @@ const LogbookPage = () => {
                                                 </div>
                                             ) : (
                                                 <div className="p-8 border-2 border-dashed border-slate-100 rounded-3xl text-center">
-                                                    <p className="text-xs text-slate-300 italic font-medium">Waiting for advisor review...</p>
+                                                    <p className="text-xs text-slate-300 italic font-medium">Waiting for university advisor review...</p>
                                                 </div>
                                             )}
                                         </div>

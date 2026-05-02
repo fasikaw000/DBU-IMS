@@ -54,8 +54,8 @@ const AdminInternships = () => {
     
     const headers = [
       'Student Name', 'Student ID', 'Department', 'Company', 
-      'Supervisor Name', 'Supervisor Email', 'Supervisor Phone', 
-      'Field', 'Start Date', 'End Date', 'Status', 'Advisor'
+      'Company Supervisor Name', 'Company Supervisor Email', 'Company Supervisor Phone', 
+      'Field', 'Start Date', 'End Date', 'Status', 'University Advisor'
     ].join(',');
 
     const rows = internships.map(i => {
@@ -289,15 +289,15 @@ const AdminInternships = () => {
                     <p className="text-sm font-bold text-slate-800">{selectedInternship.company?.name}</p>
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-400 block lowercase">Supervisor Name</label>
+                    <label className="text-[10px] text-slate-400 block lowercase">Company Supervisor Name</label>
                     <p className="text-sm font-bold text-slate-800">{selectedInternship.companySupervisorName}</p>
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-400 block lowercase">Supervisor Email</label>
+                    <label className="text-[10px] text-slate-400 block lowercase">Company Supervisor Email</label>
                     <p className="text-sm font-bold text-slate-800">{selectedInternship.companySupervisorEmail}</p>
                   </div>
                    <div>
-                    <label className="text-[10px] text-slate-400 block lowercase">Supervisor Phone</label>
+                    <label className="text-[10px] text-slate-400 block lowercase">Company Supervisor Phone</label>
                     <p className="text-sm font-bold text-slate-800">{selectedInternship.companySupervisorPhone}</p>
                   </div>
                 </div>

@@ -18,7 +18,7 @@ import {
 
 const AssignmentsPage = () => {
     const [assignments, setAssignments] = useState([]);
-    const [advisors, setAdvisors] = useState([]);
+    const [advisorsWorkload, setAdvisorsWorkload] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [actionLoading, setActionLoading] = useState(false);
@@ -27,6 +27,8 @@ const AssignmentsPage = () => {
     const [selectedHistory, setSelectedHistory] = useState([]);
     const [historyLoading, setHistoryLoading] = useState(false);
     const [selectedStudentName, setSelectedStudentName] = useState('');
+
+    const MAX_WORKLOAD = 5;
 
     useEffect(() => {
         fetchData();
@@ -52,14 +54,15 @@ const AssignmentsPage = () => {
                     companyName: s.internship.company?.name || s.internship.companyName || 'Unknown Company',
                     status: s.internship.status
                 }));
-            
+
             // Point 5: FIX ASSIGNMENTS PAGE - Only show APPROVED (awaiting assignment)
+            // UPDATED: Show both assigned and unassigned to allow reassignment
             const filteredList = list.filter(item => 
-                ['Approved', 'APPROVED'].includes(item.status) && !item.assignedAdvisorId
+                ['Approved', 'APPROVED', 'Active', 'ACTIVE', 'Ongoing', 'ONGOING'].includes(item.status)
             );
 
             setAssignments(filteredList);
-            setAdvisors(advisorsRes.data.map(w => w.advisor));
+            setAdvisorsWorkload(advisorsRes.data);
         } catch (err) {
             console.error(err);
         } finally {
@@ -116,9 +119,88 @@ const AssignmentsPage = () => {
                 <div>
                     <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">
                         <ClipboardList className="w-8 h-8 text-dbu-primary" />
-                        Advisor Assignments
+                        University Advisor Assignments
                     </h1>
-                    <p className="text-slate-500 text-sm mt-1">Assign faculty advisors to approved student internships.</p>
+                    <p className="text-slate-500 text-sm mt-1">Assign university advisors to approved student internships.</p>
+                </div>
+            </div>
+
+            {/* Advisor Workload Summary - Redesigned for Scalability */}
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                        <UserCheck className="w-5 h-5 text-dbu-primary" />
+                        University Advisor Workload
+                    </h3>
+                    <div className="flex gap-4">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Available</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Almost Full</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Full</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    {advisorsWorkload.map((w, idx) => {
+                        const percentage = (w.count / MAX_WORKLOAD) * 100;
+                        let statusColor = "bg-emerald-500";
+                        let statusText = "Available";
+                        let textColor = "text-emerald-600";
+                        let bgColor = "bg-emerald-50";
+
+                        if (w.count >= MAX_WORKLOAD) {
+                            statusColor = "bg-red-500";
+                            statusText = "Full";
+                            textColor = "text-red-600";
+                            bgColor = "bg-red-50";
+                        } else if (w.count === 4) {
+                            statusColor = "bg-amber-500";
+                            statusText = "Almost Full";
+                            textColor = "text-amber-600";
+                            bgColor = "bg-amber-50";
+                        }
+
+                        return (
+                            <div key={idx} className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-100 hover:border-dbu-primary/20 transition-all">
+                                <div className="md:w-1/3">
+                                    <p className="text-sm font-black text-slate-700">{w.advisor?.name}</p>
+                                    <p className="text-[10px] font-mono text-slate-400">({w.advisor?.username})</p>
+                                </div>
+                                
+                                <div className="flex-1 space-y-2">
+                                    <div className="flex justify-between items-end">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase">Capacity Usage</span>
+                                        <span className="text-xs font-black text-slate-700">{w.count} / {MAX_WORKLOAD}</span>
+                                    </div>
+                                    <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                                        <div 
+                                            className={`h-full ${statusColor} transition-all duration-1000 ease-out`} 
+                                            style={{ width: `${Math.min(100, percentage)}%` }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="md:w-32 flex justify-end">
+                                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${bgColor} ${textColor} border-current opacity-80`}>
+                                        {statusText}
+                                    </span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {advisorsWorkload.length === 0 && (
+                        <div className="py-12 text-center text-slate-400 italic bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                            No university advisors found in this department.
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -152,7 +234,7 @@ const AssignmentsPage = () => {
                             <tr className="border-b border-slate-100 text-slate-400 text-[10px] font-black uppercase tracking-widest bg-slate-50/30">
                                 <th className="p-6">Student</th>
                                 <th className="p-6">Placement</th>
-                                <th className="p-6">Assigned Advisor</th>
+                                <th className="p-6">University Advisor</th>
                                 <th className="p-6">Status</th>
                                 <th className="p-6 text-right">Actions</th>
                             </tr>
@@ -213,19 +295,25 @@ const AssignmentsPage = () => {
                                                     onChange={(e) => handleAssignAdvisor(item.internshipId, e.target.value)}
                                                     value={item.assignedAdvisorId || ''}
                                                 >
-                                                    <option value="" disabled>Select Advisor</option>
-                                                    {advisors.map(adv => (
-                                                        <option key={adv._id} value={adv._id}>{adv.name}</option>
+                                                    <option value="" disabled>Select University Advisor</option>
+                                                    {advisorsWorkload.map(w => (
+                                                        <option 
+                                                            key={w.advisor?._id} 
+                                                            value={w.advisor?._id}
+                                                            disabled={w.count >= MAX_WORKLOAD && item.assignedAdvisorId !== w.advisor?._id}
+                                                        >
+                                                            {w.advisor?.name} ({w.count}/{MAX_WORKLOAD}) {w.count >= MAX_WORKLOAD ? '— FULL' : ''}
+                                                        </option>
                                                     ))}
                                                 </select>
-                                                <button 
+                                                <button
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.preventDefault();
                                                         e.stopPropagation();
                                                         fetchHistory(item.internshipId, item.studentName);
                                                     }}
-                                                    className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-dbu-primary transition" 
+                                                    className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-dbu-primary transition"
                                                     title="View History"
                                                 >
                                                     <History size={18} />
@@ -259,7 +347,7 @@ const AssignmentsPage = () => {
                                 <X size={20} />
                             </button>
                         </div>
-                        
+
                         <div className="p-6 max-h-[60vh] overflow-y-auto">
                             {historyLoading ? (
                                 <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-dbu-primary" /></div>
@@ -290,7 +378,7 @@ const AssignmentsPage = () => {
                                 </div>
                             )}
                         </div>
-                        
+
                         <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
                             <button onClick={() => setShowHistory(false)} className="px-6 py-2.5 bg-white border border-slate-200 rounded-xl font-black text-[10px] tracking-widest hover:bg-slate-100 transition shadow-sm">
                                 CLOSE HISTORY

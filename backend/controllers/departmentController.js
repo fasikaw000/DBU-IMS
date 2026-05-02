@@ -248,8 +248,8 @@ export const getAdvisorWorkload = async (req, res, next) => {
     const advisors = await User.find({ role: 'advisor', department: dean.department }).select('name username email');
 
     const workloads = await Promise.all(advisors.map(async (adv) => {
-      const activeInternships = await Internship.countDocuments({ advisor_id: adv._id, status: { $in: ['Active', 'Approved'] } });
-      return { advisor: adv, activeStudentsCount: activeInternships };
+      const activeInternships = await Internship.countDocuments({ advisor_id: adv._id, status: { $in: ['Active', 'Approved', 'ACTIVE', 'APPROVED', 'Ongoing', 'ONGOING'] } });
+      return { advisor: adv, count: activeInternships };
     }));
 
     res.status(200).json({ success: true, data: workloads });

@@ -60,7 +60,7 @@ const SupervisorDashboard = () => {
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 text-dbu-dark">Supervisor Dashboard</h2>
+          <h2 className="text-2xl font-bold text-slate-800 text-dbu-dark">Company Supervisor Dashboard</h2>
           <p className="text-slate-500">Manage your assigned interns and provide performance feedback.</p>
         </div>
       </div>

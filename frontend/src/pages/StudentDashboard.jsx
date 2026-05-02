@@ -335,7 +335,7 @@ const StudentDashboard = () => {
                                 </div>
                             </div>
                             <div className="space-y-6">
-                                <h3 className="text-[10px] font-black text-dbu-primary uppercase tracking-widest border-b border-dbu-primary/10 pb-2">Supervisor Contact</h3>
+                                <h3 className="text-[10px] font-black text-dbu-primary uppercase tracking-widest border-b border-dbu-primary/10 pb-2">Company Supervisor Contact</h3>
                                 <div className="space-y-4">
                                     <div className="space-y-1">
                                         <input placeholder="Full Name" className={`w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-dbu-primary transition text-sm font-bold ${errors.companySupervisorName ? 'border-red-500' : 'border-slate-200'}`} value={applyData.companySupervisorName} onChange={e => { setApplyData({ ...applyData, companySupervisorName: e.target.value }); setErrors({ ...errors, companySupervisorName: null }); }} />
@@ -380,11 +380,13 @@ const StudentDashboard = () => {
                                             <p className="text-sm font-bold text-slate-700">{new Date(internship.startDate).toLocaleDateString()} - {new Date(internship.endDate).toLocaleDateString()}</p>
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Supervisor</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Company Supervisor</p>
                                             <p className="text-sm font-bold text-slate-700">{internship.companySupervisorName}</p>
+                                            {internship.companySupervisorEmail && <p className="text-[10px] text-slate-500 font-medium truncate">{internship.companySupervisorEmail}</p>}
+                                            {internship.companySupervisorPhone && <p className="text-[10px] text-slate-500 font-medium">{internship.companySupervisorPhone}</p>}
                                         </div>
                                         <div className="col-span-2 md:col-span-1 pt-6 border-t border-slate-50">
-                                            <p className="text-[10px] font-black text-dbu-primary uppercase tracking-widest">Assigned Advisor</p>
+                                            <p className="text-[10px] font-black text-dbu-primary uppercase tracking-widest">University Advisor</p>
                                             <p className="text-sm font-bold text-slate-700">{internship.advisor?.name || internship.advisor_id?.name || 'Pending Assignment'}</p>
                                         </div>
                                     </div>
@@ -408,7 +410,7 @@ const StudentDashboard = () => {
                                             className="flex-1 py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black tracking-widest hover:border-dbu-primary hover:text-dbu-primary transition flex items-center justify-center gap-2"
                                         >
                                             <FileText size={16} />
-                                            MANAGE REPORTS
+                                            REPORTS
                                         </button>
                                     </div>
                                 </div>
@@ -509,7 +511,7 @@ const StudentDashboard = () => {
                                         
                                         <div className="space-y-5">
                                             <h3 className="text-[10px] font-black text-dbu-primary uppercase tracking-widest border-b border-slate-100 pb-2 flex items-center gap-2">
-                                                <User size={14} /> Supervisor Contact
+                                                <User size={14} /> Company Supervisor Contact
                                             </h3>
                                             <div className="space-y-4">
                                                 <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">

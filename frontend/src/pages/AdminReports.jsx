@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
-import { 
-  BarChart3, 
-  PieChart as PieChartIcon, 
-  Download, 
-  Filter, 
-  Users, 
-  Target, 
+import {
+  BarChart3,
+  PieChart as PieChartIcon,
+  Download,
+  Filter,
+  Users,
+  Target,
   TrendingUp,
   FileSpreadsheet,
   FileText,
@@ -66,7 +66,7 @@ const AdminReports = () => {
   const printReport = () => {
     const reportData = getActiveData();
     if (!reportData || reportData.length === 0) return;
-    const tabLabels = { distribution: 'Student Distribution', status: 'Internship Status', workload: 'Advisor Workload', grades: 'Grade Analytics' };
+    const tabLabels = { distribution: 'Student Distribution', status: 'Internship Status', workload: 'University Advisor Workload', grades: 'Grade Analytics' };
     const printWindow = window.open('', '_blank');
     const headers = reportData.length > 0 ? Object.keys(reportData[0]) : [];
     printWindow.document.write(`
@@ -116,8 +116,8 @@ const AdminReports = () => {
           <span>{value}</span>
         </div>
         <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-          <div 
-            className={`h-full ${color} transition-all duration-1000 ease-out`} 
+          <div
+            className={`h-full ${color} transition-all duration-1000 ease-out`}
             style={{ width: `${percentage}%` }}
           />
         </div>
@@ -133,35 +133,35 @@ const AdminReports = () => {
           <p className="text-slate-500 text-sm">Analytics and exports for internships, workload, and outcomes.</p>
         </div>
         <div className="flex items-center gap-2 relative">
-            <button 
-                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                className="bg-white text-slate-700 border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold flex items-center hover:bg-slate-50 transition-all shadow-sm"
-            >
-                <Filter className="w-4 h-4 mr-2" />
-                {dateFilter === 'all' ? 'All Time' : dateFilter === '7d' ? 'Last 7 Days' : 'This Month'}
-            </button>
-            {showFilterDropdown && (
-                <div className="absolute top-full mt-2 right-0 w-48 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    <div className="p-2">
-                        {['all', '7d', '30d'].map(f => (
-                            <button
-                                key={f}
-                                onClick={() => { setDateFilter(f); setShowFilterDropdown(false); fetchAnalytics(f); }}
-                                className={`w-full text-left px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${dateFilter === f ? 'bg-dbu-primary/10 text-dbu-primary' : 'hover:bg-slate-50 text-slate-500'}`}
-                            >
-                                {f === 'all' ? 'All Time' : f === '7d' ? 'Last 7 Days' : 'This Month'}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-            <button 
-                onClick={() => setShowExportModal(true)}
-                className="bg-dbu-primary text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center shadow-lg shadow-dbu-primary/20 hover:bg-dbu-accent transition-all"
-            >
-                <Download className="w-4 h-4 mr-2" />
-                Export
-            </button>
+          <button
+            onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+            className="bg-white text-slate-700 border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold flex items-center hover:bg-slate-50 transition-all shadow-sm"
+          >
+            <Filter className="w-4 h-4 mr-2" />
+            {dateFilter === 'all' ? 'All Time' : dateFilter === '7d' ? 'Last 7 Days' : 'This Month'}
+          </button>
+          {showFilterDropdown && (
+            <div className="absolute top-full mt-2 right-0 w-48 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              <div className="p-2">
+                {['all', '7d', '30d'].map(f => (
+                  <button
+                    key={f}
+                    onClick={() => { setDateFilter(f); setShowFilterDropdown(false); fetchAnalytics(f); }}
+                    className={`w-full text-left px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${dateFilter === f ? 'bg-dbu-primary/10 text-dbu-primary' : 'hover:bg-slate-50 text-slate-500'}`}
+                  >
+                    {f === 'all' ? 'All Time' : f === '7d' ? 'Last 7 Days' : 'This Month'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="bg-dbu-primary text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center shadow-lg shadow-dbu-primary/20 hover:bg-dbu-accent transition-all"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </button>
         </div>
       </div>
 
@@ -169,15 +169,14 @@ const AdminReports = () => {
         {[
           { id: 'distribution', label: 'Student Distribution', icon: Users },
           { id: 'status', label: 'Internship Status', icon: Target },
-          { id: 'workload', label: 'Advisor Workload', icon: TrendingUp },
+          { id: 'workload', label: 'University Advisor Workload', icon: TrendingUp },
           { id: 'grades', label: 'Grade Analytics', icon: BarChart3 },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`pb-4 text-sm font-bold flex items-center gap-2 transition-all border-b-2 whitespace-nowrap ${
-              activeTab === tab.id ? 'border-dbu-primary text-dbu-primary' : 'border-transparent text-slate-400 hover:text-slate-600'
-            }`}
+            className={`pb-4 text-sm font-bold flex items-center gap-2 transition-all border-b-2 whitespace-nowrap ${activeTab === tab.id ? 'border-dbu-primary text-dbu-primary' : 'border-transparent text-slate-400 hover:text-slate-600'
+              }`}
           >
             <tab.icon className="w-4 h-4" />
             {tab.label}
@@ -239,16 +238,16 @@ const AdminReports = () => {
                   </tr>
                 ))}
                 {activeTab === 'workload' && (data?.workload || []).map((w, i) => (
-                    <tr key={i} className="hover:bg-slate-50">
-                        <td className="px-6 py-4 text-sm font-bold text-slate-700">{w.name}</td>
-                        <td className="px-6 py-4 text-sm text-right font-mono text-purple-500">{w.count} Students</td>
-                    </tr>
+                  <tr key={i} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 text-sm font-bold text-slate-700">{w.name}</td>
+                    <td className="px-6 py-4 text-sm text-right font-mono text-purple-500">{w.count} Students</td>
+                  </tr>
                 ))}
                 {activeTab === 'grades' && (data?.grades || []).map((g, i) => (
-                    <tr key={i} className="hover:bg-slate-50">
-                        <td className="px-6 py-4 text-sm font-bold text-slate-700">Grade Band: {g._id}+</td>
-                        <td className="px-6 py-4 text-sm text-right font-mono text-green-500">{g.count} Submissions</td>
-                    </tr>
+                  <tr key={i} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 text-sm font-bold text-slate-700">Grade Band: {g._id}+</td>
+                    <td className="px-6 py-4 text-sm text-right font-mono text-green-500">{g.count} Submissions</td>
+                  </tr>
                 ))}
               </tbody>
             </table>

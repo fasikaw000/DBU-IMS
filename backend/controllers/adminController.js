@@ -604,8 +604,55 @@ export const bulkUploadStudents = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Uploaded file is empty.' });
     }
 
+    // Pass 1: Strict Validation
+    const validationErrors = [];
     const seenStudentIds = new Set();
-    const errors = [];
+    const requiredCols = ['Full Name', 'Student ID', 'Department', 'Year'];
+
+    // Check headers (using first row as proxy)
+    const sampleRow = rows[0];
+    const missingCols = requiredCols.filter(col => !Object.keys(sampleRow).some(k => k.toLowerCase() === col.toLowerCase()));
+    if (missingCols.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Missing required columns: ${missingCols.join(', ')}`
+      });
+    }
+
+    for (let index = 0; index < rows.length; index += 1) {
+      const row = rows[index];
+      const rowNo = index + 2;
+
+      const name = String(row['Full Name'] || row.Name || row.name || '').trim();
+      const studentId = String(row['Student ID'] || row.studentId || row.student_id || '').trim().toUpperCase();
+      const departmentValue = String(row.Department || row.department || '').trim();
+      const year = String(row.Year || row.year || '').trim();
+
+      if (!name) validationErrors.push(`Full Name is required (row ${rowNo})`);
+      if (!studentId) validationErrors.push(`Student ID is required (row ${rowNo})`);
+      if (!departmentValue) validationErrors.push(`Department is required (row ${rowNo})`);
+      if (!year) validationErrors.push(`Year is required (row ${rowNo})`);
+
+      if (studentId && !/^DBU\d{7}$/.test(studentId)) {
+        validationErrors.push(`Invalid Student ID format: ${studentId} (row ${rowNo})`);
+      }
+
+      if (studentId && seenStudentIds.has(studentId)) {
+        validationErrors.push(`Duplicate Student ID in file: ${studentId} (row ${rowNo})`);
+      }
+      seenStudentIds.add(studentId);
+    }
+
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed. No data was processed.',
+        errors: validationErrors
+      });
+    }
+
+    // Pass 2: DB Checks & Processing
+    const processingErrors = [];
     const created = [];
 
     for (let index = 0; index < rows.length; index += 1) {
@@ -679,8 +726,12 @@ export const bulkUploadStudents = async (req, res, next) => {
 
         created.push({ row: rowNo, name, studentId, username, year });
       } catch (error) {
-        errors.push({ row: rowNo, message: error.message || 'Failed to create student row.' });
+        processingErrors.push(`Row ${rowNo}: ${error.message || 'Failed to create student.'}`);
       }
+    }
+
+    if (processingErrors.length > 0 && created.length === 0) {
+      return res.status(400).json({ success: false, message: 'Processing failed.', errors: processingErrors });
     }
 
     await AuditLog.create({
@@ -692,12 +743,12 @@ export const bulkUploadStudents = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: `Bulk upload completed. Created ${created.length} student(s).`,
+      message: `Upload completed successfully. Created ${created.length} students.`,
       data: {
         createdCount: created.length,
-        failedCount: errors.length,
+        failedCount: processingErrors.length,
         created,
-        errors
+        errors: processingErrors
       }
     });
   } catch (error) {
@@ -724,8 +775,51 @@ export const bulkUploadStaff = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Uploaded file is empty.' });
     }
 
-    const errors = [];
+    // Pass 1: Strict Validation
+    const validationErrors = [];
+    const requiredCols = ['Full Name', 'Department', 'Role'];
+
+    const sampleRow = rows[0];
+    const missingCols = requiredCols.filter(col => !Object.keys(sampleRow).some(k => k.toLowerCase() === col.toLowerCase()));
+    if (missingCols.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Missing required columns: ${missingCols.join(', ')}`
+      });
+    }
+
+    for (let index = 0; index < rows.length; index += 1) {
+      const row = rows[index];
+      const rowNo = index + 2;
+
+      const name = String(row['Full Name'] || row.Name || row.name || '').trim();
+      const departmentValue = String(row.Department || row.department || '').trim();
+      const roleRaw = String(row.Role || row.role || '').trim();
+
+      if (!name) validationErrors.push(`Full Name is required (row ${rowNo})`);
+      if (!departmentValue) validationErrors.push(`Department is required (row ${rowNo})`);
+      if (!roleRaw) validationErrors.push(`Role is required (row ${rowNo})`);
+
+      if (roleRaw) {
+        const role = normalizeRole(roleRaw);
+        if (role === 'Admin') {
+          validationErrors.push(`Admin role cannot be assigned via bulk upload (row ${rowNo})`);
+        } else if (!['Advisor', 'Dean'].includes(role)) {
+          validationErrors.push(`Invalid role: ${roleRaw} (row ${rowNo}). Use Advisor or Dean.`);
+        }
+      }
+    }
+
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed. No data was processed.',
+        errors: validationErrors
+      });
+    }
+
     const created = [];
+    const processingErrors = [];
 
     for (let index = 0; index < rows.length; index += 1) {
       const row = rows[index];
@@ -741,8 +835,8 @@ export const bulkUploadStaff = async (req, res, next) => {
       }
 
       const role = normalizeRole(roleRaw);
-      if (!['Advisor', 'Dean'].includes(role)) {
-        errors.push({ row: rowNo, message: `Invalid role "${roleRaw}". Use "Dean" or "Advisor".` });
+      if (role === 'Admin' || !['Advisor', 'Dean'].includes(role)) {
+        processingErrors.push(`Row ${rowNo}: Invalid or restricted role.`);
         continue;
       }
 
@@ -781,7 +875,7 @@ export const bulkUploadStaff = async (req, res, next) => {
 
         created.push({ row: rowNo, name, username, role });
       } catch (error) {
-        errors.push({ row: rowNo, message: error.message || 'Failed to create staff row.' });
+        processingErrors.push(`Row ${rowNo}: ${error.message || 'Failed to create staff member.'}`);
       }
     }
 
@@ -854,7 +948,7 @@ export const updateInternshipStatus = async (req, res, next) => {
     // Point 2: DEAN APPROVAL (CRITICAL FIX)
     if (status === 'APPROVED') {
       const studentProfile = await Student.findOne({ user: internship.student });
-      
+
       // A. CREATE PLACEMENT RECORD
       await Placement.create({
         student: studentProfile?._id || internship.student,
@@ -1068,9 +1162,9 @@ export const updateStaff = async (req, res, next) => {
       }
       if (role) {
         const normRole = normalizeRole(role);
-        if (['Advisor', 'Dean'].includes(normRole)) {
+        if (['Advisor', 'Dean', 'Admin'].includes(normRole)) {
           user.role = normRole;
-          staff.role = normRole === 'Dean' ? 'dean' : 'advisor';
+          staff.role = normRole.toLowerCase();
         }
       }
       await user.save();
@@ -1143,9 +1237,9 @@ export const deleteDepartment = async (req, res, next) => {
     const userCount = await User.countDocuments({ department: department._id });
 
     if (userCount > 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Cannot delete department: ${userCount} registered users belong to this department. Please deactivate it instead.` 
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete department: ${userCount} registered users belong to this department. Please deactivate it instead.`
       });
     }
 
@@ -1247,17 +1341,17 @@ export const getLogs = async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 50;
     const search = req.query.search || '';
     const includeAll = req.query.includeAll === 'true';
-    
+
     // Construct search filter
     const searchFilter = {
       ...(includeAll ? {} : { action: { $in: IMPORTANT_ACTIVITY_ACTIONS } }),
       ...(search
         ? {
-            $or: [
-              { action: { $regex: search, $options: 'i' } },
-              { details: { $regex: search, $options: 'i' } }
-            ]
-          }
+          $or: [
+            { action: { $regex: search, $options: 'i' } },
+            { details: { $regex: search, $options: 'i' } }
+          ]
+        }
         : {})
     };
 

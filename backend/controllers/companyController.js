@@ -179,7 +179,8 @@ export const getCompanyPlacements = async (req, res, next) => {
         path: 'student',
         populate: { path: 'user', select: 'name email' }
       })
-      .select('student field companySupervisorName companySupervisorEmail companySupervisorPhone startDate endDate status')
+      .populate('advisor_id', 'name username')
+      .select('student advisor_id field companySupervisorName companySupervisorEmail companySupervisorPhone startDate endDate status')
       .lean();
 
     res.status(200).json({ success: true, count: internships.length, data: internships });

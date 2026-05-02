@@ -28,6 +28,7 @@ const Profile = () => {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+  const [loadingProfile, setLoadingProfile] = useState(user?.role === 'Student');
 
   useEffect(() => {
     if (!message && !error) return;
@@ -51,7 +52,8 @@ const Profile = () => {
     setFullName(user?.name || '');
     setEmail(user?.email || '');
     setPhone(user?.phone || '');
-  }, [user?._id, user?.name, user?.email, user?.phone]);
+    setCbeAccount(user?.studentProfile?.cbeAccount || user?.cbeAccount || '');
+  }, [user]);
 
   useEffect(() => {
     const fetchStudentProfile = async () => {
@@ -66,15 +68,18 @@ const Profile = () => {
         console.error("Student profile error", _err);
       }
     };
-    fetchStudentProfile();
+    fetchStudentProfile().finally(() => setLoadingProfile(false));
   }, [user?.role]);
 
   const displayRole = useMemo(() => user?.role || 'Unknown', [user?.role]);
 
   const getAvatarInitial = (name) => {
     if (!name) return 'U';
-    const first = name.split(' ').filter(Boolean)[0] || 'U';
-    return first.charAt(0).toUpperCase();
+    const cleaned = String(name).trim().replace(/\.+/g, '.');
+    const parts = cleaned.split(/\s+/).filter(Boolean);
+    const honorifics = new Set(['dr', 'dr.', 'mr', 'mr.', 'ms', 'ms.', 'mrs', 'mrs.', 'prof', 'prof.', 'dean', 'ato', 'w/ro', 'w/t', 'wrt', 'head', 'hod', 'director']);
+    const first = parts.find((p) => !honorifics.has(p.toLowerCase())) || parts[0];
+    return (first?.charAt(0) || 'U').toUpperCase();
   };
 
   const handleSaveProfile = async (e) => {
@@ -170,7 +175,7 @@ const Profile = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {!isProfileComplete && user?.role === 'Student' && (
+      {!loadingProfile && !isProfileComplete && user?.role === 'Student' && (
         <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-xl flex items-center gap-3 animate-pulse">
           <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
             <Landmark className="w-5 h-5" />

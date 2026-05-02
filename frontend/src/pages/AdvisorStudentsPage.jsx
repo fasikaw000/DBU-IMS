@@ -174,9 +174,9 @@ const AdvisorStudentsPage = () => {
                         <div>
                             <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">
                                 <GraduationCap className="w-8 h-8 text-dbu-primary" />
-                                Student Supervision
+                                University Advisor Supervision
                             </h1>
-                            <p className="text-slate-500 text-sm mt-1">Manage assigned students and evaluate their internship performance.</p>
+                            <p className="text-slate-500 text-sm mt-1">Manage assigned students and evaluate their internship performance as a university advisor.</p>
                         </div>
                     </div>
 
@@ -412,7 +412,7 @@ const AdvisorStudentsPage = () => {
                                                         <span className="text-xl font-black text-dbu-accent">{selectedInternship.finalGrade.letterGrade}</span>
                                                     </div>
                                                 ) : (
-                                                    <p className="text-xs text-white/60 italic">Pending advisor evaluation</p>
+                                                    <p className="text-xs text-white/60 italic">Pending university advisor evaluation</p>
                                                 )}
                                             </div>
                                         </div>
@@ -561,7 +561,7 @@ const AdvisorStudentsPage = () => {
                                                             <div className="flex items-start gap-3 bg-white p-4 rounded-xl border border-slate-100">
                                                                 <MessageSquare size={16} className="text-dbu-primary mt-1" />
                                                                 <div>
-                                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Advisor Comment</p>
+                                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">University Advisor Comment</p>
                                                                     <p className="text-xs text-slate-600 font-medium">{log.comment.text}</p>
                                                                 </div>
                                                             </div>
@@ -635,11 +635,11 @@ const AdvisorStudentsPage = () => {
                                         </div>
 
                                         <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Advisor Summative Comment</label>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">University Advisor Summative Comment</label>
                                             <textarea 
                                                 rows="4"
                                                 className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm font-medium resize-none"
-                                                placeholder="Provide a professional summary of the student's internship progress, strengths, and areas for improvement..."
+                                                placeholder="Provide a professional summary of the student's internship progress, strengths, and areas for improvement as a university advisor..."
                                                 value={grades.advisorComment}
                                                 onChange={(e) => setGrades({...grades, advisorComment: e.target.value})}
                                             ></textarea>
