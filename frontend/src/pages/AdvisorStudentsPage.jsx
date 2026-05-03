@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
-import { 
-    GraduationCap, 
-    Search, 
-    Filter, 
-    User, 
-    Briefcase, 
-    Calendar, 
-    FileText, 
-    ClipboardList, 
-    MessageSquare, 
-    CheckCircle, 
+import {
+    GraduationCap,
+    Search,
+    Filter,
+    User,
+    Briefcase,
+    Calendar,
+    FileText,
+    ClipboardList,
+    MessageSquare,
+    CheckCircle,
     XCircle,
     AlertCircle,
     ChevronRight,
@@ -26,12 +26,12 @@ const AdvisorStudentsPage = () => {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState('All');
-    
+
     // View state
     const [view, setView] = useState('list'); // list, profile
     const [selectedInternship, setSelectedInternship] = useState(null);
     const [activeTab, setActiveTab] = useState('overview'); // overview, reports, logbook, evaluation
-    
+
     // Sub-data state
     const [reports, setReports] = useState([]);
     const [logbooks, setLogbooks] = useState([]);
@@ -69,7 +69,7 @@ const AdvisorStudentsPage = () => {
         setView('profile');
         setActiveTab('overview');
         setMessage(null);
-        
+
         try {
             const [reportsRes, logbooksRes] = await Promise.all([
                 api.get(`/advisor/reports/${internship._id}`),
@@ -153,8 +153,8 @@ const AdvisorStudentsPage = () => {
     };
 
     const filteredStudents = students.filter(s => {
-        const matchesSearch = s.student?.user?.name.toLowerCase().includes(search.toLowerCase()) || 
-                             s.student?.studentId.toLowerCase().includes(search.toLowerCase());
+        const matchesSearch = s.student?.user?.name.toLowerCase().includes(search.toLowerCase()) ||
+            s.student?.studentId.toLowerCase().includes(search.toLowerCase());
         const matchesFilter = filterStatus === 'All' || s.status === filterStatus;
         return matchesSearch && matchesFilter;
     });
@@ -184,8 +184,8 @@ const AdvisorStudentsPage = () => {
                     <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4">
                         <div className="relative flex-1">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                            <input 
-                                type="text" 
+                            <input
+                                type="text"
                                 placeholder="Search by student name or ID..."
                                 className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm"
                                 value={search}
@@ -194,7 +194,7 @@ const AdvisorStudentsPage = () => {
                         </div>
                         <div className="flex items-center gap-2">
                             <Filter size={18} className="text-slate-400" />
-                            <select 
+                            <select
                                 className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-600 outline-none focus:ring-2 focus:ring-dbu-primary"
                                 value={filterStatus}
                                 onChange={(e) => setFilterStatus(e.target.value)}
@@ -250,18 +250,17 @@ const AdvisorStudentsPage = () => {
                                                     </div>
                                                 </td>
                                                 <td className="p-6">
-                                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                                                        intern.status === 'ACTIVE' || intern.status === 'Active' 
-                                                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
-                                                        : intern.status === 'COMPLETED'
-                                                        ? 'bg-blue-50 text-blue-600 border-blue-100'
-                                                        : 'bg-slate-50 text-slate-600 border-slate-100'
-                                                    }`}>
+                                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${intern.status === 'ACTIVE' || intern.status === 'Active'
+                                                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                                            : intern.status === 'COMPLETED'
+                                                                ? 'bg-blue-50 text-blue-600 border-blue-100'
+                                                                : 'bg-slate-50 text-slate-600 border-slate-100'
+                                                        }`}>
                                                         {intern.status}
                                                     </span>
                                                 </td>
                                                 <td className="p-6 text-right">
-                                                    <button 
+                                                    <button
                                                         onClick={() => fetchStudentDetails(intern)}
                                                         className="inline-flex items-center gap-2 px-4 py-2 bg-dbu-primary text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-dbu-accent transition shadow-sm"
                                                     >
@@ -283,7 +282,7 @@ const AdvisorStudentsPage = () => {
                     {/* Sub Header */}
                     <div className="bg-white border-b border-slate-200 p-6 sticky top-0 z-20 flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                            <button 
+                            <button
                                 onClick={() => setView('list')}
                                 className="p-2 hover:bg-slate-100 rounded-full transition text-slate-500"
                             >
@@ -299,9 +298,8 @@ const AdvisorStudentsPage = () => {
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
-                                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition ${
-                                        activeTab === tab ? 'bg-white text-dbu-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                                    }`}
+                                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition ${activeTab === tab ? 'bg-white text-dbu-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                        }`}
                                 >
                                     {tab}
                                 </button>
@@ -311,9 +309,8 @@ const AdvisorStudentsPage = () => {
 
                     <div className="p-8 max-w-5xl mx-auto space-y-8">
                         {message && (
-                            <div className={`p-4 rounded-xl border flex items-center gap-3 ${
-                                message.type === 'error' ? 'bg-red-50 border-red-100 text-red-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'
-                            }`}>
+                            <div className={`p-4 rounded-xl border flex items-center gap-3 ${message.type === 'error' ? 'bg-red-50 border-red-100 text-red-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'
+                                }`}>
                                 {message.type === 'error' ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
                                 <p className="font-bold text-sm">{message.text}</p>
                             </div>
@@ -425,7 +422,7 @@ const AdvisorStudentsPage = () => {
                                                 <span className="text-sm font-black uppercase tracking-widest">Company Evaluation</span>
                                             </div>
                                             <p className="text-xs text-slate-500 leading-relaxed">Student has uploaded the required evaluation form from the company supervisor.</p>
-                                            <a 
+                                            <a
                                                 href={`http://localhost:5001${selectedInternship.companyEvaluationUrl}`}
                                                 target="_blank"
                                                 rel="noreferrer"
@@ -464,17 +461,16 @@ const AdvisorStudentsPage = () => {
                                                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{new Date(report.createdAt).toLocaleDateString()}</p>
                                                             </div>
                                                         </div>
-                                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border ${
-                                                            report.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                            report.status === 'Revision Required' ? 'bg-red-50 text-red-600 border-red-100' :
-                                                            'bg-amber-50 text-amber-600 border-amber-100'
-                                                        }`}>
+                                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border ${report.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                                report.status === 'Revision Required' ? 'bg-red-50 text-red-600 border-red-100' :
+                                                                    'bg-amber-50 text-amber-600 border-amber-100'
+                                                            }`}>
                                                             {report.status}
                                                         </span>
                                                     </div>
 
                                                     <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                                                        <a 
+                                                        <a
                                                             href={`http://localhost:5001${report.fileUrl}`}
                                                             target="_blank"
                                                             rel="noreferrer"
@@ -483,10 +479,10 @@ const AdvisorStudentsPage = () => {
                                                             <ExternalLink size={12} />
                                                             READ REPORT DOCUMENT
                                                         </a>
-                                                        
+
                                                         {report.status === 'Pending' && (
                                                             <div className="flex gap-2">
-                                                                <button 
+                                                                <button
                                                                     onClick={() => {
                                                                         const feedback = prompt("Enter revision feedback:");
                                                                         if (feedback) handleReportReview(report._id, 'Revision Required', feedback);
@@ -496,7 +492,7 @@ const AdvisorStudentsPage = () => {
                                                                 >
                                                                     REQUEST REVISION
                                                                 </button>
-                                                                <button 
+                                                                <button
                                                                     onClick={() => handleReportReview(report._id, 'Approved')}
                                                                     disabled={actionLoading}
                                                                     className="px-3 py-1.5 text-[9px] font-black bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition"
@@ -555,7 +551,7 @@ const AdvisorStudentsPage = () => {
                                                             <p className="text-xs text-slate-500 italic">{log.problemsFaced}</p>
                                                         </div>
                                                     )}
-                                                    
+
                                                     <div className="pt-4 border-t border-slate-200">
                                                         {log.comment && log.comment.text ? (
                                                             <div className="flex items-start gap-3 bg-white p-4 rounded-xl border border-slate-100">
@@ -567,15 +563,15 @@ const AdvisorStudentsPage = () => {
                                                             </div>
                                                         ) : (
                                                             <div className="flex gap-2">
-                                                                <input 
-                                                                    type="text" 
+                                                                <input
+                                                                    type="text"
                                                                     placeholder="Add a comment or guidance..."
                                                                     className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs focus:ring-1 focus:ring-dbu-primary outline-none transition"
                                                                     onKeyDown={(e) => {
                                                                         if (e.key === 'Enter') handleLogbookComment(log._id, e.target.value);
                                                                     }}
                                                                 />
-                                                                <button 
+                                                                <button
                                                                     onClick={(e) => {
                                                                         const input = e.currentTarget.previousSibling;
                                                                         handleLogbookComment(log._id, input.value);
@@ -620,14 +616,14 @@ const AdvisorStudentsPage = () => {
                                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{field.label}</label>
                                                         <span className="text-[10px] font-black text-dbu-primary bg-dbu-primary/5 px-2 py-0.5 rounded">WEIGHTED</span>
                                                     </div>
-                                                    <input 
+                                                    <input
                                                         required
-                                                        type="number" 
+                                                        type="number"
                                                         min="0" max="100"
                                                         placeholder="Score / 100"
                                                         className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm font-bold"
                                                         value={grades[field.id]}
-                                                        onChange={(e) => setGrades({...grades, [field.id]: e.target.value})}
+                                                        onChange={(e) => setGrades({ ...grades, [field.id]: e.target.value })}
                                                     />
                                                     <p className="text-[9px] text-slate-400 font-medium italic">{field.hint}</p>
                                                 </div>
@@ -636,12 +632,12 @@ const AdvisorStudentsPage = () => {
 
                                         <div className="space-y-3">
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">University Advisor Summative Comment</label>
-                                            <textarea 
+                                            <textarea
                                                 rows="4"
                                                 className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm font-medium resize-none"
                                                 placeholder="Provide a professional summary of the student's internship progress, strengths, and areas for improvement as a university advisor..."
                                                 value={grades.advisorComment}
-                                                onChange={(e) => setGrades({...grades, advisorComment: e.target.value})}
+                                                onChange={(e) => setGrades({ ...grades, advisorComment: e.target.value })}
                                             ></textarea>
                                         </div>
 
@@ -650,7 +646,7 @@ const AdvisorStudentsPage = () => {
                                                 <div className="w-20 h-20 bg-white/5 rounded-2xl flex flex-col items-center justify-center border border-white/10">
                                                     <p className="text-[8px] font-black uppercase tracking-tighter opacity-40">Total</p>
                                                     <p className="text-3xl font-black">
-                                                        {(Number(grades.companyGrade)*0.3 + Number(grades.documentationGrade)*0.25 + Number(grades.implementationGrade)*0.25 + Number(grades.presentationGrade)*0.2).toFixed(1)}
+                                                        {(Number(grades.companyGrade) * 0.3 + Number(grades.documentationGrade) * 0.25 + Number(grades.implementationGrade) * 0.25 + Number(grades.presentationGrade) * 0.2).toFixed(1)}
                                                     </p>
                                                 </div>
                                                 <div>
@@ -658,7 +654,7 @@ const AdvisorStudentsPage = () => {
                                                     <p className="text-xs text-white/50 max-w-xs">By finalizing, you confirm this grade is an accurate reflection of the student's performance.</p>
                                                 </div>
                                             </div>
-                                            <button 
+                                            <button
                                                 type="submit"
                                                 disabled={actionLoading || selectedInternship.status === 'COMPLETED'}
                                                 className="px-10 py-5 bg-dbu-primary text-white rounded-2xl font-black text-xs tracking-widest hover:bg-dbu-accent transition shadow-lg shadow-dbu-primary/20 flex items-center gap-2 disabled:opacity-50"

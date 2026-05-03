@@ -160,11 +160,11 @@ const ReportsPage = () => {
                                     />
                                     <p className="text-[9px] text-slate-400 ml-1 italic">* Submissions past this date will be flagged as LATE automatically.</p>
                                 </div>
-                                <div 
+                                <div
                                     onClick={() => document.getElementById('reportFile').click()}
                                     className={`p-10 border-2 border-dashed rounded-2xl text-center group transition-all cursor-pointer ${selectedFile ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-slate-50/30 hover:border-dbu-primary'}`}
                                 >
-                                    <input 
+                                    <input
                                         id="reportFile"
                                         type="file"
                                         className="hidden"
@@ -229,8 +229,8 @@ const ReportsPage = () => {
                                                 </h3>
                                             </div>
                                             <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border ${report.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                    report.status === 'Revision Required' ? 'bg-red-50 text-red-600 border-red-100' :
-                                                        'bg-amber-50 text-amber-600 border-amber-100'
+                                                report.status === 'Revision Required' ? 'bg-red-50 text-red-600 border-red-100' :
+                                                    'bg-amber-50 text-amber-600 border-amber-100'
                                                 }`}>
                                                 {report.status}
                                             </div>

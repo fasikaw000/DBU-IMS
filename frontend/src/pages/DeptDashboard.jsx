@@ -255,9 +255,8 @@ const DeptDashboard = () => {
                                             <td className="px-8 py-6">
                                                 <div className="flex flex-col">
                                                     <span className="font-bold text-slate-700 text-sm">{app.company?.name || 'N/A'}</span>
-                                                    <span className={`text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 rounded ${
-                                                        app.status === 'RESUBMITTED' ? 'bg-indigo-100 text-indigo-700' : 'text-dbu-primary bg-dbu-primary/5'
-                                                    }`}>
+                                                    <span className={`text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 rounded ${app.status === 'RESUBMITTED' ? 'bg-indigo-100 text-indigo-700' : 'text-dbu-primary bg-dbu-primary/5'
+                                                        }`}>
                                                         {app.status === 'RESUBMITTED' ? '★ RESUBMITTED' : app.field}
                                                     </span>
                                                 </div>
@@ -317,11 +316,10 @@ const DeptDashboard = () => {
                                             <td className="px-8 py-6 text-[11px] font-mono font-bold text-slate-600">{s.cbeAccount || 'N/A'}</td>
                                             <td className="px-8 py-6 text-[11px] font-bold text-slate-600">{s.phone || 'N/A'}</td>
                                             <td className="px-8 py-6">
-                                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                                                        s.internship?.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${s.internship?.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                                                         s.internship?.status === 'PENDING_APPROVAL' || s.internship?.status === 'RESUBMITTED' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                                                        s.internship?.status === 'REVISION_REQUIRED' ? 'bg-red-50 text-red-600 border-red-100' :
-                                                        'bg-slate-50 text-slate-400 border-slate-100'
+                                                            s.internship?.status === 'REVISION_REQUIRED' ? 'bg-red-50 text-red-600 border-red-100' :
+                                                                'bg-slate-50 text-slate-400 border-slate-100'
                                                     }`}>
                                                     {s.internship?.status || 'NOT APPLIED'}
                                                 </span>
@@ -357,7 +355,7 @@ const DeptDashboard = () => {
                                 <X size={24} />
                             </button>
                         </div>
-                        
+
                         <div className="p-10 space-y-10">
                             <div className="grid grid-cols-2 gap-10">
                                 <section className="space-y-4">
@@ -405,7 +403,7 @@ const DeptDashboard = () => {
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                             {actionType === 'Rejected' ? 'Reason for Rejection' : 'Correction Instructions for Student'}
                                         </label>
-                                        <textarea 
+                                        <textarea
                                             autoFocus
                                             value={revisionReason}
                                             onChange={e => setRevisionReason(e.target.value)}
@@ -413,14 +411,14 @@ const DeptDashboard = () => {
                                             className={`w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 transition-all min-h-[100px] ${actionType === 'Rejected' ? 'focus:ring-red-500' : 'focus:ring-amber-500'}`}
                                         />
                                         <div className="flex gap-3">
-                                            <button 
+                                            <button
                                                 onClick={() => { handleAction(selectedApp._id, actionType, revisionReason); setShowDetails(false); setIsRevising(false); }}
                                                 disabled={!revisionReason.trim()}
                                                 className={`flex-1 py-4 rounded-2xl font-black text-sm text-white transition-all shadow-lg disabled:opacity-50 ${actionType === 'Rejected' ? 'bg-red-600 shadow-red-600/20 hover:bg-red-700' : 'bg-amber-600 shadow-amber-600/20 hover:bg-amber-700'}`}
                                             >
                                                 {actionType === 'Rejected' ? 'Confirm Rejection' : 'Send Correction Request'}
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => setIsRevising(false)}
                                                 className="px-6 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all"
                                             >
@@ -430,19 +428,19 @@ const DeptDashboard = () => {
                                     </div>
                                 ) : (
                                     <div className="flex gap-4">
-                                        <button 
+                                        <button
                                             onClick={() => { handleAction(selectedApp._id, 'Approved'); setShowDetails(false); }}
                                             className="flex-1 bg-emerald-500 text-white py-4 rounded-2xl font-black text-sm hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 uppercase tracking-widest"
                                         >
                                             Approve
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={() => { setActionType('Revision Required'); setIsRevising(true); }}
                                             className="flex-1 bg-amber-500 text-white py-4 rounded-2xl font-black text-sm hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 uppercase tracking-widest"
                                         >
                                             Request Correction
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={() => { setActionType('Rejected'); setIsRevising(true); }}
                                             className="bg-red-50 text-red-500 px-6 py-4 rounded-2xl font-black text-sm hover:bg-red-100 transition-all uppercase tracking-widest"
                                         >

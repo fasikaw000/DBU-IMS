@@ -57,7 +57,7 @@ const AssignmentsPage = () => {
 
             // Point 5: FIX ASSIGNMENTS PAGE - Only show APPROVED (awaiting assignment)
             // UPDATED: Show both assigned and unassigned to allow reassignment
-            const filteredList = list.filter(item => 
+            const filteredList = list.filter(item =>
                 ['Approved', 'APPROVED', 'Active', 'ACTIVE', 'Ongoing', 'ONGOING'].includes(item.status)
             );
 
@@ -174,15 +174,15 @@ const AssignmentsPage = () => {
                                     <p className="text-sm font-black text-slate-700">{w.advisor?.name}</p>
                                     <p className="text-[10px] font-mono text-slate-400">({w.advisor?.username})</p>
                                 </div>
-                                
+
                                 <div className="flex-1 space-y-2">
                                     <div className="flex justify-between items-end">
                                         <span className="text-[10px] font-black text-slate-400 uppercase">Capacity Usage</span>
                                         <span className="text-xs font-black text-slate-700">{w.count} / {MAX_WORKLOAD}</span>
                                     </div>
                                     <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
-                                        <div 
-                                            className={`h-full ${statusColor} transition-all duration-1000 ease-out`} 
+                                        <div
+                                            className={`h-full ${statusColor} transition-all duration-1000 ease-out`}
                                             style={{ width: `${Math.min(100, percentage)}%` }}
                                         />
                                     </div>
@@ -297,8 +297,8 @@ const AssignmentsPage = () => {
                                                 >
                                                     <option value="" disabled>Select University Advisor</option>
                                                     {advisorsWorkload.map(w => (
-                                                        <option 
-                                                            key={w.advisor?._id} 
+                                                        <option
+                                                            key={w.advisor?._id}
                                                             value={w.advisor?._id}
                                                             disabled={w.count >= MAX_WORKLOAD && item.assignedAdvisorId !== w.advisor?._id}
                                                         >

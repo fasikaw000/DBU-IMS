@@ -11,12 +11,12 @@ export const submitLogbook = async (req, res) => {
 
     const student = await Student.findOne({ user: req.user.id });
     if (!student) {
-        return res.status(404).json({ success: false, message: 'Student record not found' });
+      return res.status(404).json({ success: false, message: 'Student record not found' });
     }
 
     const internship = await Internship.findOne({ student: student._id });
     if (!internship) {
-        return res.status(404).json({ success: false, message: 'Active internship not found' });
+      return res.status(404).json({ success: false, message: 'Active internship not found' });
     }
 
     const logbook = await Logbook.create({
@@ -65,15 +65,15 @@ export const getAssignedStudentLogbooks = async (req, res) => {
     const internshipIds = internships.map(i => i._id);
 
     let query = { internship: { $in: internshipIds } };
-    
+
     if (studentId) {
-        query.student = studentId;
+      query.student = studentId;
     }
 
     const logbooks = await Logbook.find(query)
       .populate({
-          path: 'student',
-          populate: { path: 'user', select: 'name email' }
+        path: 'student',
+        populate: { path: 'user', select: 'name email' }
       })
       .sort({ date: -1 });
 

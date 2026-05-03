@@ -85,13 +85,13 @@ const Profile = () => {
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     setErrors({});
-    
+
     // Validation
     let newErrors = {};
     if (!fullName.trim()) newErrors.fullName = "Please fill out all required fields";
     if (!email.trim()) newErrors.email = "Please fill out all required fields";
     if (!phone.trim()) newErrors.phone = "Please fill out all required fields";
-    
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       setError("Please fill out all required fields");
@@ -108,17 +108,17 @@ const Profile = () => {
         phone,
         cbeAccount: user?.role === 'Student' ? cbeAccount : undefined
       });
-      
+
       // Critical Fix: Fetch current user to ensure UI reflects changes instantly
       const updatedUserRes = await api.get('/users/me');
       if (updatedUserRes?.data) {
         setUser(updatedUserRes.data);
         if (updatedUserRes.data.studentProfile) {
-            setStudentProfile(updatedUserRes.data.studentProfile);
-            setCbeAccount(updatedUserRes.data.studentProfile.cbeAccount || '');
+          setStudentProfile(updatedUserRes.data.studentProfile);
+          setCbeAccount(updatedUserRes.data.studentProfile.cbeAccount || '');
         }
       }
-      
+
       setMessage('Profile updated successfully');
     } catch (err) {
       setError(err.message || 'Failed to update profile');
@@ -292,13 +292,13 @@ const Profile = () => {
                   {errors.phone && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.phone}</p>}
                 </div>
 
-                 {user?.role === 'Student' && (
+                {user?.role === 'Student' && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between ml-1">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CBE Account Number</label>
-                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${cbeAccount ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
-                            {cbeAccount ? 'Completed' : 'Not Linked'}
-                        </span>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CBE Account Number</label>
+                      <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${cbeAccount ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                        {cbeAccount ? 'Completed' : 'Not Linked'}
+                      </span>
                     </div>
                     <div className="relative">
                       <Landmark className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -314,7 +314,7 @@ const Profile = () => {
                 )}
               </div>
 
-               <div className="pt-4 flex gap-4">
+              <div className="pt-4 flex gap-4">
                 <button
                   type="submit"
                   disabled={saving}

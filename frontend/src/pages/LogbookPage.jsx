@@ -24,14 +24,14 @@ const LogbookPage = () => {
     const { user } = useContext(AuthContext);
     const [searchParams] = useSearchParams();
     const targetStudentId = searchParams.get('studentId'); // For Advisor view
-    
+
     const [logbooks, setLogbooks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [message, setMessage] = useState(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [expandedId, setExpandedId] = useState(null);
-    
+
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
         activity: '',
@@ -153,7 +153,7 @@ const LogbookPage = () => {
                 ) : (
                     logbooks.map((log) => (
                         <div key={log._id} className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                            <div 
+                            <div
                                 className="p-6 cursor-pointer flex items-center justify-between"
                                 onClick={() => setExpandedId(expandedId === log._id ? null : log._id)}
                             >
@@ -227,14 +227,14 @@ const LogbookPage = () => {
                                                 </div>
                                             ) : user?.role === 'Advisor' ? (
                                                 <div className="space-y-3">
-                                                    <textarea 
+                                                    <textarea
                                                         placeholder="Add a comment or guidance for this entry..."
                                                         className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all resize-none"
                                                         rows="3"
                                                         value={commentText}
                                                         onChange={(e) => setCommentText(e.target.value)}
                                                     ></textarea>
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleAddComment(log._id)}
                                                         className="w-full py-3 bg-dbu-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-dbu-primary/20 hover:bg-dbu-accent transition-all flex items-center justify-center gap-2"
                                                     >

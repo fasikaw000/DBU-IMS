@@ -592,8 +592,10 @@ export const seedStudentIds = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 export const bulkUploadStudents = async (req, res, next) => {
   try {
+    const errors = [];
+
     if (!req.file?.buffer) {
-      return res.status(400).json({ success: false, message: 'Please upload a CSV or Excel file.' });
+      return res.status(400).json({ success: false, message: 'Please select a file first.' });
     }
 
     const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
@@ -604,20 +606,56 @@ export const bulkUploadStudents = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Uploaded file is empty.' });
     }
 
-    // Pass 1: Strict Validation
-    const validationErrors = [];
-    const seenStudentIds = new Set();
+    // Pass 1: Validation
     const requiredCols = ['Full Name', 'Student ID', 'Department', 'Year'];
-
-    // Check headers (using first row as proxy)
     const sampleRow = rows[0];
     const missingCols = requiredCols.filter(col => !Object.keys(sampleRow).some(k => k.toLowerCase() === col.toLowerCase()));
+
     if (missingCols.length > 0) {
       return res.status(400).json({
         success: false,
-        message: `Missing required columns: ${missingCols.join(', ')}`
+        message: `Upload failed. Missing required columns: ${missingCols.join(', ')}`
       });
     }
+
+    const seenStudentIds = new Set();
+    for (let index = 0; index < rows.length; index += 1) {
+      const row = rows[index];
+      const rowNo = index + 2;
+
+      const name = String(row['Full Name'] || row.Name || row.name || '').trim();
+      const studentId = String(row['Student ID'] || row.studentId || row.student_id || '').trim().toUpperCase();
+      const departmentValue = String(row.Department || row.department || '').trim();
+      const year = String(row.Year || row.year || '').trim();
+
+      if (!name) errors.push(`Full Name is required (row ${rowNo})`);
+      if (!studentId) {
+        errors.push(`Student ID is required (row ${rowNo})`);
+      } else {
+        if (!/^DBU\d{7}$/.test(studentId)) {
+          errors.push(`Invalid Student ID format: ${studentId} (row ${rowNo})`);
+        }
+        if (seenStudentIds.has(studentId)) {
+          errors.push(`Student ID '${studentId}' already exists (row ${rowNo})`);
+        }
+        seenStudentIds.add(studentId);
+      }
+
+      if (!departmentValue) errors.push(`Department is required (row ${rowNo})`);
+      if (!year) errors.push(`Year is required (row ${rowNo})`);
+    }
+
+    if (errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Upload failed. Please fix the following:',
+        errors
+      });
+    }
+
+    // Pass 2: Processing
+    const created = [];
+    const processingErrors = [];
 
     for (let index = 0; index < rows.length; index += 1) {
       const row = rows[index];
@@ -628,72 +666,22 @@ export const bulkUploadStudents = async (req, res, next) => {
       const departmentValue = String(row.Department || row.department || '').trim();
       const year = String(row.Year || row.year || '').trim();
 
-      if (!name) validationErrors.push(`Full Name is required (row ${rowNo})`);
-      if (!studentId) validationErrors.push(`Student ID is required (row ${rowNo})`);
-      if (!departmentValue) validationErrors.push(`Department is required (row ${rowNo})`);
-      if (!year) validationErrors.push(`Year is required (row ${rowNo})`);
-
-      if (studentId && !/^DBU\d{7}$/.test(studentId)) {
-        validationErrors.push(`Invalid Student ID format: ${studentId} (row ${rowNo})`);
-      }
-
-      if (studentId && seenStudentIds.has(studentId)) {
-        validationErrors.push(`Duplicate Student ID in file: ${studentId} (row ${rowNo})`);
-      }
-      seenStudentIds.add(studentId);
-    }
-
-    if (validationErrors.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed. No data was processed.',
-        errors: validationErrors
-      });
-    }
-
-    // Pass 2: DB Checks & Processing
-    const processingErrors = [];
-    const created = [];
-
-    for (let index = 0; index < rows.length; index += 1) {
-      const row = rows[index];
-      const rowNo = index + 2; // header row is 1
-
-      const name = String(row['Full Name'] || row.Name || row.name || '').trim();
-      const studentId = String(row['Student ID'] || row.studentId || row.student_id || '').trim().toUpperCase();
-      const departmentValue = String(row.Department || row.department || '').trim();
-      const year = String(row.Year || row.year || '').trim();
-
-      if (!name || !studentId || !departmentValue || !year) {
-        errors.push({ row: rowNo, message: 'Name, Student ID, Department, and Year are required.' });
-        continue;
-      }
-      if (!/^DBU\d{7}$/.test(studentId)) {
-        errors.push({ row: rowNo, message: 'Student ID must be in format DBU1234567.' });
-        continue;
-      }
-      if (seenStudentIds.has(studentId)) {
-        errors.push({ row: rowNo, message: 'Duplicate Student ID in upload file.' });
-        continue;
-      }
-      seenStudentIds.add(studentId);
-
       const existingStudent = await Student.findOne({ studentId });
       if (existingStudent) {
-        errors.push({ row: rowNo, message: 'Student ID already exists.' });
+        processingErrors.push(`Student ID '${studentId}' already exists (row ${rowNo})`);
         continue;
       }
 
       const department = await Department.findOne({
         $or: [
           { _id: mongoose.Types.ObjectId.isValid(departmentValue) ? departmentValue : null },
-          { code: departmentValue },
-          { name: departmentValue }
+          { code: { $regex: new RegExp(`^${departmentValue}$`, 'i') } },
+          { name: { $regex: new RegExp(`^${departmentValue}$`, 'i') } }
         ]
       });
 
       if (!department) {
-        errors.push({ row: rowNo, message: `Department "${departmentValue}" not found.` });
+        processingErrors.push(`Department '${departmentValue}' does not exist (row ${rowNo})`);
         continue;
       }
 
@@ -703,7 +691,7 @@ export const bulkUploadStudents = async (req, res, next) => {
           name,
           username,
           department: department._id,
-          role: 'student',
+          role: 'Student',
           isActivated: false,
           activationStatus: 'Pending',
           isActive: true
@@ -717,7 +705,6 @@ export const bulkUploadStudents = async (req, res, next) => {
           year
         });
 
-        // Sync ValidStudentId
         await ValidStudentId.findOneAndUpdate(
           { studentId },
           { isRegistered: true },
@@ -726,30 +713,39 @@ export const bulkUploadStudents = async (req, res, next) => {
 
         created.push({ row: rowNo, name, studentId, username, year });
       } catch (error) {
-        processingErrors.push(`Row ${rowNo}: ${error.message || 'Failed to create student.'}`);
+        if (error.code === 11000) {
+          if (error.keyPattern && error.keyPattern.username) {
+            processingErrors.push(`Username already exists (row ${rowNo})`);
+          } else {
+            processingErrors.push(`Duplicate record found (row ${rowNo})`);
+          }
+        } else {
+          processingErrors.push(`Row ${rowNo} failed to process`);
+        }
       }
     }
 
     if (processingErrors.length > 0 && created.length === 0) {
-      return res.status(400).json({ success: false, message: 'Processing failed.', errors: processingErrors });
+      return res.status(400).json({
+        success: false,
+        message: 'Upload failed. Please fix the following:',
+        errors: processingErrors
+      });
     }
 
     await AuditLog.create({
       user: req.user.id,
       action: 'bulk_students_uploaded',
-      details: `Bulk upload completed. Created: ${created.length}, Failed: ${errors.length}`,
+      details: `Bulk upload completed. Created: ${created.length}, Failed: ${processingErrors.length}`,
       ip: req.ip
     });
 
     res.status(201).json({
       success: true,
-      message: `Upload completed successfully. Created ${created.length} students.`,
-      data: {
-        createdCount: created.length,
-        failedCount: processingErrors.length,
-        created,
-        errors: processingErrors
-      }
+      message: 'Students uploaded successfully.',
+      createdCount: created.length,
+      failedCount: processingErrors.length,
+      errors: processingErrors
     });
   } catch (error) {
     next(error);
@@ -763,8 +759,10 @@ export const bulkUploadStudents = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 export const bulkUploadStaff = async (req, res, next) => {
   try {
+    const errors = [];
+
     if (!req.file?.buffer) {
-      return res.status(400).json({ success: false, message: 'Please upload a CSV or Excel file.' });
+      return res.status(400).json({ success: false, message: 'Please select a file first.' });
     }
 
     const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
@@ -775,16 +773,15 @@ export const bulkUploadStaff = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Uploaded file is empty.' });
     }
 
-    // Pass 1: Strict Validation
-    const validationErrors = [];
+    // Pass 1: Validation
     const requiredCols = ['Full Name', 'Department', 'Role'];
-
     const sampleRow = rows[0];
     const missingCols = requiredCols.filter(col => !Object.keys(sampleRow).some(k => k.toLowerCase() === col.toLowerCase()));
+
     if (missingCols.length > 0) {
       return res.status(400).json({
         success: false,
-        message: `Missing required columns: ${missingCols.join(', ')}`
+        message: `Upload failed. Missing required columns: ${missingCols.join(', ')}`
       });
     }
 
@@ -796,28 +793,30 @@ export const bulkUploadStaff = async (req, res, next) => {
       const departmentValue = String(row.Department || row.department || '').trim();
       const roleRaw = String(row.Role || row.role || '').trim();
 
-      if (!name) validationErrors.push(`Full Name is required (row ${rowNo})`);
-      if (!departmentValue) validationErrors.push(`Department is required (row ${rowNo})`);
-      if (!roleRaw) validationErrors.push(`Role is required (row ${rowNo})`);
+      if (!name) errors.push(`Full Name is required (row ${rowNo})`);
+      if (!departmentValue) errors.push(`Department is required (row ${rowNo})`);
 
-      if (roleRaw) {
+      if (!roleRaw) {
+        errors.push(`Role is required (row ${rowNo})`);
+      } else {
         const role = normalizeRole(roleRaw);
         if (role === 'Admin') {
-          validationErrors.push(`Admin role cannot be assigned via bulk upload (row ${rowNo})`);
+          errors.push(`Invalid role 'Admin' (row ${rowNo}). Allowed roles: Advisor, Dean`);
         } else if (!['Advisor', 'Dean'].includes(role)) {
-          validationErrors.push(`Invalid role: ${roleRaw} (row ${rowNo}). Use Advisor or Dean.`);
+          errors.push(`Invalid role '${roleRaw}' (row ${rowNo}). Allowed roles: Advisor, Dean`);
         }
       }
     }
 
-    if (validationErrors.length > 0) {
+    if (errors.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'Validation failed. No data was processed.',
-        errors: validationErrors
+        message: 'Upload failed. Please fix the following:',
+        errors
       });
     }
 
+    // Pass 2: Processing
     const created = [];
     const processingErrors = [];
 
@@ -827,29 +826,19 @@ export const bulkUploadStaff = async (req, res, next) => {
 
       const name = String(row['Full Name'] || row.Name || row.name || '').trim();
       const departmentValue = String(row.Department || row.department || '').trim();
-      const roleRaw = String(row.Role || row.role || '').trim().toLowerCase();
-
-      if (!name || !departmentValue || !roleRaw) {
-        errors.push({ row: rowNo, message: 'Full Name, Department, and Role are required.' });
-        continue;
-      }
+      const roleRaw = String(row.Role || row.role || '').trim();
 
       const role = normalizeRole(roleRaw);
-      if (role === 'Admin' || !['Advisor', 'Dean'].includes(role)) {
-        processingErrors.push(`Row ${rowNo}: Invalid or restricted role.`);
-        continue;
-      }
-
       const department = await Department.findOne({
         $or: [
           { _id: mongoose.Types.ObjectId.isValid(departmentValue) ? departmentValue : null },
-          { code: departmentValue },
-          { name: departmentValue }
+          { code: { $regex: new RegExp(`^${departmentValue}$`, 'i') } },
+          { name: { $regex: new RegExp(`^${departmentValue}$`, 'i') } }
         ]
       });
 
       if (!department) {
-        errors.push({ row: rowNo, message: `Department "${departmentValue}" not found.` });
+        processingErrors.push(`Department '${departmentValue}' does not exist (row ${rowNo})`);
         continue;
       }
 
@@ -859,7 +848,7 @@ export const bulkUploadStaff = async (req, res, next) => {
           name,
           username,
           department: department._id,
-          role,
+          role: role, // Canonical role from normalizeRole (Advisor/Dean)
           isActivated: false,
           activationStatus: 'Pending',
           isActive: true
@@ -870,31 +859,44 @@ export const bulkUploadStaff = async (req, res, next) => {
           username,
           fullName: name,
           department: department._id,
-          role: role === 'Dean' ? 'dean' : 'advisor'
+          role: role.toLowerCase() // 'dean' or 'advisor'
         });
 
         created.push({ row: rowNo, name, username, role });
       } catch (error) {
-        processingErrors.push(`Row ${rowNo}: ${error.message || 'Failed to create staff member.'}`);
+        if (error.code === 11000) {
+          if (error.keyPattern && error.keyPattern.username) {
+            processingErrors.push(`Username already exists (row ${rowNo})`);
+          } else {
+            processingErrors.push(`Duplicate record found (row ${rowNo})`);
+          }
+        } else {
+          processingErrors.push(`Row ${rowNo} failed to process`);
+        }
       }
+    }
+
+    if (processingErrors.length > 0 && created.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Upload failed. Please fix the following:',
+        errors: processingErrors
+      });
     }
 
     await AuditLog.create({
       user: req.user.id,
       action: 'bulk_staff_uploaded',
-      details: `Bulk staff upload completed. Created: ${created.length}, Failed: ${errors.length}`,
+      details: `Bulk staff upload completed. Created: ${created.length}, Failed: ${processingErrors.length}`,
       ip: req.ip
     });
 
     res.status(201).json({
       success: true,
-      message: `Bulk staff upload completed. Created ${created.length} staff member(s).`,
-      data: {
-        createdCount: created.length,
-        failedCount: errors.length,
-        created,
-        errors
-      }
+      message: 'Staff uploaded successfully.',
+      createdCount: created.length,
+      failedCount: processingErrors.length,
+      errors: processingErrors
     });
   } catch (error) {
     next(error);

@@ -173,6 +173,13 @@ const AdminStaff = () => {
             return;
         }
 
+        const fileExt = uploadFile.name.split('.').pop().toLowerCase();
+        if (!['csv', 'xlsx', 'xls'].includes(fileExt)) {
+            setMessageType('error');
+            setMessage('Invalid file format. Please upload a CSV file.');
+            return;
+        }
+
         setActionLoading(true);
         setMessage('');
         try {
@@ -192,7 +199,7 @@ const AdminStaff = () => {
             const detailErrors = err.response?.data?.errors;
 
             if (Array.isArray(detailErrors) && detailErrors.length > 0) {
-                setMessage(`${errorMsg}\n${detailErrors.slice(0, 5).join('\n')}${detailErrors.length > 5 ? '\n...' : ''}`);
+                setMessage(`${errorMsg}\n• ${detailErrors.slice(0, 5).join('\n• ')}${detailErrors.length > 5 ? '\n...' : ''}`);
             } else {
                 setMessage(errorMsg.replace(/^Failed: /i, ''));
             }

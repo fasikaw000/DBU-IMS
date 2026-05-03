@@ -51,46 +51,46 @@ const ForgotPassword = () => {
               </div>
             </div>
           )}
-          
+
           <form className="space-y-6" onSubmit={handleSubmit}>
-              {error && (
-                <div className="bg-red-50 border-l-4 border-red-400 p-4">
-                  <div className="flex items-center">
-                    <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
-                    <p className="text-sm text-red-700">{error}</p>
-                  </div>
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-400 p-4">
+                <div className="flex items-center">
+                  <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
+                  <p className="text-sm text-red-700">{error}</p>
                 </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Username</label>
-                <input
-                  type="text"
-                  required
-                  className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary text-sm"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value.toUpperCase())}
-                  placeholder="Enter your username"
-                />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Email</label>
-                <input
-                  type="email"
-                  required
-                  className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary text-sm"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your registered email"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-dbu-primary hover:bg-dbu-accent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-dbu-primary transition-colors disabled:opacity-50"
-              >
-                {loading ? 'Sending...' : <><Mail className="w-5 h-5 mr-2" />Send Reset Link</>}
-              </button>
-            </form>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Username</label>
+              <input
+                type="text"
+                required
+                className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary text-sm"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toUpperCase())}
+                placeholder="Enter your username"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Email</label>
+              <input
+                type="email"
+                required
+                className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-dbu-primary focus:border-dbu-primary text-sm"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your registered email"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-dbu-primary hover:bg-dbu-accent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-dbu-primary transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Sending...' : <><Mail className="w-5 h-5 mr-2" />Send Reset Link</>}
+            </button>
+          </form>
           <div className="mt-6 text-center">
             <Link to="/login" className="text-dbu-primary hover:text-dbu-accent text-sm font-medium flex items-center justify-center">
               <ArrowLeft className="w-4 h-4 mr-1" /> Back to Sign In

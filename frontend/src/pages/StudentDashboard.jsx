@@ -88,7 +88,7 @@ const StudentDashboard = () => {
         // Validation
         let newErrors = {};
         const required = ['companyName', 'country', 'city', 'field', 'startDate', 'endDate', 'companySupervisorName', 'companySupervisorPhone', 'companySupervisorEmail'];
-        
+
         required.forEach(field => {
             if (!applyData[field]) {
                 const label = field.replace(/([A-Z])/g, ' $1').toLowerCase();
@@ -246,16 +246,16 @@ const StudentDashboard = () => {
                                 <div className="space-y-4">
                                     <div className="space-y-3">
                                         <label className="text-[9px] font-black text-slate-400 uppercase ml-2">Company Name</label>
-                                        
+
                                         <div className="flex bg-slate-100 p-1 rounded-xl mb-2">
-                                            <button 
+                                            <button
                                                 type="button"
                                                 onClick={() => setCompanyInputMode('select')}
                                                 className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${companyInputMode === 'select' ? 'bg-white text-dbu-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                                             >
                                                 Select Existing
                                             </button>
-                                            <button 
+                                            <button
                                                 type="button"
                                                 onClick={() => setCompanyInputMode('manual')}
                                                 className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${companyInputMode === 'manual' ? 'bg-white text-dbu-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
@@ -271,9 +271,9 @@ const StudentDashboard = () => {
                                                 onChange={e => {
                                                     const selected = companies.find(c => c.name === e.target.value);
                                                     if (selected) {
-                                                        setApplyData({ 
-                                                            ...applyData, 
-                                                            companyName: selected.name, 
+                                                        setApplyData({
+                                                            ...applyData,
+                                                            companyName: selected.name,
                                                             country: selected.country || 'Ethiopia',
                                                             city: selected.city || '',
                                                             subcity: selected.subcity || ''
@@ -416,33 +416,30 @@ const StudentDashboard = () => {
                                 </div>
                             ) : (
                                 <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                                    <div className={`p-8 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
-                                        status === 'REVISION_REQUIRED' || status === 'REJECTED' 
-                                        ? 'bg-red-50/50 border-red-100' 
-                                        : 'bg-amber-50/50 border-amber-100'
-                                    }`}>
+                                    <div className={`p-8 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${status === 'REVISION_REQUIRED' || status === 'REJECTED'
+                                            ? 'bg-red-50/50 border-red-100'
+                                            : 'bg-amber-50/50 border-amber-100'
+                                        }`}>
                                         <div>
-                                            <h2 className={`text-xl font-black ${
-                                                status === 'REVISION_REQUIRED' || status === 'REJECTED' 
-                                                ? 'text-red-800' 
-                                                : 'text-slate-800'
-                                            }`}>
-                                                {status === 'REVISION_REQUIRED' 
-                                                    ? 'Action Required' 
+                                            <h2 className={`text-xl font-black ${status === 'REVISION_REQUIRED' || status === 'REJECTED'
+                                                    ? 'text-red-800'
+                                                    : 'text-slate-800'
+                                                }`}>
+                                                {status === 'REVISION_REQUIRED'
+                                                    ? 'Action Required'
                                                     : status === 'REJECTED'
-                                                    ? 'Application Rejected'
-                                                    : 'Application Pending Review'}
+                                                        ? 'Application Rejected'
+                                                        : 'Application Pending Review'}
                                             </h2>
-                                            <p className={`text-xs font-bold mt-1 ${
-                                                status === 'REVISION_REQUIRED' || status === 'REJECTED' 
-                                                ? 'text-red-600' 
-                                                : 'text-slate-500'
-                                            }`}>
-                                                {status === 'REVISION_REQUIRED' 
-                                                    ? 'The Dean has requested some changes to your application.' 
+                                            <p className={`text-xs font-bold mt-1 ${status === 'REVISION_REQUIRED' || status === 'REJECTED'
+                                                    ? 'text-red-600'
+                                                    : 'text-slate-500'
+                                                }`}>
+                                                {status === 'REVISION_REQUIRED'
+                                                    ? 'The Dean has requested some changes to your application.'
                                                     : status === 'REJECTED'
-                                                    ? 'Your application was rejected. You can edit your details to resubmit or find a different company.'
-                                                    : 'Your application is awaiting review by the Department Dean. You can still edit your details.'}
+                                                        ? 'Your application was rejected. You can edit your details to resubmit or find a different company.'
+                                                        : 'Your application is awaiting review by the Department Dean. You can still edit your details.'}
                                             </p>
                                         </div>
                                         {['PENDING', 'PENDING_APPROVAL', 'Pending', 'RESUBMITTED', 'REVISION_REQUIRED', 'REJECTED'].includes(status) && (
@@ -464,11 +461,10 @@ const StudentDashboard = () => {
                                                     }
                                                     setShowApply(true);
                                                 }}
-                                                className={`px-5 py-2.5 bg-white border rounded-xl font-black text-[10px] tracking-widest transition flex items-center gap-2 shadow-sm ${
-                                                    status === 'REVISION_REQUIRED' || status === 'REJECTED'
-                                                    ? 'border-red-200 text-red-600 hover:bg-red-50' 
-                                                    : 'border-amber-200 text-amber-600 hover:bg-amber-50'
-                                                }`}
+                                                className={`px-5 py-2.5 bg-white border rounded-xl font-black text-[10px] tracking-widest transition flex items-center gap-2 shadow-sm ${status === 'REVISION_REQUIRED' || status === 'REJECTED'
+                                                        ? 'border-red-200 text-red-600 hover:bg-red-50'
+                                                        : 'border-amber-200 text-amber-600 hover:bg-amber-50'
+                                                    }`}
                                             >
                                                 <Edit3 size={14} />
                                                 EDIT DETAILS
@@ -508,7 +504,7 @@ const StudentDashboard = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         <div className="space-y-5">
                                             <h3 className="text-[10px] font-black text-dbu-primary uppercase tracking-widest border-b border-slate-100 pb-2 flex items-center gap-2">
                                                 <User size={14} /> Company Supervisor Contact

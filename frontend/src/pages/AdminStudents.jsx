@@ -328,6 +328,13 @@ const AdminStudents = () => {
         setMessage('Please select a file first.');
         return;
       }
+      
+      const fileExt = uploadFile.name.split('.').pop().toLowerCase();
+      if (!['csv', 'xlsx', 'xls'].includes(fileExt)) {
+        setMessageType('error');
+        setMessage('Invalid file format. Please upload a CSV file.');
+        return;
+      }
       const formData = new FormData();
       formData.append('file', uploadFile);
       const res = await api.post('/admin/students/bulk-upload', formData, {
@@ -344,7 +351,7 @@ const AdminStudents = () => {
       const detailErrors = err.response?.data?.errors;
 
       if (Array.isArray(detailErrors) && detailErrors.length > 0) {
-        setMessage(`${errorMsg}\n${detailErrors.slice(0, 5).join('\n')}${detailErrors.length > 5 ? '\n...' : ''}`);
+        setMessage(`${errorMsg}\n• ${detailErrors.slice(0, 5).join('\n• ')}${detailErrors.length > 5 ? '\n...' : ''}`);
       } else {
         setMessage(errorMsg.replace(/^Failed: /i, ''));
       }
@@ -467,8 +474,8 @@ const AdminStudents = () => {
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full w-fit ${student.internshipStatus === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600' :
-                            student.internshipStatus === 'NOT_APPLIED' ? 'bg-slate-50 text-slate-400' :
-                              'bg-blue-50 text-blue-600'
+                          student.internshipStatus === 'NOT_APPLIED' ? 'bg-slate-50 text-slate-400' :
+                            'bg-blue-50 text-blue-600'
                           }`}>
                           {student.internshipStatus.replace('_', ' ')}
                         </span>

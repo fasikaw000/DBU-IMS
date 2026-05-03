@@ -82,7 +82,7 @@ export const submitReport = async (req, res, next) => {
     let version = 1;
     if (existingReports.length > 0) {
       version = existingReports.length + 1;
-      await Report.updateMany({ student: student._id, type }, { $set: { isLatest: false }});
+      await Report.updateMany({ student: student._id, type }, { $set: { isLatest: false } });
     }
 
     const report = await Report.create({
@@ -90,7 +90,7 @@ export const submitReport = async (req, res, next) => {
       internship: internship._id,
       type,
       fileUrl,
-      dueDate, 
+      dueDate,
       version,
       isLatest: true,
       status: 'Pending'
@@ -126,9 +126,9 @@ export const getMyLogbooks = async (req, res, next) => {
 
     const total = await Logbook.countDocuments({ student: student._id });
     const logbooks = await Logbook.find({ student: student._id })
-        .sort({ date: -1 })
-        .skip(startIndex)
-        .limit(limit);
+      .sort({ date: -1 })
+      .skip(startIndex)
+      .limit(limit);
 
     res.status(200).json({ success: true, message: 'Logbooks retrieved', data: { count: logbooks.length, total, page, logbooks } });
   } catch (err) { next(err); }

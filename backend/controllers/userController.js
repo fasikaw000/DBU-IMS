@@ -121,7 +121,7 @@ export const updateMe = async (req, res, next) => {
             studentProfile.cbeAccount = undefined;
           }
         }
-        
+
         await studentProfile.save();
       }
     }
@@ -299,7 +299,7 @@ export const changeMyPassword = async (req, res, next) => {
     if (!isMatch) {
       return res.status(400).json({ success: false, message: 'Current password is incorrect' });
     }
-    
+
     const isPrev = await user.isPreviousPassword(newPassword);
     if (isPrev) {
       return res.status(400).json({ success: false, message: 'You cannot reuse a previously used password. Please choose a new password.' });
@@ -326,7 +326,7 @@ export const getRecentActivity = async (req, res, next) => {
     const role = normalizeRole(req.user.role);
     let query = {};
     let limit = 3;
-    
+
     // We dynamically load models needed for scoping
     const User = (await import('../models/User.js')).default;
     const Student = (await import('../models/Student.js')).default;
@@ -342,7 +342,7 @@ export const getRecentActivity = async (req, res, next) => {
         'broadcast_message_sent', 'communication_sent'
       ];
       query = { action: { $in: allowedActions } };
-    } 
+    }
     else if (role === 'Dean') {
       // Find all users in the dean's department
       const currentUser = await User.findById(req.user.id);
@@ -355,11 +355,11 @@ export const getRecentActivity = async (req, res, next) => {
         'advisor_assigned', 'communication_sent'
       ];
 
-      query = { 
+      query = {
         user: { $in: deptUserIds },
-        action: { $in: allowedActions } 
+        action: { $in: allowedActions }
       };
-    } 
+    }
     else if (role === 'Advisor') {
       // Find students assigned to this advisor
       const internships = await Internship.find({ advisor_id: req.user.id });
@@ -368,8 +368,8 @@ export const getRecentActivity = async (req, res, next) => {
       const studentUserIds = students.map(s => s.user);
 
       const allowedActions = [
-        'advisor_assigned', 
-        'report_submitted', 
+        'advisor_assigned',
+        'report_submitted',
         'message_sent', 'new_message', 'message_received'
       ];
 
@@ -380,18 +380,18 @@ export const getRecentActivity = async (req, res, next) => {
         ],
         action: { $in: allowedActions }
       };
-    } 
+    }
     else if (role === 'Student') {
       const allowedActions = [
         'internship_application_submitted', 'internship_pending_approval',
-        'advisor_assigned', 
-        'report_submitted', 
+        'advisor_assigned',
+        'report_submitted',
         'profile_updated', 'cbe_account_added', 'cbe_account_updated'
       ];
 
       const student = await Student.findOne({ user: req.user.id });
       const internship = student ? await Internship.findOne({ student: student._id }) : null;
-      
+
       query = {
         $or: [
           { user: req.user.id },
@@ -399,12 +399,12 @@ export const getRecentActivity = async (req, res, next) => {
         ],
         action: { $in: allowedActions }
       };
-    } 
+    }
     else {
       // Fallback for any other role
-      query = { 
+      query = {
         user: req.user.id,
-        action: { $ne: 'login' } 
+        action: { $ne: 'login' }
       };
     }
 
@@ -417,14 +417,14 @@ export const getRecentActivity = async (req, res, next) => {
       const { action, details } = log;
       switch (action) {
         case 'profile_updated': return 'Profile updated successfully';
-        case 'cbe_account_added': 
+        case 'cbe_account_added':
         case 'cbe_account_updated': return 'Profile updated (CBE account)';
         case 'report_submitted': return 'Report uploaded successfully';
         case 'internship_pending_approval':
         case 'internship_application_submitted': return 'Internship application submitted';
         case 'internship_approved': return 'Internship application approved';
         case 'internship_rejected': return 'Internship application rejected';
-        case 'advisor_assigned': 
+        case 'advisor_assigned':
           if (role === 'Student') return 'Advisor assigned to you';
           return 'Advisor assigned';
         case 'user_created':

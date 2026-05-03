@@ -30,7 +30,7 @@ export const getDepartmentStudents = async (req, res, next) => {
     const allDeptIds = similarDepts.map(d => d._id);
 
     // Find student user IDs in these departments
-    const studentUsers = await User.find({ 
+    const studentUsers = await User.find({
       department: { $in: allDeptIds },
       role: { $regex: /^student$/i }
     }).select('_id');
@@ -52,7 +52,7 @@ export const getDepartmentStudents = async (req, res, next) => {
       try {
         const internship = await Internship.findOne({ student: s._id })
           .populate('company', 'name');
-        
+
         return {
           _id: s._id,
           userId: s.user?._id,
