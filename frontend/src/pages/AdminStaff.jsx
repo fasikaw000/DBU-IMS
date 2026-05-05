@@ -433,8 +433,9 @@ const AdminStaff = () => {
                                         <td className="px-6 py-4 text-sm text-slate-600 font-medium">{staff.department?.code || 'Central'}</td>
                                         <td className="px-6 py-4 text-sm font-mono text-slate-600">{staff.username}</td>
                                         <td className="px-6 py-4">
-                                            <span className={`text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded ${staff.role === 'dean' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
-                                                {staff.role}
+                                            <span className={`text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded ${staff.role === 'department_dean' || staff.role === 'dean' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
+                                                {staff.role === 'advisor' || staff.role === 'Advisor' ? 'Faculty Advisor' : 
+                                                 staff.role === 'department_dean' || staff.role === 'dean' || staff.role === 'Dean' ? 'Department Dean' : staff.role}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-center">
@@ -568,7 +569,7 @@ const AdminStaff = () => {
                                         className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all ${errors.role ? 'border-red-500' : 'border-slate-200'}`}
                                     >
                                         <option value="" disabled>Select role</option>
-                                        <option value="Advisor">Advisor</option>
+                                        <option value="Advisor">Faculty Advisor</option>
                                         <option value="Dean">Department Dean</option>
                                     </select>
                                     {errors.role && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.role}</p>}
@@ -634,7 +635,7 @@ const AdminStaff = () => {
                                             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all"
                                             required
                                         >
-                                            <option value="advisor">University Advisor</option>
+                                            <option value="advisor">Faculty Advisor</option>
                                             <option value="department_dean">Department Dean</option>
                                         </select>
                                     </div>

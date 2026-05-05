@@ -156,17 +156,18 @@ export const createStudent = async (req, res, next) => {
     // Generate unique DBU username
     const username = await generateUsername('student');
 
-    // Make sure department exists
+    // Make sure department exists and is active
     const dept = await Department.findOne({
       $or: [
         { _id: mongoose.Types.ObjectId.isValid(department) ? department : null },
         { code: department },
         { name: department }
-      ]
+      ],
+      status: 'Active'
     });
 
     if (!dept) {
-      return res.status(404).json({ success: false, message: 'Department not found' });
+      return res.status(404).json({ success: false, message: 'Active department not found. New students cannot be assigned to inactive departments.' });
     }
 
     // Create User record
@@ -236,17 +237,18 @@ export const createStaff = async (req, res, next) => {
     // Generate unique STF username
     const username = await generateUsername(normalizedRole);
 
-    // Make sure department exists
+    // Make sure department exists and is active
     const dept = await Department.findOne({
       $or: [
         { _id: mongoose.Types.ObjectId.isValid(department) ? department : null },
         { code: department },
         { name: department }
-      ]
+      ],
+      status: 'Active'
     });
 
     if (!dept) {
-      return res.status(404).json({ success: false, message: 'Department not found' });
+      return res.status(404).json({ success: false, message: 'Active department not found. New staff cannot be assigned to inactive departments.' });
     }
 
     // Create User record
@@ -677,11 +679,12 @@ export const bulkUploadStudents = async (req, res, next) => {
           { _id: mongoose.Types.ObjectId.isValid(departmentValue) ? departmentValue : null },
           { code: { $regex: new RegExp(`^${departmentValue}$`, 'i') } },
           { name: { $regex: new RegExp(`^${departmentValue}$`, 'i') } }
-        ]
+        ],
+        status: 'Active'
       });
 
       if (!department) {
-        processingErrors.push(`Department '${departmentValue}' does not exist (row ${rowNo})`);
+        processingErrors.push(`Active Department '${departmentValue}' does not exist (row ${rowNo})`);
         continue;
       }
 
@@ -834,11 +837,12 @@ export const bulkUploadStaff = async (req, res, next) => {
           { _id: mongoose.Types.ObjectId.isValid(departmentValue) ? departmentValue : null },
           { code: { $regex: new RegExp(`^${departmentValue}$`, 'i') } },
           { name: { $regex: new RegExp(`^${departmentValue}$`, 'i') } }
-        ]
+        ],
+        status: 'Active'
       });
 
       if (!department) {
-        processingErrors.push(`Department '${departmentValue}' does not exist (row ${rowNo})`);
+        processingErrors.push(`Active Department '${departmentValue}' does not exist (row ${rowNo})`);
         continue;
       }
 

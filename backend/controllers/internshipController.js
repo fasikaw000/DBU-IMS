@@ -308,7 +308,7 @@ export const getStudentInternship = async (req, res) => {
     }
 
     const internship = await Internship.findOne({ student: student._id })
-      .populate('company', 'name location industry')
+      .populate('company', 'name city subcity country industry')
       .populate('advisor_id', 'name email');
 
     if (!internship) {

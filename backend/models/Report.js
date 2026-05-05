@@ -21,8 +21,7 @@ const reportSchema = new mongoose.Schema({
     required: true
   },
   dueDate: {
-    type: Date,
-    required: true
+    type: Date
   },
   isLate: {
     type: Boolean,

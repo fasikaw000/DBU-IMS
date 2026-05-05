@@ -60,7 +60,22 @@ const StudentDashboard = () => {
 
     useEffect(() => {
         fetchData();
-        console.log("Current User Object:", user);
+        
+        // Refresh data when window is refocused (e.g. returning to tab)
+        const handleFocus = () => {
+            console.log("Window focused, refreshing student data...");
+            fetchData();
+        };
+        
+        window.addEventListener('focus', handleFocus);
+        
+        // Also refresh periodically every 30 seconds for near real-time updates
+        const interval = setInterval(fetchData, 30000);
+
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+            clearInterval(interval);
+        };
     }, []);
 
     const fetchData = async () => {
@@ -386,7 +401,7 @@ const StudentDashboard = () => {
                                             {internship.companySupervisorPhone && <p className="text-[10px] text-slate-500 font-medium">{internship.companySupervisorPhone}</p>}
                                         </div>
                                         <div className="col-span-2 md:col-span-1 pt-6 border-t border-slate-50">
-                                            <p className="text-[10px] font-black text-dbu-primary uppercase tracking-widest">University Advisor</p>
+                                            <p className="text-[10px] font-black text-dbu-primary uppercase tracking-widest">Faculty Advisor</p>
                                             <p className="text-sm font-bold text-slate-700">{internship.advisor?.name || internship.advisor_id?.name || 'Pending Assignment'}</p>
                                         </div>
                                     </div>

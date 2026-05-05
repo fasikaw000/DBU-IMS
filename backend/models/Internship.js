@@ -49,7 +49,7 @@ const internshipSchema = new mongoose.Schema({
   },
   advisor_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User' // Links to University Advisor
+    ref: 'User' // Links to Faculty Advisor
   },
   companyEvaluationUrl: {
     type: String

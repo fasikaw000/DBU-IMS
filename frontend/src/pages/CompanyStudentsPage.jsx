@@ -127,7 +127,7 @@ const CompanyStudentsPage = () => {
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
                         <UserCheck className="w-5 h-5 text-dbu-primary" />
-                        University Advisor Workload
+                        Faculty Advisor Workload
                     </h3>
                     <div className="flex gap-4">
                         <div className="flex items-center gap-2">
@@ -195,7 +195,7 @@ const CompanyStudentsPage = () => {
                     })}
                     {advisorsWorkload.length === 0 && (
                         <div className="py-12 text-center text-slate-400 italic bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                            No university advisors found.
+                            No faculty advisors found.
                         </div>
                     )}
                 </div>
@@ -267,7 +267,7 @@ const CompanyStudentsPage = () => {
                                     <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
                                         <UserCheck size={14} className="text-dbu-primary" />
                                         <div>
-                                            <p className="text-[9px] font-black text-dbu-primary uppercase tracking-widest">University Advisor</p>
+                                            <p className="text-[9px] font-black text-dbu-primary uppercase tracking-widest">Faculty Advisor</p>
                                             {intern.advisor_id ? (
                                                 <p className="text-xs font-bold text-slate-700">
                                                     {intern.advisor_id.name} <span className="text-[9px] text-slate-400 font-mono">({intern.advisor_id.username})</span>

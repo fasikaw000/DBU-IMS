@@ -25,13 +25,24 @@ const ReportsPage = () => {
     // Upload Form State
     const [showUpload, setShowUpload] = useState(false);
     const [type, setType] = useState('WEEKLY');
-    const [dueDate, setDueDate] = useState('');
     const [fileUrl, setFileUrl] = useState('');
     const [selectedFile, setSelectedFile] = useState(null);
 
     useEffect(() => {
         fetchReports();
     }, []);
+
+    useEffect(() => {
+        let timer;
+        if (message) {
+            timer = setTimeout(() => {
+                setMessage(null);
+            }, 4000);
+        }
+        return () => {
+            if (timer) clearTimeout(timer);
+        };
+    }, [message]);
 
     const fetchReports = async () => {
         try {
@@ -54,18 +65,21 @@ const ReportsPage = () => {
 
     const handleUpload = async (e) => {
         e.preventDefault();
+        setMessage(null); // Clear previous messages to restart timers
+
         if (!selectedFile) {
-            setMessage({ type: 'error', text: 'Please select a file first.' });
+            // Small delay to ensure state change is picked up by useEffect if needed
+            setTimeout(() => {
+                setMessage({ type: 'error', text: 'Please select a file first.' });
+            }, 10);
             return;
         }
 
         setSubmitting(true);
-        setMessage(null);
         try {
             const formData = new FormData();
             formData.append('file', selectedFile);
             formData.append('type', type);
-            formData.append('dueDate', dueDate);
 
             const res = await api.post('/student/reports', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
@@ -111,7 +125,13 @@ const ReportsPage = () => {
                     </p>
                 </div>
                 <button
-                    onClick={() => setShowUpload(true)}
+                    onClick={() => {
+                        setType('WEEKLY');
+                        setSelectedFile(null);
+                        setFileUrl('');
+                        setMessage(null);
+                        setShowUpload(true);
+                    }}
                     className="px-6 py-4 bg-dbu-primary text-white rounded-2xl font-black text-[10px] tracking-widest hover:bg-dbu-accent transition shadow-xl flex items-center gap-2"
                 >
                     <UploadCloud size={18} />
@@ -119,8 +139,8 @@ const ReportsPage = () => {
                 </button>
             </div>
 
-            {message && (
-                <div className={`p-4 rounded-2xl border flex items-center gap-3 ${message.type === 'error' ? 'bg-red-50 border-red-100 text-red-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'
+            {message && !showUpload && (
+                <div className={`p-4 rounded-2xl border flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${message.type === 'error' ? 'bg-red-50 border-red-100 text-red-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'
                     }`}>
                     {message.type === 'error' ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
                     <p className="font-bold text-sm">{message.text}</p>
@@ -136,6 +156,12 @@ const ReportsPage = () => {
                             <button onClick={() => setShowUpload(false)} className="text-slate-400 hover:text-slate-600 font-bold text-xs uppercase tracking-widest transition-colors">Close</button>
                         </div>
                         <form onSubmit={handleUpload} className="p-8 space-y-6">
+                            {message && showUpload && (
+                                <div className={`p-4 rounded-2xl border flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${message.type === 'error' ? 'bg-red-50 border-red-100 text-red-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
+                                    {message.type === 'error' ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
+                                    <p className="font-bold text-sm">{message.text}</p>
+                                </div>
+                            )}
                             <div className="space-y-4">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Report Type</label>
@@ -146,19 +172,8 @@ const ReportsPage = () => {
                                     >
                                         <option value="WEEKLY">Weekly Report</option>
                                         <option value="MONTHLY">Monthly Report</option>
-                                        <option value="FINAL">Final Project Report</option>
+                                        <option value="FINAL">Final Internship Report</option>
                                     </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Assigned Due Date</label>
-                                    <input
-                                        required
-                                        type="date"
-                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none text-sm font-bold"
-                                        value={dueDate}
-                                        onChange={(e) => setDueDate(e.target.value)}
-                                    />
-                                    <p className="text-[9px] text-slate-400 ml-1 italic">* Submissions past this date will be flagged as LATE automatically.</p>
                                 </div>
                                 <div
                                     onClick={() => document.getElementById('reportFile').click()}
@@ -240,14 +255,8 @@ const ReportsPage = () => {
                                             <div className="flex items-center gap-4 text-[11px] font-bold text-slate-500">
                                                 <div className="flex items-center gap-1.5">
                                                     <Calendar size={14} className="text-dbu-primary" />
-                                                    Due: {new Date(report.dueDate).toLocaleDateString()}
+                                                    Submitted on {new Date(report.createdAt).toLocaleDateString()}
                                                 </div>
-                                                {report.isLate && (
-                                                    <div className="flex items-center gap-1.5 text-red-500 bg-red-50 px-2 py-0.5 rounded-lg font-black uppercase tracking-tighter">
-                                                        <Clock size={12} />
-                                                        LATE
-                                                    </div>
-                                                )}
                                             </div>
 
                                             <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
@@ -267,7 +276,7 @@ const ReportsPage = () => {
                                                 <div className="p-4 bg-slate-900 rounded-2xl text-white space-y-2">
                                                     <div className="flex items-center gap-2 text-dbu-accent">
                                                         <History size={12} />
-                                                        <span className="text-[9px] font-black uppercase tracking-widest">University Advisor Feedback</span>
+                                                        <span className="text-[9px] font-black uppercase tracking-widest">Faculty Advisor Feedback</span>
                                                     </div>
                                                     <p className="text-xs italic text-white/70 leading-relaxed font-medium">"{report.feedback}"</p>
                                                 </div>

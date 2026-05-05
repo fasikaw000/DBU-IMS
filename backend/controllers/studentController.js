@@ -72,7 +72,18 @@ export const submitLogbook = async (req, res, next) => {
 // @desc    Submit a Report (Weekly, Monthly, Final) w/ Versioning & Deadlines
 export const submitReport = async (req, res, next) => {
   try {
-    const { type, fileUrl, dueDate } = req.body;
+    const { type, dueDate } = req.body;
+    let fileUrl = req.body.fileUrl;
+
+    // Handle multer file upload
+    if (req.file) {
+      fileUrl = `/uploads/${req.file.filename}`;
+    }
+
+    if (!type || !fileUrl) {
+      return res.status(400).json({ success: false, message: 'Report type and file are required.' });
+    }
+
     const student = await Student.findOne({ user: req.user.id });
     const internship = await Internship.findOne({ student: student._id });
 
@@ -103,7 +114,13 @@ export const submitReport = async (req, res, next) => {
       ip: req.ip
     });
 
-    res.status(201).json({ success: true, message: `${type} Report submitted (v${version})`, data: report });
+    res.status(201).json({ 
+      success: true, 
+      message: `${type} Report submitted (v${version})`, 
+      data: report,
+      version,
+      isLate: report.isLate
+    });
   } catch (err) { next(err); }
 };
 

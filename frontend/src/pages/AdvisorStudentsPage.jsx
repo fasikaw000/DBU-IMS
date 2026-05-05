@@ -174,9 +174,9 @@ const AdvisorStudentsPage = () => {
                         <div>
                             <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">
                                 <GraduationCap className="w-8 h-8 text-dbu-primary" />
-                                University Advisor Supervision
+                                Faculty Advisor Supervision
                             </h1>
-                            <p className="text-slate-500 text-sm mt-1">Manage assigned students and evaluate their internship performance as a university advisor.</p>
+                            <p className="text-slate-500 text-sm mt-1">Manage assigned students and evaluate their internship performance as a faculty advisor.</p>
                         </div>
                     </div>
 
@@ -232,7 +232,12 @@ const AdvisorStudentsPage = () => {
                                             <tr key={intern._id} className="hover:bg-slate-50/50 transition">
                                                 <td className="p-6">
                                                     <div className="flex flex-col">
-                                                        <span className="font-bold text-slate-800">{intern.student?.user?.name}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-bold text-slate-800">{intern.student?.user?.name}</span>
+                                                            {intern.student?.user?.isActive === false && (
+                                                                <span className="px-1.5 py-0.5 bg-red-50 text-red-500 text-[8px] font-black uppercase rounded border border-red-100 tracking-tighter">Deactivated</span>
+                                                            )}
+                                                        </div>
                                                         <span className="text-xs text-slate-400 font-medium">{intern.student?.studentId}</span>
                                                     </div>
                                                 </td>
@@ -288,10 +293,13 @@ const AdvisorStudentsPage = () => {
                             >
                                 <ArrowLeft size={20} />
                             </button>
-                            <div>
-                                <h2 className="text-xl font-black text-slate-800 tracking-tight">{selectedInternship.student?.user?.name}</h2>
+                                <div className="flex items-center gap-2">
+                                    <h2 className="text-xl font-black text-slate-800 tracking-tight">{selectedInternship.student?.user?.name}</h2>
+                                    {selectedInternship.student?.user?.isActive === false && (
+                                        <span className="px-1.5 py-0.5 bg-red-50 text-red-500 text-[8px] font-black uppercase rounded border border-red-100 tracking-tighter">Deactivated</span>
+                                    )}
+                                </div>
                                 <p className="text-xs text-slate-500 font-medium">{selectedInternship.student?.studentId} • {selectedInternship.company?.name || 'N/A'}</p>
-                            </div>
                         </div>
                         <div className="flex bg-slate-100 p-1 rounded-xl">
                             {['overview', 'reports', 'logbook', 'evaluation'].map(tab => (
@@ -409,7 +417,7 @@ const AdvisorStudentsPage = () => {
                                                         <span className="text-xl font-black text-dbu-accent">{selectedInternship.finalGrade.letterGrade}</span>
                                                     </div>
                                                 ) : (
-                                                    <p className="text-xs text-white/60 italic">Pending university advisor evaluation</p>
+                                                    <p className="text-xs text-white/60 italic">Pending faculty advisor evaluation</p>
                                                 )}
                                             </div>
                                         </div>
@@ -487,15 +495,15 @@ const AdvisorStudentsPage = () => {
                                                                         const feedback = prompt("Enter revision feedback:");
                                                                         if (feedback) handleReportReview(report._id, 'Revision Required', feedback);
                                                                     }}
-                                                                    disabled={actionLoading}
-                                                                    className="px-3 py-1.5 text-[9px] font-black bg-white text-red-500 border border-red-100 rounded-lg hover:bg-red-50 transition"
+                                                                    disabled={actionLoading || selectedInternship.student?.user?.isActive === false}
+                                                                    className="px-3 py-1.5 text-[9px] font-black bg-white text-red-500 border border-red-100 rounded-lg hover:bg-red-50 transition disabled:opacity-30"
                                                                 >
                                                                     REQUEST REVISION
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleReportReview(report._id, 'Approved')}
-                                                                    disabled={actionLoading}
-                                                                    className="px-3 py-1.5 text-[9px] font-black bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition"
+                                                                    disabled={actionLoading || selectedInternship.student?.user?.isActive === false}
+                                                                    className="px-3 py-1.5 text-[9px] font-black bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition disabled:opacity-30"
                                                                 >
                                                                     APPROVE
                                                                 </button>
@@ -557,7 +565,7 @@ const AdvisorStudentsPage = () => {
                                                             <div className="flex items-start gap-3 bg-white p-4 rounded-xl border border-slate-100">
                                                                 <MessageSquare size={16} className="text-dbu-primary mt-1" />
                                                                 <div>
-                                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">University Advisor Comment</p>
+                                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Faculty Advisor Comment</p>
                                                                     <p className="text-xs text-slate-600 font-medium">{log.comment.text}</p>
                                                                 </div>
                                                             </div>
@@ -565,8 +573,9 @@ const AdvisorStudentsPage = () => {
                                                             <div className="flex gap-2">
                                                                 <input
                                                                     type="text"
-                                                                    placeholder="Add a comment or guidance..."
-                                                                    className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs focus:ring-1 focus:ring-dbu-primary outline-none transition"
+                                                                    placeholder={selectedInternship.student?.user?.isActive === false ? "Account deactivated..." : "Add a comment or guidance..."}
+                                                                    disabled={selectedInternship.student?.user?.isActive === false}
+                                                                    className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs focus:ring-1 focus:ring-dbu-primary outline-none transition disabled:bg-slate-100 disabled:text-slate-400"
                                                                     onKeyDown={(e) => {
                                                                         if (e.key === 'Enter') handleLogbookComment(log._id, e.target.value);
                                                                     }}
@@ -576,7 +585,8 @@ const AdvisorStudentsPage = () => {
                                                                         const input = e.currentTarget.previousSibling;
                                                                         handleLogbookComment(log._id, input.value);
                                                                     }}
-                                                                    className="p-2 bg-dbu-primary text-white rounded-xl hover:bg-dbu-accent transition"
+                                                                    disabled={selectedInternship.student?.user?.isActive === false}
+                                                                    className="p-2 bg-dbu-primary text-white rounded-xl hover:bg-dbu-accent transition disabled:opacity-30"
                                                                 >
                                                                     <Send size={16} />
                                                                 </button>
@@ -631,11 +641,11 @@ const AdvisorStudentsPage = () => {
                                         </div>
 
                                         <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">University Advisor Summative Comment</label>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Faculty Advisor Summative Comment</label>
                                             <textarea
                                                 rows="4"
                                                 className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-dbu-primary outline-none transition text-sm font-medium resize-none"
-                                                placeholder="Provide a professional summary of the student's internship progress, strengths, and areas for improvement as a university advisor..."
+                                                placeholder="Provide a professional summary of the student's internship progress, strengths, and areas for improvement as a faculty advisor..."
                                                 value={grades.advisorComment}
                                                 onChange={(e) => setGrades({ ...grades, advisorComment: e.target.value })}
                                             ></textarea>
@@ -656,11 +666,11 @@ const AdvisorStudentsPage = () => {
                                             </div>
                                             <button
                                                 type="submit"
-                                                disabled={actionLoading || selectedInternship.status === 'COMPLETED'}
+                                                disabled={actionLoading || selectedInternship.status === 'COMPLETED' || selectedInternship.student?.user?.isActive === false}
                                                 className="px-10 py-5 bg-dbu-primary text-white rounded-2xl font-black text-xs tracking-widest hover:bg-dbu-accent transition shadow-lg shadow-dbu-primary/20 flex items-center gap-2 disabled:opacity-50"
                                             >
                                                 {actionLoading && <Loader2 size={16} className="animate-spin" />}
-                                                {selectedInternship.status === 'COMPLETED' ? 'COMPLETED & LOCKED' : 'FINALIZE & SUBMIT'}
+                                                {selectedInternship.student?.user?.isActive === false ? 'ACCOUNT DEACTIVATED' : (selectedInternship.status === 'COMPLETED' ? 'COMPLETED & LOCKED' : 'FINALIZE & SUBMIT')}
                                             </button>
                                         </div>
                                     </form>

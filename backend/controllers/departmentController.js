@@ -51,7 +51,8 @@ export const getDepartmentStudents = async (req, res, next) => {
     const mappedStudents = await Promise.all(students.map(async (s) => {
       try {
         const internship = await Internship.findOne({ student: s._id })
-          .populate('company', 'name');
+          .populate('company', 'name city subcity country')
+          .populate('advisor_id', 'name');
 
         return {
           _id: s._id,
@@ -67,8 +68,9 @@ export const getDepartmentStudents = async (req, res, next) => {
           isActivated: s.user?.isActivated || false,
           isActive: s.user?.isActive !== false,
           accountStatus: s.user?.isActive === false ? 'Inactive' : 'Active',
+          internship: internship, // Include full internship object
           internshipStatus: internship?.status || 'NOT_APPLIED',
-          status: internship?.status || 'NOT_APPLIED', // Adding generic 'status' for compatibility
+          status: internship?.status || 'NOT_APPLIED',
           companyName: internship?.company?.name || 'N/A',
           createdAt: s.createdAt
         };
@@ -185,9 +187,13 @@ export const assignAdvisor = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Internship not found' });
     }
 
-    const advisor = await User.findOne({ _id: advisorId, role: 'advisor' });
+    if (internship.student?.user?.isActive === false) {
+      return res.status(400).json({ success: false, message: 'Cannot assign advisor to a deactivated student' });
+    }
+
+    const advisor = await User.findOne({ _id: advisorId, role: 'advisor', isActive: true });
     if (!advisor) {
-      return res.status(404).json({ success: false, message: 'Advisor not found or invalid user role' });
+      return res.status(404).json({ success: false, message: 'Advisor not found or invalid user role (must be active advisor)' });
     }
 
     internship.advisor_id = advisor._id;
@@ -244,8 +250,16 @@ export const assignAdvisor = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 export const getAdvisorWorkload = async (req, res, next) => {
   try {
-    const dean = await User.findById(req.user.id);
-    const advisors = await User.find({ role: 'advisor', department: dean.department }).select('name username email');
+    const dean = await User.findById(req.user.id).populate('department');
+    if (!dean || !dean.department) {
+      return res.status(400).json({ success: false, message: 'Dean not assigned to a department' });
+    }
+
+    const deptName = dean.department.name;
+    const similarDepts = await Department.find({ name: deptName }).select('_id');
+    const allDeptIds = similarDepts.map(d => d._id);
+
+    const advisors = await User.find({ role: 'advisor', department: { $in: allDeptIds } }).select('name username email isActive status');
 
     const workloads = await Promise.all(advisors.map(async (adv) => {
       const activeInternships = await Internship.countDocuments({ advisor_id: adv._id, status: { $in: ['Active', 'Approved', 'ACTIVE', 'APPROVED', 'Ongoing', 'ONGOING'] } });
@@ -265,17 +279,30 @@ export const getAdvisorWorkload = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 export const getDepartmentStats = async (req, res, next) => {
   try {
-    const dean = await User.findById(req.user.id);
-    if (!dean.department) {
+    const dean = await User.findById(req.user.id).populate('department');
+    if (!dean || !dean.department) {
       return res.status(400).json({ success: false, message: 'Dean not assigned to a department' });
     }
 
-    const deptId = dean.department;
+    const deptName = dean.department.name;
+    const similarDepts = await Department.find({ name: deptName }).select('_id');
+    const allDeptIds = similarDepts.map(d => d._id);
 
-    const totalAdvisors = await User.countDocuments({ role: 'advisor', department: deptId });
+    const studentUsers = await User.find({
+      department: { $in: allDeptIds },
+      role: { $regex: /^student$/i }
+    }).select('_id');
+    const userIds = studentUsers.map(u => u._id);
 
-    const students = await Student.find({ department: deptId }).select('_id');
+    const students = await Student.find({
+      $or: [
+        { department: { $in: allDeptIds } },
+        { user: { $in: userIds } }
+      ]
+    }).select('_id');
     const studentIds = students.map(s => s._id);
+
+    const totalAdvisors = await User.countDocuments({ role: 'advisor', department: { $in: allDeptIds } });
 
     const pendingApplications = await Internship.countDocuments({
       student: { $in: studentIds },

@@ -32,6 +32,10 @@ const AssignmentsPage = () => {
 
     useEffect(() => {
         fetchData();
+        
+        // Auto-refresh every 30 seconds to show newly approved students
+        const interval = setInterval(fetchData, 30000);
+        return () => clearInterval(interval);
     }, []);
 
     const fetchData = async () => {
@@ -46,13 +50,15 @@ const AssignmentsPage = () => {
                 .filter(s => s.internship && (s.internship.status === 'Approved' || s.internship.status === 'Active' || s.internship.status === 'APPROVED' || s.internship.status === 'ACTIVE'))
                 .map(s => ({
                     internshipId: s.internship._id,
-                    studentName: s.user?.name,
-                    studentId: s.studentId,
-                    department: s.department?.name || s.department?.code,
-                    assignedAdvisorId: s.internship.advisor_id || s.internship.advisor?._id,
-                    assignedAdvisorName: s.internship.advisor?.name || 'Not Assigned',
-                    companyName: s.internship.company?.name || s.internship.companyName || 'Unknown Company',
-                    status: s.internship.status
+                    studentName: s.fullName || 'N/A',
+                    studentId: s.studentId || 'N/A',
+                    department: s.department || 'N/A',
+                    field: s.internship?.field || 'N/A',
+                    assignedAdvisorId: s.internship.advisor_id?._id || s.internship.advisor_id,
+                    assignedAdvisorName: s.internship.advisor_id?.name || 'Not Assigned',
+                    companyName: s.internship.company?.name || s.companyName || 'Unknown Company',
+                    status: s.internship.status,
+                    studentIsActive: s.isActive
                 }));
 
             // Point 5: FIX ASSIGNMENTS PAGE - Only show APPROVED (awaiting assignment)
@@ -77,8 +83,18 @@ const AssignmentsPage = () => {
             await api.put(`/department/internship/${internshipId}/advisor`, { advisorId });
             setMessage({ type: 'success', text: 'Advisor assigned successfully!' });
             fetchData();
+            
+            // Auto-clear message after 5 seconds
+            setTimeout(() => {
+                setMessage(null);
+            }, 5000);
         } catch (err) {
             setMessage({ type: 'error', text: err.response?.data?.message || 'Assignment failed' });
+            
+            // Also clear error message after 5 seconds
+            setTimeout(() => {
+                setMessage(null);
+            }, 5000);
         } finally {
             setActionLoading(false);
         }
@@ -102,8 +118,8 @@ const AssignmentsPage = () => {
     };
 
     const filteredAssignments = assignments.filter(a =>
-        a.studentName.toLowerCase().includes(search.toLowerCase()) ||
-        a.studentId.toLowerCase().includes(search.toLowerCase())
+        (a.studentName || '').toLowerCase().includes(search.toLowerCase()) ||
+        (a.studentId || '').toLowerCase().includes(search.toLowerCase())
     );
 
     if (loading) return (
@@ -119,9 +135,9 @@ const AssignmentsPage = () => {
                 <div>
                     <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">
                         <ClipboardList className="w-8 h-8 text-dbu-primary" />
-                        University Advisor Assignments
+                        Faculty Advisor Assignments
                     </h1>
-                    <p className="text-slate-500 text-sm mt-1">Assign university advisors to approved student internships.</p>
+                    <p className="text-slate-500 text-sm mt-1">Assign faculty advisors to approved student internships.</p>
                 </div>
             </div>
 
@@ -130,7 +146,7 @@ const AssignmentsPage = () => {
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
                         <UserCheck className="w-5 h-5 text-dbu-primary" />
-                        University Advisor Workload
+                        Faculty Advisor Workload
                     </h3>
                     <div className="flex gap-4">
                         <div className="flex items-center gap-2">
@@ -156,7 +172,12 @@ const AssignmentsPage = () => {
                         let textColor = "text-emerald-600";
                         let bgColor = "bg-emerald-50";
 
-                        if (w.count >= MAX_WORKLOAD) {
+                        if (w.advisor?.isActive === false || w.advisor?.status === 'deactivated') {
+                            statusColor = "bg-slate-400";
+                            statusText = "Deactivated";
+                            textColor = "text-slate-500";
+                            bgColor = "bg-slate-100";
+                        } else if (w.count >= MAX_WORKLOAD) {
                             statusColor = "bg-red-500";
                             statusText = "Full";
                             textColor = "text-red-600";
@@ -198,7 +219,7 @@ const AssignmentsPage = () => {
                     })}
                     {advisorsWorkload.length === 0 && (
                         <div className="py-12 text-center text-slate-400 italic bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                            No university advisors found in this department.
+                            No faculty advisors found in this department.
                         </div>
                     )}
                 </div>
@@ -234,7 +255,7 @@ const AssignmentsPage = () => {
                             <tr className="border-b border-slate-100 text-slate-400 text-[10px] font-black uppercase tracking-widest bg-slate-50/30">
                                 <th className="p-6">Student</th>
                                 <th className="p-6">Placement</th>
-                                <th className="p-6">University Advisor</th>
+                                <th className="p-6">Faculty Advisor</th>
                                 <th className="p-6">Status</th>
                                 <th className="p-6 text-right">Actions</th>
                             </tr>
@@ -264,7 +285,7 @@ const AssignmentsPage = () => {
                                                     <Building size={14} className="text-dbu-primary" />
                                                     {item.companyName}
                                                 </div>
-                                                <span className="text-[10px] text-slate-400 uppercase font-black ml-5">{item.department}</span>
+                                                <span className="text-[10px] text-slate-400 uppercase font-black ml-5">{item.field}</span>
                                             </div>
                                         </td>
                                         <td className="p-6">
@@ -291,18 +312,19 @@ const AssignmentsPage = () => {
                                         <td className="p-6">
                                             <div className="flex justify-end gap-2">
                                                 <select
-                                                    className="text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 outline-none focus:ring-2 focus:ring-dbu-primary font-bold text-slate-600 min-w-[180px]"
+                                                    className={`text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 outline-none focus:ring-2 focus:ring-dbu-primary font-bold text-slate-600 min-w-[180px] ${item.studentIsActive === false ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                     onChange={(e) => handleAssignAdvisor(item.internshipId, e.target.value)}
                                                     value={item.assignedAdvisorId || ''}
+                                                    disabled={item.studentIsActive === false}
                                                 >
-                                                    <option value="" disabled>Select University Advisor</option>
+                                                    <option value="" disabled>{item.studentIsActive === false ? 'Student Deactivated' : 'Select Faculty Advisor'}</option>
                                                     {advisorsWorkload.map(w => (
                                                         <option
                                                             key={w.advisor?._id}
                                                             value={w.advisor?._id}
-                                                            disabled={w.count >= MAX_WORKLOAD && item.assignedAdvisorId !== w.advisor?._id}
+                                                            disabled={(w.count >= MAX_WORKLOAD && item.assignedAdvisorId !== w.advisor?._id) || w.advisor?.isActive === false}
                                                         >
-                                                            {w.advisor?.name} ({w.count}/{MAX_WORKLOAD}) {w.count >= MAX_WORKLOAD ? '— FULL' : ''}
+                                                            {w.advisor?.name} {w.advisor?.isActive === false ? '(INACTIVE)' : `(${w.count}/${MAX_WORKLOAD})`} {w.count >= MAX_WORKLOAD && w.advisor?.isActive !== false ? '— FULL' : ''}
                                                         </option>
                                                     ))}
                                                 </select>

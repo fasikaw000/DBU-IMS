@@ -66,7 +66,7 @@ const AdminReports = () => {
   const printReport = () => {
     const reportData = getActiveData();
     if (!reportData || reportData.length === 0) return;
-    const tabLabels = { distribution: 'Student Distribution', status: 'Internship Status', workload: 'University Advisor Workload', grades: 'Grade Analytics' };
+    const tabLabels = { distribution: 'Student Distribution', status: 'Internship Status', workload: 'Faculty Advisor Workload', grades: 'Grade Analytics' };
     const printWindow = window.open('', '_blank');
     const headers = reportData.length > 0 ? Object.keys(reportData[0]) : [];
     printWindow.document.write(`
@@ -169,7 +169,7 @@ const AdminReports = () => {
         {[
           { id: 'distribution', label: 'Student Distribution', icon: Users },
           { id: 'status', label: 'Internship Status', icon: Target },
-          { id: 'workload', label: 'University Advisor Workload', icon: TrendingUp },
+          { id: 'workload', label: 'Faculty Advisor Workload', icon: TrendingUp },
           { id: 'grades', label: 'Grade Analytics', icon: BarChart3 },
         ].map((tab) => (
           <button

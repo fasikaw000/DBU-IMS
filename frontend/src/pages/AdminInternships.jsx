@@ -55,7 +55,7 @@ const AdminInternships = () => {
     const headers = [
       'Student Name', 'Student ID', 'Department', 'Company', 
       'Company Supervisor Name', 'Company Supervisor Email', 'Company Supervisor Phone', 
-      'Field', 'Start Date', 'End Date', 'Status', 'University Advisor'
+      'Field', 'Start Date', 'End Date', 'Status', 'Faculty Advisor'
     ].join(',');
 
     const rows = internships.map(i => {

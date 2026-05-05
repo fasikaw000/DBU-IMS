@@ -13,7 +13,7 @@ const notificationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['APPLICATION_APPROVED', 'APPLICATION_REJECTED', 'ADVISOR_ASSIGNED', 'NEW_MESSAGE', 'REPORT_SUBMITTED', 'EVALUATION_SUBMITTED', 'INFO', 'FEEDBACK', 'ANNOUNCEMENT', 'internship_approved', 'report_submitted', 'evaluation_submitted', 'advisor_assigned', 'info', 'new_message', 'announcement'],
+    enum: ['APPLICATION_APPROVED', 'APPLICATION_REJECTED', 'ADVISOR_ASSIGNED', 'NEW_MESSAGE', 'REPORT_SUBMITTED', 'EVALUATION_SUBMITTED', 'INFO', 'FEEDBACK', 'ANNOUNCEMENT', 'NEW_INTERNSHIP_APPLICATION', 'internship_approved', 'report_submitted', 'evaluation_submitted', 'advisor_assigned', 'info', 'new_message', 'announcement', 'new_internship_application'],
     required: true
   },
   message: {

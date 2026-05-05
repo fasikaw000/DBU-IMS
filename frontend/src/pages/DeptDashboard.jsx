@@ -65,6 +65,10 @@ const DeptDashboard = () => {
 
     useEffect(() => {
         fetchData();
+        
+        // Auto-refresh every 30 seconds
+        const interval = setInterval(fetchData, 30000);
+        return () => clearInterval(interval);
     }, []);
 
     const fetchData = async () => {
@@ -83,15 +87,15 @@ const DeptDashboard = () => {
                 .filter(s => s.internship && ['PENDING', 'PENDING_APPROVAL', 'RESUBMITTED', 'REVISION_REQUIRED'].includes(s.internship.status))
                 .map(s => ({
                     ...s.internship,
-                    studentName: s.user?.name,
+                    studentName: s.fullName || 'N/A',
                     studentId: s.studentId,
-                    department: s.department?.name || s.department?.code
+                    department: s.department || 'N/A',
+                    studentIsActive: s.isActive
                 }));
             setApplications(pending);
 
             if (studentsRes.data.length > 0) {
-                const dept = studentsRes.data[0].department;
-                setDepartmentName(dept?.name || dept?.code);
+                setDepartmentName(studentsRes.data[0].department || 'Department');
             }
         } catch (err) {
             console.error(err);
@@ -125,7 +129,7 @@ const DeptDashboard = () => {
 
     const filteredStudents = students.filter(s => {
         if (!s) return false;
-        const nameStr = s.user?.name || '';
+        const nameStr = s.fullName || '';
         const idStr = s.studentId || '';
         const searchStr = search.toLowerCase();
         return String(nameStr).toLowerCase().includes(searchStr) || String(idStr).toLowerCase().includes(searchStr);
@@ -254,7 +258,7 @@ const DeptDashboard = () => {
                                             </td>
                                             <td className="px-8 py-6">
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-slate-700 text-sm">{app.company?.name || 'N/A'}</span>
+                                                    <span className="font-bold text-slate-700 text-sm">{app.company?.name || app.companyName || 'N/A'}</span>
                                                     <span className={`text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 rounded ${app.status === 'RESUBMITTED' ? 'bg-indigo-100 text-indigo-700' : 'text-dbu-primary bg-dbu-primary/5'
                                                         }`}>
                                                         {app.status === 'RESUBMITTED' ? '★ RESUBMITTED' : app.field}
@@ -309,7 +313,7 @@ const DeptDashboard = () => {
                                         <tr key={s._id} className="hover:bg-slate-50/50 transition-colors">
                                             <td className="px-8 py-6">
                                                 <div className="flex flex-col">
-                                                    <span className="font-black text-slate-800 text-sm">{s.user?.name}</span>
+                                                    <span className="font-black text-slate-800 text-sm">{s.fullName}</span>
                                                     <span className="text-[10px] text-slate-400 font-bold uppercase">{s.studentId}</span>
                                                 </div>
                                             </td>
@@ -397,7 +401,13 @@ const DeptDashboard = () => {
                                 </section>
                             </div>
 
-                            <div className="flex flex-col gap-6 pt-6 border-t border-slate-100">
+                             <div className="flex flex-col gap-6 pt-6 border-t border-slate-100">
+                                {selectedApp.studentIsActive === false && (
+                                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-center gap-3 text-amber-700">
+                                        <AlertCircle size={20} />
+                                        <p className="text-xs font-bold uppercase tracking-tight">This student account is currently deactivated. You cannot approve or modify this application until the account is reactivated by the admin.</p>
+                                    </div>
+                                )}
                                 {isRevising ? (
                                     <div className="space-y-4 animate-in slide-in-from-bottom-4">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -430,19 +440,22 @@ const DeptDashboard = () => {
                                     <div className="flex gap-4">
                                         <button
                                             onClick={() => { handleAction(selectedApp._id, 'Approved'); setShowDetails(false); }}
-                                            className="flex-1 bg-emerald-500 text-white py-4 rounded-2xl font-black text-sm hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 uppercase tracking-widest"
+                                            disabled={selectedApp.studentIsActive === false}
+                                            className="flex-1 bg-emerald-500 text-white py-4 rounded-2xl font-black text-sm hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 uppercase tracking-widest disabled:opacity-30 disabled:cursor-not-allowed"
                                         >
                                             Approve
                                         </button>
                                         <button
                                             onClick={() => { setActionType('Revision Required'); setIsRevising(true); }}
-                                            className="flex-1 bg-amber-500 text-white py-4 rounded-2xl font-black text-sm hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 uppercase tracking-widest"
+                                            disabled={selectedApp.studentIsActive === false}
+                                            className="flex-1 bg-amber-500 text-white py-4 rounded-2xl font-black text-sm hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 uppercase tracking-widest disabled:opacity-30 disabled:cursor-not-allowed"
                                         >
                                             Request Correction
                                         </button>
                                         <button
                                             onClick={() => { setActionType('Rejected'); setIsRevising(true); }}
-                                            className="bg-red-50 text-red-500 px-6 py-4 rounded-2xl font-black text-sm hover:bg-red-100 transition-all uppercase tracking-widest"
+                                            disabled={selectedApp.studentIsActive === false}
+                                            className="bg-red-50 text-red-500 px-6 py-4 rounded-2xl font-black text-sm hover:bg-red-100 transition-all uppercase tracking-widest disabled:opacity-30 disabled:cursor-not-allowed"
                                         >
                                             Reject
                                         </button>

@@ -65,7 +65,7 @@ const AdvisorDashboard = () => {
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 relative overflow-hidden">
                 <div className="relative z-10">
                     <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-                        University Advisor Overview
+                        Faculty Advisor Overview
                         <span className="bg-dbu-primary/10 text-dbu-primary text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-widest border border-dbu-primary/10">
                             Department: {user?.department?.name || 'Unknown Department'}
                         </span>

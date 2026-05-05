@@ -5,7 +5,6 @@ import { UploadCloud, AlertCircle } from 'lucide-react';
 const ReportUpload = () => {
     const [type, setType] = useState('WEEKLY');
     const [fileUrl, setFileUrl] = useState(''); // Placeholder until Cloudinary widget is fully hooked
-    const [dueDate, setDueDate] = useState('');
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -20,8 +19,7 @@ const ReportUpload = () => {
             
             const res = await api.post('/student/reports', {
                 type,
-                fileUrl: fileUrl || fakeCloudinaryUrl,
-                dueDate
+                fileUrl: fileUrl || fakeCloudinaryUrl
             });
 
             // The backend responds with the `report` object including versioning and isLate checks
@@ -61,21 +59,10 @@ const ReportUpload = () => {
                     >
                         <option value="WEEKLY">Weekly Report</option>
                         <option value="MONTHLY">Monthly Report</option>
-                        <option value="FINAL">Final Project Report</option>
+                        <option value="FINAL">Final Internship Report</option>
                     </select>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Assigned Due Date</label>
-                    <input 
-                        type="date" 
-                        required
-                        value={dueDate}
-                        onChange={(e) => setDueDate(e.target.value)}
-                        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-dbu-primary outline-none"
-                    />
-                    <p className="text-xs text-slate-400 mt-1">If submitted past this date, the system flags it automatically.</p>
-                </div>
 
                 {/* Cloudinary UI Placeholder */}
                 <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:bg-slate-50 transition cursor-pointer">

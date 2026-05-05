@@ -1,14 +1,15 @@
 import express from 'express';
-import { 
-    applyForInternship, 
-    submitLogbook, 
-    submitReport, 
-    getMyLogbooks, 
-    getMyReports, 
-    getMyActivity, 
-    updateProfile 
+import {
+    applyForInternship,
+    submitLogbook,
+    submitReport,
+    getMyLogbooks,
+    getMyReports,
+    getMyActivity,
+    updateProfile
 } from '../controllers/studentController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
+import upload from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
@@ -22,7 +23,7 @@ router.route('/logbook')
     .get(getMyLogbooks);
 
 router.route('/reports')
-    .post(submitReport)
+    .post(upload.single('file'), submitReport)
     .get(getMyReports);
 
 router.get('/activity', getMyActivity);
