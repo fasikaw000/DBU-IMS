@@ -6,7 +6,8 @@ import path from 'path';
 import fs from 'fs';
 import { notify } from './notificationController.js';
 
-// @desc    Setup Multer for file uploads
+
+// Multer Config for reports
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = 'uploads/reports';
@@ -16,17 +17,17 @@ const storage = multer.diskStorage({
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    cb(null, `${req.user.id}-${Date.now()}${path.extname(file.originalname)}`);
+    cb(null, `report-${Date.now()}${path.extname(file.originalname)}`);
   }
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['.pdf', '.docx'];
-  const ext = path.extname(file.originalname).toLowerCase();
-  if (allowedTypes.includes(ext)) {
+  if (file.mimetype === 'application/pdf' || 
+      file.mimetype === 'application/msword' || 
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
     cb(null, true);
   } else {
-    cb(new Error('Only PDF and DOCX files are allowed'), false);
+    cb(new Error('Invalid file type. Only PDF and Word documents are allowed.'), false);
   }
 };
 
@@ -35,144 +36,132 @@ export const upload = multer({ storage, fileFilter });
 // @desc    Upload a weekly report
 // @route   POST /api/reports/upload
 // @access  Private/Student
-export const uploadReport = async (req, res) => {
+export const uploadReport = async (req, res, next) => {
   try {
-    const { title, description, week_number } = req.body;
-
+    const { type, dueDate } = req.body;
+    
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'Please upload a file' });
     }
 
-    // 1. Find student record for the user
     const student = await Student.findOne({ user: req.user.id });
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student record not found' });
     }
 
-    // 2. Find student's active internship
     const internship = await Internship.findOne({ student: student._id });
     if (!internship) {
-      return res.status(404).json({ success: false, message: 'No active internship found for this student' });
+      return res.status(404).json({ success: false, message: 'No active internship found' });
     }
 
-    if (internship.status === 'COMPLETED') {
-      return res.status(400).json({ success: false, message: 'Internship is already completed and locked. No further report submissions allowed.' });
-    }
-
-    // 3. Create report
     const report = await Report.create({
-      student_id: req.user.id,
-      internship_id: internship._id,
-      title,
-      description,
-      file: req.file.path,
-      week_number,
-      status: 'submitted'
+      student: student._id,
+      internship: internship._id,
+      type: type || 'WEEKLY',
+      fileUrl: `/uploads/reports/${req.file.filename}`,
+      dueDate: dueDate ? new Date(dueDate) : undefined,
+      status: 'Pending'
     });
 
-    // Notify advisor
+    res.status(201).json({
+      success: true,
+      message: 'Report uploaded successfully',
+      data: report
+    });
+
+    // Notify Advisor
     if (internship.advisor_id) {
       await notify(
         internship.advisor_id,
         'REPORT_SUBMITTED',
-        `Student ${req.user.name} submitted a report for Week ${week_number}.`,
+        `Student ${req.user.name} has submitted a new ${type || 'WEEKLY'} report.`,
         `/advisor-dashboard`
       );
     }
 
-    res.status(201).json({
-      success: true,
-      message: 'Report submitted successfully',
-      data: report
-    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message || 'Server Error' });
+    next(error);
   }
 };
 
 // @desc    Get student's reports
 // @route   GET /api/reports/my-reports
 // @access  Private/Student
-export const getStudentReports = async (req, res) => {
+export const getStudentReports = async (req, res, next) => {
   try {
-    const reports = await Report.find({ student_id: req.user.id }).sort({ week_number: -1 });
+    const student = await Student.findOne({ user: req.user.id });
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student record not found' });
+    }
+    const reports = await Report.find({ student: student._id }).sort({ createdAt: -1 });
     res.status(200).json({ success: true, count: reports.length, data: reports });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message || 'Server Error' });
+    next(error);
   }
 };
 
 // @desc    Get advisor's assigned reports
 // @route   GET /api/reports/advisor-reports
 // @access  Private/Advisor
-export const getAdvisorReports = async (req, res) => {
+export const getAdvisorReports = async (req, res, next) => {
   try {
-    // 1. Find internships assigned to this advisor
     const internships = await Internship.find({ advisor_id: req.user.id });
     const internshipIds = internships.map(i => i._id);
 
-    // 2. Find reports for these internships
-    const reports = await Report.find({ internship_id: { $in: internshipIds } })
-      .populate('student_id', 'name email')
+    const reports = await Report.find({ internship: { $in: internshipIds } })
+      .populate('student', 'name email')
       .sort({ createdAt: -1 });
 
     res.status(200).json({ success: true, count: reports.length, data: reports });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message || 'Server Error' });
+    next(error);
   }
 };
 
 // @desc    Approve a report
 // @route   PUT /api/reports/:id/approve
 // @access  Private/Advisor
-export const approveReport = async (req, res) => {
+export const approveReport = async (req, res, next) => {
   try {
     const report = await Report.findById(req.params.id);
     if (!report) {
       return res.status(404).json({ success: false, message: 'Report not found' });
     }
 
-    // Authorization check
-    const internship = await Internship.findById(report.internship_id);
+    const internship = await Internship.findById(report.internship);
     if (!internship || internship.advisor_id.toString() !== req.user.id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    report.status = 'approved';
+    report.status = 'Approved';
     await report.save();
 
     res.status(200).json({ success: true, message: 'Report approved', data: report });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message || 'Server Error' });
+    next(error);
   }
 };
 
 // @desc    Reject a report
 // @route   PUT /api/reports/:id/reject
 // @access  Private/Advisor
-export const rejectReport = async (req, res) => {
+export const rejectReport = async (req, res, next) => {
   try {
     const report = await Report.findById(req.params.id);
     if (!report) {
       return res.status(404).json({ success: false, message: 'Report not found' });
     }
 
-    // Authorization check
-    const internship = await Internship.findById(report.internship_id);
+    const internship = await Internship.findById(report.internship);
     if (!internship || internship.advisor_id.toString() !== req.user.id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    report.status = 'rejected';
+    report.status = 'Revision Required';
     await report.save();
 
     res.status(200).json({ success: true, message: 'Report rejected', data: report });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message || 'Server Error' });
+    next(error);
   }
 };

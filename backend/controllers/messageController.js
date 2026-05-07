@@ -84,9 +84,9 @@ const getAllowedContactIds = async (currentUser) => {
     // Student can message: Assigned advisor, Dean, Admin
     const studentProfile = await Student.findOne({ user: currentUserId }).select('_id');
     if (studentProfile?._id) {
-      const internship = await Internship.findOne({ 
-        student: studentProfile._id, 
-        advisor_id: { $ne: null } 
+      const internship = await Internship.findOne({
+        student: studentProfile._id,
+        advisor_id: { $ne: null }
       }).select('advisor_id');
       if (internship?.advisor_id) allowedIds.add(internship.advisor_id.toString());
     }
@@ -138,8 +138,8 @@ export const sendMessage = async (req, res, next) => {
       link: `/messages?userId=${senderId}`
     });
 
-    res.status(201).json({ 
-      success: true, 
+    res.status(201).json({
+      success: true,
       data: {
         _id: message._id,
         senderId: message.sender,
@@ -147,7 +147,7 @@ export const sendMessage = async (req, res, next) => {
         message: message.content,
         isRead: message.isRead,
         createdAt: message.createdAt
-      } 
+      }
     });
   } catch (error) { next(error); }
 };

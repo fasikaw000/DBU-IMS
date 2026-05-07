@@ -49,13 +49,12 @@ const reportSchema = new mongoose.Schema({
 });
 
 // Middleware to check if submission is late
-reportSchema.pre('save', function (next) {
+reportSchema.pre('save', async function () {
     if (this.isModified('fileUrl') || this.isNew) {
         if (this.dueDate && new Date() > this.dueDate) {
             this.isLate = true;
         }
     }
-    next();
 });
 
 export default mongoose.model('Report', reportSchema);

@@ -5,7 +5,7 @@ import Student from '../models/Student.js';
 // @desc    Submit a daily logbook entry
 // @route   POST /api/logbooks/submit
 // @access  Private/Student
-export const submitLogbook = async (req, res) => {
+export const submitLogbook = async (req, res, next) => {
   try {
     const { date, activity, tasksCompleted, problemsFaced, hoursWorked } = req.body;
 
@@ -35,29 +35,27 @@ export const submitLogbook = async (req, res) => {
       data: logbook
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message || 'Server Error' });
+    next(error);
   }
 };
 
 // @desc    Get student's own logbooks
 // @route   GET /api/logbooks/my-logbooks
 // @access  Private/Student
-export const getStudentLogbooks = async (req, res) => {
+export const getStudentLogbooks = async (req, res, next) => {
   try {
     const student = await Student.findOne({ user: req.user.id });
     const logbooks = await Logbook.find({ student: student?._id }).sort({ date: -1 });
     res.status(200).json({ success: true, count: logbooks.length, data: logbooks });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message || 'Server Error' });
+    next(error);
   }
 };
 
 // @desc    Get advisor's assigned students' logbooks
 // @route   GET /api/logbooks/assigned-logbooks
 // @access  Private/Advisor
-export const getAssignedStudentLogbooks = async (req, res) => {
+export const getAssignedStudentLogbooks = async (req, res, next) => {
   try {
     const { studentId } = req.query;
     // Find internships assigned to this advisor
@@ -79,15 +77,14 @@ export const getAssignedStudentLogbooks = async (req, res) => {
 
     res.status(200).json({ success: true, count: logbooks.length, data: logbooks });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message || 'Server Error' });
+    next(error);
   }
 };
 
 // @desc    Add comment to logbook entry
 // @route   POST /api/logbooks/:id/comment
 // @access  Private/Advisor
-export const addLogbookComment = async (req, res) => {
+export const addLogbookComment = async (req, res, next) => {
   try {
     const { text } = req.body;
     const logbook = await Logbook.findById(req.params.id);
@@ -106,7 +103,6 @@ export const addLogbookComment = async (req, res) => {
 
     res.status(200).json({ success: true, message: 'Comment added', data: logbook });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message || 'Server Error' });
+    next(error);
   }
 };

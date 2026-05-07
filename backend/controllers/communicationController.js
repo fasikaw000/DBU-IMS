@@ -124,7 +124,8 @@ export const sendCommunication = async (req, res, next) => {
     });
 
   } catch (error) {
-    next(error);
+    if (typeof next === 'function') return next(error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -140,6 +141,7 @@ export const getMyAnnouncements = async (req, res, next) => {
     
     res.status(200).json({ success: true, data: announcements });
   } catch (error) {
-    next(error);
+    if (typeof next === 'function') return next(error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };

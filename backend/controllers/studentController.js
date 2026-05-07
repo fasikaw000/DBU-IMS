@@ -4,6 +4,9 @@ import Company from '../models/Company.js';
 import Report from '../models/Report.js';
 import Logbook from '../models/Logbook.js';
 import AuditLog from '../models/AuditLog.js';
+import User from '../models/User.js';
+import { notify } from './notificationController.js';
+
 
 // @desc    Student proposes a company & applies for internship
 export const applyForInternship = async (req, res, next) => {
@@ -41,6 +44,20 @@ export const applyForInternship = async (req, res, next) => {
       message: 'Internship application submitted and is pending department approval.',
       data: internship
     });
+
+    // Notify Department Dean
+    if (student.department) {
+      const deans = await User.find({ role: 'Dean', department: student.department, isActive: true });
+      for (const dean of deans) {
+        await notify(
+          dean._id,
+          'NEW_INTERNSHIP_APPLICATION',
+          `New internship application submitted by ${req.user.name}.`,
+          '/dept-dashboard'
+        );
+      }
+    }
+
   } catch (err) { next(err); }
 };
 
@@ -114,13 +131,24 @@ export const submitReport = async (req, res, next) => {
       ip: req.ip
     });
 
-    res.status(201).json({ 
-      success: true, 
-      message: `${type} Report submitted (v${version})`, 
+    res.status(201).json({
+      success: true,
+      message: `${type} Report submitted (v${version})`,
       data: report,
       version,
       isLate: report.isLate
     });
+
+    // Notify Advisor
+    if (internship.advisor_id) {
+      await notify(
+        internship.advisor_id,
+        'REPORT_SUBMITTED',
+        `Student ${req.user.name} submitted a ${type} report (v${version}).`,
+        '/advisor-dashboard'
+      );
+    }
+
   } catch (err) { next(err); }
 };
 

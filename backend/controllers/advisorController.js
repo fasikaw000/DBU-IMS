@@ -47,15 +47,15 @@ export const getAssignedStudents = async (req, res, next) => {
 
     // For each internship, let's get report status counts
     const data = await Promise.all(internships.map(async (intern) => {
-       const reports = await Report.find({ internship: intern._id });
-       return {
-         ...intern.toObject(),
-         reportCounts: {
-           total: reports.length,
-           pending: reports.filter(r => r.status === 'Pending').length,
-           approved: reports.filter(r => r.status === 'Approved').length
-         }
-       };
+      const reports = await Report.find({ internship: intern._id });
+      return {
+        ...intern.toObject(),
+        reportCounts: {
+          total: reports.length,
+          pending: reports.filter(r => r.status === 'Pending').length,
+          approved: reports.filter(r => r.status === 'Approved').length
+        }
+      };
     }));
 
     res.status(200).json({ success: true, count: internships.length, data });
@@ -74,15 +74,15 @@ export const getAdvisorStats = async (req, res, next) => {
     const advisorId = req.user.id;
 
     const internships = await Internship.find({ advisor_id: advisorId });
-    
+
     const studentUserIds = internships.map(i => i.student);
 
     const activeInternships = internships.filter(i => i.status === 'ACTIVE' || i.status === 'APPROVED').length;
-    
-    const reports = await Report.find({ 
-      internship: { $in: internships.map(i => i._id) } 
+
+    const reports = await Report.find({
+      internship: { $in: internships.map(i => i._id) }
     });
-    
+
     const pendingReports = reports.filter(r => r.status === 'Pending').length;
 
     // Placeholder for unread messages (if messaging system exists)
@@ -164,12 +164,12 @@ export const reviewReport = async (req, res, next) => {
 export const evaluateStudent = async (req, res, next) => {
   try {
     const internshipId = req.params.internshipId;
-    const { 
-      companyGrade, 
-      documentationGrade, 
-      implementationGrade, 
-      presentationGrade, 
-      advisorComment 
+    const {
+      companyGrade,
+      documentationGrade,
+      implementationGrade,
+      presentationGrade,
+      advisorComment
     } = req.body;
 
     const internship = await Internship.findOne({ _id: internshipId, advisor_id: req.user.id });
@@ -182,10 +182,10 @@ export const evaluateStudent = async (req, res, next) => {
     }
 
     // Calculate total
-    const total = (companyGrade * 0.30) + 
-                  (documentationGrade * 0.25) + 
-                  (implementationGrade * 0.25) + 
-                  (presentationGrade * 0.20);
+    const total = (companyGrade * 0.30) +
+      (documentationGrade * 0.25) +
+      (implementationGrade * 0.25) +
+      (presentationGrade * 0.20);
     const advisorScore = Number(total.toFixed(2));
 
     const settings = await Settings.findOne().select('academicSettings.gradingSystem');
@@ -243,12 +243,12 @@ export const evaluateStudent = async (req, res, next) => {
       ip: req.ip
     });
 
-    res.status(201).json({ 
-      success: true, 
-      message: completionStatus.success 
-        ? 'Student evaluated and internship marked as COMPLETED.' 
-        : `Student graded (Status: GRADED). Note: ${completionStatus.message}`, 
-      data: evaluation 
+    res.status(201).json({
+      success: true,
+      message: completionStatus.success
+        ? 'Student evaluated and internship marked as COMPLETED.'
+        : `Student graded (Status: GRADED). Note: ${completionStatus.message}`,
+      data: evaluation
     });
   } catch (error) {
     next(error);

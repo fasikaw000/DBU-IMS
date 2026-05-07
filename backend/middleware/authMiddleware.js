@@ -19,7 +19,7 @@ export const protect = async (req, res, next) => {
       req.user = await User.findById(decoded.id).select('-password');
       if (req.user) {
         req.user.role = normalizeRole(req.user.role);
-        
+
         // Block access if user is deactivated
         if (req.user.isActive === false || req.user.status === 'deactivated') {
           return res.status(403).json({ success: false, message: 'Your account has been deactivated. Please contact your administrator.' });

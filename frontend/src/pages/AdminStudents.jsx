@@ -328,7 +328,7 @@ const AdminStudents = () => {
         setMessage('Please select a file first.');
         return;
       }
-      
+
       const fileExt = uploadFile.name.split('.').pop().toLowerCase();
       if (!['csv', 'xlsx', 'xls'].includes(fileExt)) {
         setMessageType('error');
