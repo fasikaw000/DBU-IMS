@@ -18,8 +18,10 @@ import {
     Star,
     Send,
     Loader2,
-    ArrowLeft
+    ArrowLeft,
+    Download
 } from 'lucide-react';
+import FilePreviewModal from '../components/FilePreviewModal';
 
 const AdvisorStudentsPage = () => {
     const [students, setStudents] = useState([]);
@@ -38,6 +40,7 @@ const AdvisorStudentsPage = () => {
     const [subDataLoading, setSubDataLoading] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const [message, setMessage] = useState(null);
+    const [previewData, setPreviewData] = useState(null);
 
     // Evaluation form state
     const [grades, setGrades] = useState({
@@ -55,7 +58,8 @@ const AdvisorStudentsPage = () => {
     const fetchStudents = async () => {
         try {
             const res = await api.get('/advisor/students');
-            setStudents(res.data);
+            const studentData = res?.data || (Array.isArray(res) ? res : []);
+            setStudents(Array.isArray(studentData) ? studentData : []);
         } catch (err) {
             console.error(err);
         } finally {
@@ -75,9 +79,12 @@ const AdvisorStudentsPage = () => {
                 api.get(`/advisor/reports/${internship._id}`),
                 api.get(`/logbooks/assigned-logbooks?studentId=${internship.student?._id}`)
             ]);
-            setReports(reportsRes.data);
-            // Filter logbooks for this specific student if the API returns all
-            setLogbooks(logbooksRes.data);
+            
+            const reportsData = reportsRes?.data || (Array.isArray(reportsRes) ? reportsRes : []);
+            setReports(Array.isArray(reportsData) ? reportsData : []);
+
+            const logData = logbooksRes?.data?.logbooks || logbooksRes?.data || (Array.isArray(logbooksRes) ? logbooksRes : []);
+            setLogbooks(Array.isArray(logData) ? logData : []);
 
             // If internship is already graded, populate form
             if (internship.finalGrade) {
@@ -104,7 +111,8 @@ const AdvisorStudentsPage = () => {
             await api.put(`/advisor/report/${reportId}`, { status, feedback });
             // Refresh reports
             const res = await api.get(`/advisor/reports/${selectedInternship._id}`);
-            setReports(res.data);
+            const reportsData = res?.data || (Array.isArray(res) ? res : []);
+            setReports(Array.isArray(reportsData) ? reportsData : []);
             setMessage({ type: 'success', text: `Report ${status.toLowerCase()} successfully.` });
         } catch (err) {
             setMessage({ type: 'error', text: 'Failed to update report status.' });
@@ -120,7 +128,8 @@ const AdvisorStudentsPage = () => {
             await api.post(`/logbooks/${logId}/comment`, { text });
             // Refresh logbooks
             const res = await api.get(`/logbooks/assigned-logbooks?studentId=${selectedInternship.student?._id}`);
-            setLogbooks(res.data);
+            const logData = res?.data?.logbooks || res?.data || (Array.isArray(res) ? res : []);
+            setLogbooks(Array.isArray(logData) ? logData : []);
         } catch (err) {
             console.error(err);
         } finally {
@@ -152,12 +161,12 @@ const AdvisorStudentsPage = () => {
         }
     };
 
-    const filteredStudents = students.filter(s => {
-        const matchesSearch = s.student?.user?.name.toLowerCase().includes(search.toLowerCase()) ||
-            s.student?.studentId.toLowerCase().includes(search.toLowerCase());
+    const filteredStudents = Array.isArray(students) ? students.filter(s => {
+        const matchesSearch = s.student?.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
+            s.student?.studentId?.toLowerCase().includes(search.toLowerCase());
         const matchesFilter = filterStatus === 'All' || s.status === filterStatus;
         return matchesSearch && matchesFilter;
-    });
+    }) : [];
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center">
@@ -430,15 +439,23 @@ const AdvisorStudentsPage = () => {
                                                 <span className="text-sm font-black uppercase tracking-widest">Company Evaluation</span>
                                             </div>
                                             <p className="text-xs text-slate-500 leading-relaxed">Student has uploaded the required evaluation form from the company supervisor.</p>
-                                            <a
-                                                href={`http://localhost:5001${selectedInternship.companyEvaluationUrl}`}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="flex items-center justify-center gap-2 w-full py-3 bg-dbu-primary text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-dbu-accent transition"
-                                            >
-                                                <ExternalLink size={14} />
-                                                VIEW DOCUMENT
-                                            </a>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => setPreviewData({ url: selectedInternship.companyEvaluationUrl, name: `Company Evaluation - ${selectedInternship.student?.user?.name}` })}
+                                                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-dbu-primary text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-dbu-accent transition shadow-lg shadow-dbu-primary/20"
+                                                >
+                                                    <ExternalLink size={14} />
+                                                    VIEW REPORT
+                                                </button>
+                                                <a
+                                                    href={`http://localhost:5001${selectedInternship.companyEvaluationUrl}`}
+                                                    download
+                                                    className="p-3 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-dbu-primary hover:border-dbu-primary transition-all flex items-center justify-center shadow-sm"
+                                                    title="Download File"
+                                                >
+                                                    <Download size={16} />
+                                                </a>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -478,15 +495,23 @@ const AdvisorStudentsPage = () => {
                                                     </div>
 
                                                     <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                                                        <a
-                                                            href={`http://localhost:5001${report.fileUrl}`}
-                                                            target="_blank"
-                                                            rel="noreferrer"
-                                                            className="text-[10px] font-black text-dbu-primary hover:underline flex items-center gap-1.5"
-                                                        >
-                                                            <ExternalLink size={12} />
-                                                            READ REPORT DOCUMENT
-                                                        </a>
+                                                        <div className="flex items-center gap-4">
+                                                            <button
+                                                                onClick={() => setPreviewData({ url: report.fileUrl, name: `${report.type} Report - ${selectedInternship.student?.user?.name}` })}
+                                                                className="text-[10px] font-black text-dbu-primary hover:underline flex items-center gap-1.5 transition-all"
+                                                            >
+                                                                <ExternalLink size={12} />
+                                                                VIEW REPORT
+                                                            </button>
+                                                            <a
+                                                                href={`http://localhost:5001${report.fileUrl}`}
+                                                                download
+                                                                className="flex items-center gap-1.5 text-slate-400 hover:text-dbu-primary text-[10px] font-black tracking-widest transition-all"
+                                                            >
+                                                                <Download size={12} />
+                                                                DOWNLOAD
+                                                            </a>
+                                                        </div>
 
                                                         {report.status === 'Pending' && (
                                                             <div className="flex gap-2">
@@ -680,6 +705,13 @@ const AdvisorStudentsPage = () => {
                     </div>
                 </div>
             )}
+
+            <FilePreviewModal 
+                isOpen={!!previewData} 
+                onClose={() => setPreviewData(null)} 
+                fileUrl={previewData?.url} 
+                fileName={previewData?.name} 
+            />
         </div>
     );
 };

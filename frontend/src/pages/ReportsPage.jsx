@@ -12,9 +12,11 @@ import {
     ArrowRight,
     Loader2,
     ExternalLink,
+    Download,
     ChevronDown,
     ChevronUp
 } from 'lucide-react';
+import FilePreviewModal from '../components/FilePreviewModal';
 
 const ReportsPage = () => {
     const [reports, setReports] = useState([]);
@@ -27,6 +29,7 @@ const ReportsPage = () => {
     const [type, setType] = useState('WEEKLY');
     const [fileUrl, setFileUrl] = useState('');
     const [selectedFile, setSelectedFile] = useState(null);
+    const [previewData, setPreviewData] = useState(null);
 
     useEffect(() => {
         fetchReports();
@@ -47,7 +50,9 @@ const ReportsPage = () => {
     const fetchReports = async () => {
         try {
             const res = await api.get('/student/reports');
-            setReports(res.data);
+            // Support both { success, data: [] } and direct [] response formats
+            const reportsData = res?.data?.data || res?.data || (Array.isArray(res) ? res : []);
+            setReports(Array.isArray(reportsData) ? reportsData : []);
         } catch (err) {
             console.error(err);
         } finally {
@@ -101,11 +106,11 @@ const ReportsPage = () => {
     };
 
     // Grouping reports by type for history view
-    const reportGroups = reports.reduce((acc, report) => {
+    const reportGroups = Array.isArray(reports) ? reports.reduce((acc, report) => {
         if (!acc[report.type]) acc[report.type] = [];
         acc[report.type].push(report);
         return acc;
-    }, {});
+    }, {}) : {};
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center">
@@ -196,6 +201,7 @@ const ReportsPage = () => {
                                         <>
                                             <UploadCloud className="w-10 h-10 text-slate-200 mx-auto mb-3 group-hover:text-dbu-primary transition-colors" />
                                             <p className="text-xs font-bold text-slate-400 group-hover:text-dbu-primary">Click to select PDF or DOCX file</p>
+                                            <p className="text-[9px] text-dbu-primary font-black uppercase mt-1">PDF format is recommended for better preview support.</p>
                                             <p className="text-[10px] text-slate-300 mt-1">Maximum file size: 10MB</p>
                                         </>
                                     )}
@@ -260,15 +266,23 @@ const ReportsPage = () => {
                                             </div>
 
                                             <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                                                <a
-                                                    href={`http://localhost:5001${report.fileUrl}`}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="flex items-center gap-2 text-dbu-primary text-[10px] font-black tracking-widest hover:underline"
-                                                >
-                                                    <ExternalLink size={14} />
-                                                    VIEW DOCUMENT
-                                                </a>
+                                                <div className="flex items-center gap-4">
+                                                    <button
+                                                        onClick={() => setPreviewData({ url: report.fileUrl, name: `${type} Report (v${report.version})` })}
+                                                        className="flex items-center gap-2 text-dbu-primary text-[10px] font-black tracking-widest hover:underline transition-all"
+                                                    >
+                                                        <ExternalLink size={14} />
+                                                        VIEW REPORT
+                                                    </button>
+                                                    <a
+                                                        href={`http://localhost:5001${report.fileUrl}`}
+                                                        download
+                                                        className="flex items-center gap-1.5 text-slate-400 hover:text-dbu-primary text-[10px] font-black tracking-widest transition-all"
+                                                    >
+                                                        <Download size={14} />
+                                                        DOWNLOAD
+                                                    </a>
+                                                </div>
                                                 {report.isLatest && <span className="text-[8px] font-black text-slate-300 uppercase">Current Version</span>}
                                             </div>
 
@@ -289,6 +303,13 @@ const ReportsPage = () => {
                     ))
                 )}
             </div>
+            
+            <FilePreviewModal 
+                isOpen={!!previewData} 
+                onClose={() => setPreviewData(null)} 
+                fileUrl={previewData?.url} 
+                fileName={previewData?.name} 
+            />
         </div>
     );
 };

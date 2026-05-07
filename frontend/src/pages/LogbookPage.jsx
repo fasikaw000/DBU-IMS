@@ -57,7 +57,8 @@ const LogbookPage = () => {
             } else {
                 res = await api.get('/logbooks/my-logbooks');
             }
-            setLogbooks(res.data);
+            const logData = res?.data?.logbooks || res?.data || (Array.isArray(res) ? res : []);
+            setLogbooks(Array.isArray(logData) ? logData : []);
         } catch (err) {
             console.error(err);
         } finally {
