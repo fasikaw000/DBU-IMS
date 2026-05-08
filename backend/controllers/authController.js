@@ -106,7 +106,7 @@ export const loginUser = async (req, res, next) => {
       token,
       _id: user._id,
       role: normalizeRole(user.role),
-      name: user.name,
+      name: user.fullName,
       username: user.username,
       email: user.email,
       phone,
@@ -280,7 +280,7 @@ export const forgotPassword = async (req, res, next) => {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #1e3a5f;">DBU Internship Management System</h2>
-        <p>Hello <strong>${user.name}</strong>,</p>
+        <p>Hello <strong>${user.fullName}</strong>,</p>
         <p>You requested a password reset for your account (<strong>${user.username}</strong>).</p>
         <p>Click the button below to reset your password. This link expires in <strong>10 minutes</strong>.</p>
         <div style="text-align: center; margin: 30px 0;">

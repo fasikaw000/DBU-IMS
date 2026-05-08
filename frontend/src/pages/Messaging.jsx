@@ -230,7 +230,7 @@ const Messaging = () => {
     }, [toast]);
 
     const filteredContacts = contacts.filter(c =>
-        (c.name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (c.fullName || c.name || '').toLowerCase().includes(search.toLowerCase()) ||
         (c.username || '').toLowerCase().includes(search.toLowerCase())
     );
 
@@ -294,10 +294,10 @@ const Messaging = () => {
                             className={`w-full p-4 flex items-center gap-4 hover:bg-white transition-all border-b border-slate-50 ${selectedContact?._id === c._id ? 'bg-white shadow-sm ring-1 ring-inset ring-dbu-primary/10' : ''}`}
                         >
                             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-white shadow-md ${selectedContact?._id === c._id ? 'bg-dbu-primary' : 'bg-slate-300'}`}>
-                                {getAvatarInitial(c.name)}
+                                {getAvatarInitial(c.fullName || c.name)}
                             </div>
                             <div className="flex-1 min-w-0 text-left">
-                                <p className="font-black text-slate-800 truncate text-sm">{c.name}</p>
+                                <p className="font-black text-slate-800 truncate text-sm">{c.fullName || c.name}</p>
                                 <p className="text-[10px] text-slate-500 truncate mt-0.5">
                                     {c.lastMessage ? (
                                         <span className={c.unreadCount > 0 ? 'font-bold text-slate-900' : ''}>
@@ -323,10 +323,10 @@ const Messaging = () => {
                     <>
                         <div className="p-4 border-b border-slate-100 flex items-center gap-4 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
                             <div className="w-10 h-10 rounded-xl bg-dbu-primary flex items-center justify-center text-white font-bold shadow-md">
-                                {getAvatarInitial(selectedContact.name)}
+                                {getAvatarInitial(selectedContact.fullName || selectedContact.name)}
                             </div>
                             <div>
-                                <h3 className="font-black text-slate-800">{selectedContact.name}</h3>
+                                <h3 className="font-black text-slate-800">{selectedContact.fullName || selectedContact.name}</h3>
                                 <p className="text-[10px] font-bold text-dbu-primary uppercase tracking-widest">{selectedContact.role}</p>
                             </div>
                         </div>

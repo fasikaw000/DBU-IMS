@@ -184,7 +184,7 @@ const Topbar = () => {
           >
             <div className="flex flex-col text-right hidden sm:block">
               <span className="text-sm font-black text-slate-800 leading-tight block">
-                {user?.name || 'User'}
+                {user?.fullName || user?.name || 'User'}
               </span>
               <span className="text-[10px] font-black uppercase tracking-widest text-dbu-primary mt-1 opacity-70 block">
                 {user?.role || ''}
@@ -200,7 +200,7 @@ const Topbar = () => {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <span className="text-sm font-black">{getAvatarInitial(user?.name)}</span>
+                  <span className="text-sm font-black">{getAvatarInitial(user?.fullName || user?.name)}</span>
                 )}
               </div>
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>

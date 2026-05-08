@@ -119,7 +119,7 @@ const AdminLogs = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-400"><User className="w-3 h-3" /></div>
-                        <span className="font-bold text-slate-700">{log.user?.name || 'System'}</span>
+                        <span className="font-bold text-slate-700">{log.user?.fullName || log.user?.name || 'System'}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">

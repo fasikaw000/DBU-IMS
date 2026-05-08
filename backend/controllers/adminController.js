@@ -139,10 +139,10 @@ const validateGradingSystem = (rules = []) => {
 // ─────────────────────────────────────────────────────────────
 export const createStudent = async (req, res, next) => {
   try {
-    const { name, department, studentId, year } = req.body;
+    const { fullName, department, studentId, year } = req.body;
 
-    if (!name || !department || !studentId || !year) {
-      return res.status(400).json({ success: false, message: 'Name, Department, Student ID, and Year are required.' });
+    if (!fullName || !department || !studentId || !year) {
+      return res.status(400).json({ success: false, message: 'Full Name, Department, Student ID, and Year are required.' });
     }
 
     const normalizedStudentId = studentId.toUpperCase();
@@ -172,19 +172,18 @@ export const createStudent = async (req, res, next) => {
 
     // Create User record
     const user = await User.create({
-      name,
+      fullName,
       username,
       department: dept._id,
-      role: 'student',
+      role: 'Student',
       isActivated: false,
       activationStatus: 'Pending',
       isActive: true
     });
 
-    // Create corresponding Student profile
+    // Create corresponding Student profile (Centralized: no username/phone here)
     const student = await Student.create({
       user: user._id,
-      username,
       studentId: normalizedStudentId,
       department: dept._id,
       year
@@ -209,7 +208,7 @@ export const createStudent = async (req, res, next) => {
     res.status(201).json({
       success: true,
       message: 'Student created successfully',
-      data: { username, studentId, name, year }
+      data: { username, studentId, fullName, year }
     });
   } catch (error) {
     next(error);
@@ -223,10 +222,10 @@ export const createStudent = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 export const createStaff = async (req, res, next) => {
   try {
-    const { name, department, role } = req.body;
+    const { fullName, department, role } = req.body;
 
-    if (!name || !department || !role) {
-      return res.status(400).json({ success: false, message: 'Name, Department, and Role are required.' });
+    if (!fullName || !department || !role) {
+      return res.status(400).json({ success: false, message: 'Full Name, Department, and Role are required.' });
     }
 
     const normalizedRole = normalizeRole(role);
@@ -253,7 +252,7 @@ export const createStaff = async (req, res, next) => {
 
     // Create User record
     const user = await User.create({
-      name,
+      fullName,
       username,
       department: dept._id,
       role: normalizedRole,
@@ -262,26 +261,23 @@ export const createStaff = async (req, res, next) => {
       isActive: true
     });
 
-    // Create corresponding Staff profile
+    // Create corresponding Staff profile (Centralized: no username/fullName/role here)
     const staff = await Staff.create({
       user: user._id,
-      username,
-      fullName: name,
-      department: dept._id,
-      role: normalizedRole === 'Dean' ? 'dean' : 'advisor'
+      department: dept._id
     });
 
     await AuditLog.create({
       user: req.user.id,
       action: 'created_staff',
-      details: `Created staff account for ${name} with username ${username} (${role})`,
+      details: `Created staff account for ${fullName} with username ${username} (${role})`,
       ip: req.ip
     });
 
     res.status(201).json({
       success: true,
       message: 'Staff account created successfully',
-      data: { username, name, role: normalizedRole }
+      data: { username, fullName, role: normalizedRole }
     });
   } catch (error) {
     next(error);
@@ -313,7 +309,7 @@ export const getAllUsers = async (req, res, next) => {
 export const getAllStudents = async (req, res, next) => {
   try {
     const students = await Student.find({})
-      .populate('user', 'name email isActivated activationStatus isActive status phone')
+      .populate('user', 'fullName email isActivated activationStatus isActive status phone username')
       .populate('department', 'name code')
       .populate({
         path: 'internship',
@@ -326,10 +322,10 @@ export const getAllStudents = async (req, res, next) => {
       data: students.map(s => ({
         _id: s._id,
         userId: s.user?._id,
-        name: s.user?.name,
+        name: s.user?.fullName || s.user?.name,
         email: s.user?.email,
-        phone: s.user?.phone || s.phone,
-        username: s.username,
+        phone: s.user?.phone,
+        username: s.user?.username || s.username,
         studentId: s.studentId,
         department: s.department,
         year: s.year,
@@ -351,7 +347,7 @@ export const getAllStudents = async (req, res, next) => {
 export const getAllStaff = async (req, res, next) => {
   try {
     const staffMembers = await Staff.find({})
-      .populate('user', 'name email isActivated activationStatus isActive status phone')
+      .populate('user', 'fullName name email isActivated activationStatus isActive status phone username role')
       .populate('department', 'name code');
 
     res.status(200).json({
@@ -360,12 +356,12 @@ export const getAllStaff = async (req, res, next) => {
       data: staffMembers.map(s => ({
         _id: s._id,
         userId: s.user?._id,
-        name: s.fullName,
+        name: s.user?.fullName || s.user?.name,
         email: s.user?.email,
         phone: s.user?.phone,
-        username: s.username,
+        username: s.user?.username || s.username,
         department: s.department,
-        role: s.role, // 'dean' or 'advisor'
+        role: s.user?.role, // 'Dean' or 'Advisor'
         isActivated: s.user?.isActivated,
         activationStatus: s.user?.isActivated ? 'Activated' : 'Pending',
         status: s.user?.status || 'active',
@@ -691,7 +687,7 @@ export const bulkUploadStudents = async (req, res, next) => {
       try {
         const username = await generateUsername('student');
         const user = await User.create({
-          name,
+          fullName: name,
           username,
           department: department._id,
           role: 'Student',
@@ -702,7 +698,6 @@ export const bulkUploadStudents = async (req, res, next) => {
 
         await Student.create({
           user: user._id,
-          username,
           studentId,
           department: department._id,
           year
@@ -849,7 +844,7 @@ export const bulkUploadStaff = async (req, res, next) => {
       try {
         const username = await generateUsername(role);
         const user = await User.create({
-          name,
+          fullName: name,
           username,
           department: department._id,
           role: role, // Canonical role from normalizeRole (Advisor/Dean)
@@ -860,10 +855,7 @@ export const bulkUploadStaff = async (req, res, next) => {
 
         await Staff.create({
           user: user._id,
-          username,
-          fullName: name,
-          department: department._id,
-          role: role.toLowerCase() // 'dean' or 'advisor'
+          department: department._id
         });
 
         created.push({ row: rowNo, name, username, role });
@@ -1069,7 +1061,7 @@ export const getReportAnalytics = async (req, res, next) => {
       { $group: { _id: '$advisor_id', studentCount: { $sum: 1 } } },
       { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'advisor' } },
       { $unwind: '$advisor' },
-      { $project: { name: '$advisor.name', count: '$studentCount', _id: 0 } }
+      { $project: { name: { $ifNull: ['$advisor.fullName', '$advisor.name'] }, count: '$studentCount', _id: 0 } }
     ]);
 
     // 4. Grade Distribution
@@ -1104,7 +1096,8 @@ export const getReportAnalytics = async (req, res, next) => {
  */
 export const updateStudent = async (req, res, next) => {
   try {
-    const { name, department, year } = req.body;
+    const { fullName, name, department, year } = req.body;
+    const updateName = fullName || name;
     const student = await Student.findById(req.params.id);
 
     if (!student) {
@@ -1114,7 +1107,7 @@ export const updateStudent = async (req, res, next) => {
     // Update User record
     const user = await User.findById(student.user);
     if (user) {
-      user.name = name || user.name;
+      user.fullName = updateName || user.fullName;
       if (department) {
         const dept = await Department.findById(department);
         if (dept) {
@@ -1132,7 +1125,7 @@ export const updateStudent = async (req, res, next) => {
     await AuditLog.create({
       user: req.user.id,
       action: 'student_updated',
-      details: `Updated student ${student.studentId} (${user.name})`,
+      details: `Updated student ${student.studentId} (${user.fullName || user.name})`,
       ip: req.ip
     });
 
@@ -1148,7 +1141,8 @@ export const updateStudent = async (req, res, next) => {
  */
 export const updateStaff = async (req, res, next) => {
   try {
-    const { name, department, role } = req.body;
+    const { fullName, name, department, role } = req.body;
+    const updateName = fullName || name;
     const staff = await Staff.findById(req.params.id);
 
     if (!staff) {
@@ -1158,7 +1152,7 @@ export const updateStaff = async (req, res, next) => {
     // Update User record
     const user = await User.findById(staff.user);
     if (user) {
-      user.name = name || user.name;
+      user.fullName = updateName || user.fullName;
       if (department) {
         const dept = await Department.findById(department);
         if (dept) {
@@ -1170,19 +1164,17 @@ export const updateStaff = async (req, res, next) => {
         const normRole = normalizeRole(role);
         if (['Advisor', 'Dean', 'Admin'].includes(normRole)) {
           user.role = normRole;
-          staff.role = normRole.toLowerCase();
         }
       }
       await user.save();
     }
 
-    staff.fullName = name || staff.fullName;
     await staff.save();
 
     await AuditLog.create({
       user: req.user.id,
       action: 'staff_updated',
-      details: `Updated staff ${staff.username} (${user.name})`,
+      details: `Updated staff ${staff.username} (${user.fullName || user.name})`,
       ip: req.ip
     });
 
@@ -1365,7 +1357,7 @@ export const getLogs = async (req, res, next) => {
     const totalPages = Math.ceil(totalLogs / limit) || 1;
 
     const logs = await AuditLog.find(searchFilter)
-      .populate('user', 'name role username')
+      .populate('user', 'fullName role username')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);

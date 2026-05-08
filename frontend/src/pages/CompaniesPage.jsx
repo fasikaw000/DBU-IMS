@@ -41,6 +41,7 @@ const CompaniesPage = () => {
     const [viewingStudentsFor, setViewingStudentsFor] = useState(null);
     const [placements, setPlacements] = useState([]);
     const [placementsLoading, setPlacementsLoading] = useState(false);
+    const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: '' });
 
     useEffect(() => {
         fetchData();
@@ -80,10 +81,11 @@ const CompaniesPage = () => {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to remove this company?')) return;
+    const handleDelete = async () => {
+        if (!deleteModal.id) return;
         try {
-            await api.delete(`/department/companies/${id}`);
+            await api.delete(`/department/companies/${deleteModal.id}`);
+            setDeleteModal({ open: false, id: null, name: '' });
             fetchData();
         } catch (err) {
             console.error(err);
@@ -226,7 +228,7 @@ const CompaniesPage = () => {
                                     <button onClick={() => handleToggleStatus(company._id)} className={`p-2 hover:bg-slate-100 rounded-lg transition ${company.isActive ? 'text-amber-500' : 'text-emerald-500'}`} title={company.isActive ? 'Deactivate Company' : 'Activate Company'}>
                                         <Power size={16} />
                                     </button>
-                                    <button onClick={() => handleDelete(company._id)} className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-500 transition" title="Delete Company">
+                                    <button onClick={() => setDeleteModal({ open: true, id: company._id, name: company.name })} className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-500 transition" title="Delete Company">
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
@@ -355,7 +357,35 @@ const CompaniesPage = () => {
                     </div>
                 </div>
             )}
-
+            
+            {/* Delete Confirmation Modal */}
+            {deleteModal.open && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+                    <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-8 text-center animate-in zoom-in-95 duration-200">
+                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <Trash2 size={32} />
+                        </div>
+                        <h3 className="text-xl font-black text-slate-800 mb-2">Delete Company?</h3>
+                        <p className="text-sm text-slate-500 mb-8 leading-relaxed">
+                            Are you sure you want to remove <span className="font-bold text-slate-800">{deleteModal.name}</span>? This action cannot be undone.
+                        </p>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setDeleteModal({ open: false, id: null, name: '' })}
+                                className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-[10px] tracking-widest hover:bg-slate-200 transition uppercase"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={handleDelete}
+                                className="flex-1 py-4 bg-red-500 text-white rounded-2xl font-black text-[10px] tracking-widest hover:bg-red-600 transition shadow-lg shadow-red-500/20 uppercase"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { normalizeRole, ROLE_VALUES } from '../utils/roles.js';
 
 const userSchema = new mongoose.Schema({
-  name: {
+  fullName: {
     type: String,
     required: [true, 'Please add a name']
   },
@@ -37,7 +37,7 @@ const userSchema = new mongoose.Schema({
   phone: {
     type: String,
     required: false,
-    match: [/^\d{10,15}$/, 'Phone number must be between 10 and 15 digits']
+    match: [/^(?:\+2519\d{8}|09\d{8})$/, 'Please enter a valid Ethiopian phone number.']
   },
   password: {
     type: String,
@@ -111,6 +111,11 @@ userSchema.pre('save', function () {
   // - activationStatus derives from isActivated
   // - account active state can be driven by either isActive or status (depending on what changed)
   this.activationStatus = this.isActivated ? 'Activated' : 'Pending';
+  
+  // Normalize Ethiopian Phone Number
+  if (this.phone && /^09\d{8}$/.test(this.phone)) {
+    this.phone = '+251' + this.phone.substring(1);
+  }
 
   const statusWasModified = this.isModified('status');
   const isActiveWasModified = this.isModified('isActive');

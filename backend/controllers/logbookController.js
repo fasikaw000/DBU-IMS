@@ -1,6 +1,7 @@
 import Logbook from '../models/Logbook.js';
 import Internship from '../models/Internship.js';
 import Student from '../models/Student.js';
+import { notify } from './notificationController.js';
 
 // @desc    Submit a daily logbook entry
 // @route   POST /api/logbooks/submit
@@ -34,6 +35,16 @@ export const submitLogbook = async (req, res, next) => {
       message: 'Logbook entry submitted successfully',
       data: logbook
     });
+
+    // Notify Advisor
+    if (internship.advisor_id) {
+      await notify(
+        internship.advisor_id,
+        'LOGBOOK_SUBMITTED',
+        `Student ${req.user.fullName || req.user.name} has submitted a new logbook entry for ${new Date(date).toLocaleDateString()}.`,
+        `/advisor-dashboard`
+      );
+    }
   } catch (error) {
     next(error);
   }

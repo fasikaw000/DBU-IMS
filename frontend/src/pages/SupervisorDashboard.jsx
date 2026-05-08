@@ -87,7 +87,7 @@ const SupervisorDashboard = () => {
               {students.map(intern => (
                 <div key={intern._id} className="p-4 bg-slate-50 rounded border border-slate-100 flex justify-between items-center hover:border-dbu-primary/30 transition shadow-sm">
                   <div>
-                    <h4 className="font-bold text-slate-800">{intern.student_id?.name}</h4>
+                    <h4 className="font-bold text-slate-800">{intern.student_id?.fullName || intern.student_id?.name}</h4>
                     <p className="text-xs text-slate-500">ID: {intern.student_id?.studentId} | Dept: {intern.student_id?.department}</p>
                     <div className="mt-1">
                       <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${intern.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
@@ -112,7 +112,7 @@ const SupervisorDashboard = () => {
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 animate-in slide-in-from-right duration-300">
             <h3 className="text-lg font-semibold border-b pb-2 mb-4 flex items-center">
               <Star className="w-5 h-5 mr-2 text-yellow-500" />
-              Performance Feedback: {selectedInternship.student_id?.name}
+              Performance Feedback: {selectedInternship.student_id?.fullName || selectedInternship.student_id?.name}
             </h3>
             <form onSubmit={handleEvalSubmit} className="space-y-6">
               <div>

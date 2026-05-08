@@ -60,7 +60,7 @@ const AdminInternships = () => {
 
     const rows = internships.map(i => {
       return [
-        `"${i.student?.name || ''}"`,
+      `"${i.student?.fullName || i.student?.name || ''}"`,
         `"${i.student?.studentId || ''}"`,
         `"${i.student?.department?.name || ''}"`,
         `"${i.company?.name || ''}"`,
@@ -71,7 +71,7 @@ const AdminInternships = () => {
         `"${new Date(i.startDate).toLocaleDateString()}"`,
         `"${new Date(i.endDate).toLocaleDateString()}"`,
         `"${i.status}"`,
-        `"${i.advisor_id?.name || 'Unassigned'}"`
+        `"${i.advisor_id?.fullName || i.advisor_id?.name || 'Unassigned'}"`
       ].join(',');
     }).join('\n');
 
@@ -99,7 +99,7 @@ const AdminInternships = () => {
 
   const filtered = internships.filter(i => {
     const matchesSearch = 
-      i.student?.name?.toLowerCase().includes(search.toLowerCase()) ||
+      (i.student?.fullName || i.student?.name || '').toLowerCase().includes(search.toLowerCase()) ||
       i.company?.name?.toLowerCase().includes(search.toLowerCase()) ||
       i.student?.studentId?.toLowerCase().includes(search.toLowerCase());
     
@@ -204,7 +204,7 @@ const AdminInternships = () => {
                   <tr key={intern._id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-slate-800">{intern.student?.name}</span>
+                        <span className="text-sm font-bold text-slate-800">{intern.student?.fullName || intern.student?.name}</span>
                         <span className="text-[10px] text-slate-400">{intern.student?.studentId} • {intern.student?.department?.code}</span>
                       </div>
                     </td>
@@ -249,7 +249,7 @@ const AdminInternships = () => {
             <div className="bg-dbu-primary p-6 text-white flex justify-between items-start">
               <div>
                 <h3 className="text-xl font-black">Internship Details</h3>
-                <p className="text-dbu-light/80 text-sm">Managing workflow for {selectedInternship.student?.name}</p>
+                <p className="text-dbu-light/80 text-sm">Managing workflow for {selectedInternship.student?.fullName || selectedInternship.student?.name}</p>
               </div>
               <button onClick={() => setSelectedInternship(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                 <XCircle className="w-6 h-6" />
@@ -262,7 +262,7 @@ const AdminInternships = () => {
                 <div className="space-y-3">
                   <div>
                     <label className="text-[10px] text-slate-400 block lowercase">Full Name</label>
-                    <p className="text-sm font-bold text-slate-800">{selectedInternship.student?.name}</p>
+                    <p className="text-sm font-bold text-slate-800">{selectedInternship.student?.fullName || selectedInternship.student?.name}</p>
                   </div>
                   <div>
                     <label className="text-[10px] text-slate-400 block lowercase">Internship Field</label>

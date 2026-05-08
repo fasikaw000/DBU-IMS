@@ -33,7 +33,7 @@ const DeanStudents = () => {
     // Print Modal State
     const [showPrintModal, setShowPrintModal] = useState(false);
     const [printFields, setPrintFields] = useState({
-        name: true,
+        fullName: true,
         studentId: true,
         username: true,
         year: true,
@@ -109,7 +109,7 @@ const DeanStudents = () => {
                             ${students.map(s => `
                                 <tr>
                                     ${activeFields.map(f => {
-            if (f === 'name') return `<td>${s.user?.name}</td>`;
+            if (f === 'fullName') return `<td>${s.user?.fullName || s.user?.name}</td>`;
             if (f === 'status') return `<td>${s.internship?.status || 'NOT APPLIED'}</td>`;
             if (f === 'phone') return `<td>${s.phone || s.user?.phone || 'N/A'}</td>`;
             return `<td>${s[f] || 'N/A'}</td>`;
@@ -130,7 +130,7 @@ const DeanStudents = () => {
         if (!students || students.length === 0) return;
 
         const csvData = students.map((s) => ({
-            Name: s.user?.name || '',
+            Name: s.user?.fullName || s.user?.name || '',
             Email: s.user?.email || '',
             StudentID: s.studentId || '',
             Department: user?.department?.name || departmentName || '',
@@ -156,7 +156,7 @@ const DeanStudents = () => {
 
     const filteredStudents = students.filter(s => {
         if (!s) return false;
-        const nameStr = s.user?.name || '';
+        const nameStr = s.user?.fullName || s.user?.name || '';
         const idStr = s.studentId || '';
         const searchStr = search.toLowerCase();
         return String(nameStr).toLowerCase().includes(searchStr) || String(idStr).toLowerCase().includes(searchStr);

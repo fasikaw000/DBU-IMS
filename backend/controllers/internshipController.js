@@ -97,7 +97,7 @@ export const applyInternship = async (req, res, next) => {
         await notify(
           dean._id,
           'NEW_INTERNSHIP_APPLICATION',
-          `New internship application submitted by ${req.user.name}.`,
+          `New internship application submitted by ${req.user.fullName || req.user.name}.`,
           '/dept-dashboard'
         );
       }
@@ -204,7 +204,7 @@ export const getStudentInternship = async (req, res, next) => {
 
     const internship = await Internship.findOne({ student: student._id })
       .populate('company')
-      .populate('advisor_id', 'name email');
+      .populate('advisor_id', 'fullName email');
 
     res.status(200).json({ success: true, data: internship });
   } catch (error) {
@@ -236,7 +236,7 @@ export const uploadEvaluation = async (req, res, next) => {
     await internship.save();
 
     if (internship.advisor_id) {
-      await notify(internship.advisor_id, 'EVALUATION_SUBMITTED', `Student ${req.user.name} uploaded evaluation.`, `/advisor-dashboard`);
+      await notify(internship.advisor_id, 'EVALUATION_SUBMITTED', `Student ${req.user.fullName || req.user.name} uploaded evaluation.`, `/advisor-dashboard`);
     }
 
     res.status(200).json({ success: true, message: 'Uploaded', data: { url: fileUrl } });

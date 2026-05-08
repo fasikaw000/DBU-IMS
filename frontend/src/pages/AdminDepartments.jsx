@@ -10,7 +10,10 @@ import {
     Trash2,
     ToggleLeft,
     ToggleRight,
-    Edit3
+    Edit3,
+    XCircle,
+    CheckCircle,
+    AlertCircle
 } from 'lucide-react';
 
 const AdminDepartments = () => {
@@ -43,7 +46,7 @@ const AdminDepartments = () => {
         const timeout = setTimeout(() => {
             setMessage('');
             setMessageType('success');
-        }, 2500);
+        }, 4000);
         return () => clearTimeout(timeout);
     }, [message]);
 
@@ -177,8 +180,17 @@ const AdminDepartments = () => {
             </div>
 
             {message && (
-                <div className={`p-4 rounded-xl font-bold text-sm ${messageType === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
-                    {message}
+                <div className={`p-4 rounded-xl font-bold text-sm flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${messageType === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                    <div className="flex items-center gap-3">
+                        {messageType === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+                        <p>{message}</p>
+                    </div>
+                    <button 
+                        onClick={() => setMessage('')}
+                        className="p-1 hover:bg-black/5 rounded-lg transition-colors shrink-0"
+                    >
+                        <XCircle size={18} className="opacity-50 hover:opacity-100" />
+                    </button>
                 </div>
             )}
 

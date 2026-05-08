@@ -134,7 +134,7 @@ export const sendMessage = async (req, res, next) => {
       user: receiverId,
       sender: senderId,
       type: 'NEW_MESSAGE',
-      message: `You have a new message from ${req.user.name}: "${finalContent.substring(0, 30)}..."`,
+      message: `You have a new message from ${req.user.fullName || req.user.name}: "${finalContent.substring(0, 30)}..."`,
       link: `/messages?userId=${senderId}`
     });
 
@@ -196,7 +196,7 @@ export const getContacts = async (req, res, next) => {
     const contacts = await User.find({
       _id: { $in: contactObjectIds },
       isActive: { $ne: false }
-    }).select('name username role profilePhoto department').lean();
+    }).select('fullName username role profilePhoto department').lean();
 
     const unreadCounts = await Message.aggregate([
       { $match: { receiver: new mongoose.Types.ObjectId(senderId), isRead: false, sender: { $in: contactObjectIds } } },
@@ -232,7 +232,7 @@ export const getContacts = async (req, res, next) => {
       if (a.lastMessage && b.lastMessage) return new Date(b.lastMessage.createdAt) - new Date(a.lastMessage.createdAt);
       if (a.lastMessage) return -1;
       if (b.lastMessage) return 1;
-      return a.name.localeCompare(b.name);
+      return (a.fullName || a.name || '').localeCompare(b.fullName || b.name || '');
     });
 
     res.status(200).json({ success: true, count: contactsWithDetails.length, data: contactsWithDetails });

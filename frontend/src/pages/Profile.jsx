@@ -49,7 +49,7 @@ const Profile = () => {
   }, [passwordMessage, passwordError]);
 
   useEffect(() => {
-    setFullName(user?.name || '');
+    setFullName(user?.fullName || user?.name || '');
     setEmail(user?.email || '');
     setPhone(user?.phone || '');
     setCbeAccount(user?.studentProfile?.cbeAccount || user?.cbeAccount || '');
@@ -103,7 +103,7 @@ const Profile = () => {
     setError('');
     try {
       await api.put('/users/me', {
-        name: fullName,
+        fullName: fullName,
         email,
         phone,
         cbeAccount: user?.role === 'Student' ? cbeAccount : undefined
@@ -199,7 +199,7 @@ const Profile = () => {
                   <img src={`http://localhost:5001${user.profilePhoto}`} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full bg-dbu-primary/10 flex items-center justify-center text-dbu-primary text-4xl font-black">
-                    {getAvatarInitial(user?.name)}
+                    {getAvatarInitial(user?.fullName || user?.name)}
                   </div>
                 )}
                 <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
@@ -208,7 +208,7 @@ const Profile = () => {
                 </label>
               </div>
 
-              <h2 className="text-2xl font-black text-slate-800">{user?.name}</h2>
+              <h2 className="text-2xl font-black text-slate-800">{user?.fullName || user?.name}</h2>
               <p className="text-xs font-black uppercase tracking-[0.2em] text-dbu-primary mt-1">{displayRole}</p>
 
               <div className="mt-8 pt-8 border-t border-slate-100 space-y-4">
@@ -283,9 +283,9 @@ const Profile = () => {
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       value={phone}
-                      onChange={e => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 15)); setErrors({ ...errors, phone: null }); }}
+                      onChange={e => { setPhone(e.target.value.replace(/[^\d+]/g, '').slice(0, 15)); setErrors({ ...errors, phone: null }); }}
                       className={`w-full pl-12 pr-4 py-3 bg-slate-50 border rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary ${errors.phone ? 'border-red-500' : 'border-slate-100'}`}
-                      placeholder="Enter your phone number"
+                      placeholder="e.g. +251951769049 or 0951769049"
                       type="tel"
                     />
                   </div>

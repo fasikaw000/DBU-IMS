@@ -52,7 +52,7 @@ export const applyForInternship = async (req, res, next) => {
         await notify(
           dean._id,
           'NEW_INTERNSHIP_APPLICATION',
-          `New internship application submitted by ${req.user.name}.`,
+          `New internship application submitted by ${req.user.fullName || req.user.name}.`,
           '/dept-dashboard'
         );
       }
@@ -144,7 +144,7 @@ export const submitReport = async (req, res, next) => {
       await notify(
         internship.advisor_id,
         'REPORT_SUBMITTED',
-        `Student ${req.user.name} submitted a ${type} report (v${version}).`,
+        `Student ${req.user.fullName || req.user.name} submitted a ${type} report (v${version}).`,
         '/advisor-dashboard'
       );
     }
@@ -183,8 +183,12 @@ export const getMyLogbooks = async (req, res, next) => {
 export const updateProfile = async (req, res, next) => {
   try {
     const { phone, cbeAccount } = req.body;
+    
+    if (phone) {
+      await User.findByIdAndUpdate(req.user.id, { phone });
+    }
+
     const updateData = {};
-    if (phone) updateData.phone = phone;
     if (cbeAccount) updateData.cbeAccount = cbeAccount;
 
     const student = await Student.findOneAndUpdate(

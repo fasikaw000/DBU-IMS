@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
-import { Users, Search, Activity, Key, Upload, Plus, Printer, Trash2, Mail, UserPlus, Edit, Shield, ShieldOff, X, CheckCircle, FileText, Download } from 'lucide-react';
+import { Users, Search, Activity, Key, Upload, Plus, Printer, Trash2, Mail, UserPlus, Edit, Shield, ShieldOff, X, CheckCircle, FileText, Download, XCircle, AlertCircle } from 'lucide-react';
 
 const AdminStudents = () => {
   const [students, setStudents] = useState([]);
@@ -24,7 +24,7 @@ const AdminStudents = () => {
   // Print Modal State
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printFields, setPrintFields] = useState({
-    name: true,
+    fullName: true,
     studentId: true,
     username: true,
     department: true,
@@ -39,7 +39,7 @@ const AdminStudents = () => {
 
   // Registration Form State
   const [newStudent, setNewStudent] = useState({
-    name: '',
+    fullName: '',
     studentId: '',
     department: '',
     year: ''
@@ -47,7 +47,7 @@ const AdminStudents = () => {
 
   // Edit Form State
   const [editForm, setEditForm] = useState({
-    name: '',
+    fullName: '',
     department: '',
     year: ''
   });
@@ -61,7 +61,7 @@ const AdminStudents = () => {
     const timeout = setTimeout(() => {
       setMessage('');
       setMessageType('success');
-    }, 2500);
+    }, 4000);
     return () => clearTimeout(timeout);
   }, [message]);
 
@@ -88,7 +88,7 @@ const AdminStudents = () => {
 
     // Validation
     let newErrors = {};
-    if (!newStudent.name) newErrors.name = "Required";
+    if (!newStudent.fullName) newErrors.fullName = "Required";
     if (!newStudent.studentId) newErrors.studentId = "Required";
     if (!newStudent.department) newErrors.department = "Required";
     if (!newStudent.year) newErrors.year = "Required";
@@ -105,9 +105,9 @@ const AdminStudents = () => {
     try {
       await api.post('/admin/student', newStudent);
       setMessageType('success');
-      setMessage(`Success: Student ${newStudent.name} registered.`);
+      setMessage(`Success: Student ${newStudent.fullName} registered.`);
       setShowAddModal(false);
-      setNewStudent({ name: '', studentId: '', department: '', year: '' });
+      setNewStudent({ fullName: '', studentId: '', department: '', year: '' });
       await fetchData();
     } catch (err) {
       setMessageType('error');
@@ -120,7 +120,7 @@ const AdminStudents = () => {
   const handleEditStudent = (student) => {
     setEditingStudent(student);
     setEditForm({
-      name: student.name,
+      fullName: student.fullName || student.name,
       department: student.department?._id || student.department,
       year: student.year
     });
@@ -134,7 +134,7 @@ const AdminStudents = () => {
     try {
       await api.put(`/admin/students/${editingStudent._id}`, editForm);
       setMessageType('success');
-      setMessage(`Success: Student ${editForm.name} updated.`);
+      setMessage(`Success: Student ${editForm.fullName} updated.`);
       setShowEditModal(false);
       await fetchData();
     } catch (err) {
@@ -172,7 +172,7 @@ const AdminStudents = () => {
 
     const activeFields = Object.keys(printFields).filter(f => printFields[f]);
     const fieldLabels = {
-      name: 'Full Name',
+      fullName: 'Full Name',
       studentId: 'Student ID',
       username: 'Username',
       department: 'Department',
@@ -249,7 +249,7 @@ const AdminStudents = () => {
     if (!data || data.length === 0) return;
     const activeFields = Object.keys(printFields).filter(f => printFields[f]);
     const fieldLabels = {
-      name: 'Full Name',
+      fullName: 'Full Name',
       studentId: 'Student ID',
       username: 'Username',
       department: 'Department',
@@ -361,7 +361,7 @@ const AdminStudents = () => {
   };
 
   const filteredStudents = students.filter((student) =>
-    (student.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (student.fullName || student.name || '').toLowerCase().includes(search.toLowerCase()) ||
     (student.username || '').toLowerCase().includes(search.toLowerCase()) ||
     (student.studentId || '').toLowerCase().includes(search.toLowerCase())
   );
@@ -406,8 +406,17 @@ const AdminStudents = () => {
       </div>
 
       {message && (
-        <div className={`p-4 rounded-xl font-bold text-sm border whitespace-pre-line ${messageType === 'success' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
-          {message}
+        <div className={`p-4 rounded-xl font-bold text-sm border flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${messageType === 'success' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
+          <div className="flex items-center gap-3">
+            {messageType === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+            <p className="whitespace-pre-line">{message}</p>
+          </div>
+          <button 
+            onClick={() => setMessage('')}
+            className="p-1 hover:bg-black/5 rounded-lg transition-colors shrink-0"
+          >
+            <XCircle size={18} className="opacity-50 hover:opacity-100" />
+          </button>
         </div>
       )}
 
@@ -614,8 +623,8 @@ const AdminStudents = () => {
             <div className="bg-dbu-primary p-6 text-white"><h3 className="text-xl font-black">Add New Student</h3></div>
             <form onSubmit={handleRegisterStudent} className="p-8 space-y-4">
               <div className="space-y-1">
-                <input type="text" placeholder="Full Name" value={newStudent.name} onChange={e => { setNewStudent({ ...newStudent, name: e.target.value }); setErrors({ ...errors, name: null }); }} className={`w-full p-3 border rounded-xl ${errors.name ? 'border-red-500' : ''}`} />
-                {errors.name && <p className="text-red-500 text-[10px] font-bold ml-1">{errors.name}</p>}
+                <input type="text" placeholder="Full Name" value={newStudent.fullName} onChange={e => { setNewStudent({ ...newStudent, fullName: e.target.value }); setErrors({ ...errors, fullName: null }); }} className={`w-full p-3 border rounded-xl ${errors.fullName ? 'border-red-500' : ''}`} />
+                {errors.fullName && <p className="text-red-500 text-[10px] font-bold ml-1">{errors.fullName}</p>}
               </div>
               <div className="space-y-1">
                 <input type="text" placeholder="Student ID" value={newStudent.studentId} onChange={e => { setNewStudent({ ...newStudent, studentId: e.target.value }); setErrors({ ...errors, studentId: null }); }} className={`w-full p-3 border rounded-xl ${errors.studentId ? 'border-red-500' : ''}`} />
@@ -648,7 +657,7 @@ const AdminStudents = () => {
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
             <div className="bg-dbu-primary p-6 text-white"><h3 className="text-xl font-black">Edit Student</h3></div>
             <form onSubmit={handleUpdateStudent} className="p-8 space-y-4">
-              <input type="text" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="w-full p-3 border rounded-xl" required />
+              <input type="text" value={editForm.fullName} onChange={e => setEditForm({ ...editForm, fullName: e.target.value })} className="w-full p-3 border rounded-xl" required />
               <select value={editForm.department} onChange={e => setEditForm({ ...editForm, department: e.target.value })} className="w-full p-3 border rounded-xl" required>
                 {departments.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
               </select>

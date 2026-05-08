@@ -168,10 +168,10 @@ const AdvisorDashboard = () => {
                                         <td className="p-6">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 font-black">
-                                                    {intern.student?.user?.name?.charAt(0)}
+                                                    {(intern.student?.user?.fullName || intern.student?.user?.name || 'U').charAt(0)}
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-slate-800">{intern.student?.user?.name}</span>
+                                                    <span className="font-bold text-slate-800">{intern.student?.user?.fullName || intern.student?.user?.name}</span>
                                                     <span className="text-xs text-slate-400 font-medium">{intern.student?.studentId}</span>
                                                 </div>
                                             </div>

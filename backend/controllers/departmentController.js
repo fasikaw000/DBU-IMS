@@ -43,7 +43,7 @@ export const getDepartmentStudents = async (req, res, next) => {
         { user: { $in: userIds } }
       ]
     })
-      .populate('user', 'name email username isActivated role phone isActive status')
+      .populate('user', 'fullName email username isActivated role phone isActive status')
       .populate('department', 'name code')
       .lean();
 
@@ -57,7 +57,7 @@ export const getDepartmentStudents = async (req, res, next) => {
         return {
           _id: s._id,
           userId: s.user?._id,
-          fullName: s.user?.name || 'N/A', // Mapping 'name' to 'fullName' as requested
+          fullName: s.user?.fullName || 'N/A', // Mapping centralized fullName
           email: s.user?.email || 'N/A',
           username: s.username || s.user?.username || 'N/A',
           studentId: s.studentId || 'N/A',
@@ -217,14 +217,14 @@ export const assignAdvisor = async (req, res, next) => {
       user: req.user.id,
       action: 'advisor_assigned',
       targetResource: { model: 'Internship', documentId: internshipId },
-      details: `Assisted advisor ${advisor.name} to internship ${internshipId}`,
+      details: `Assisted advisor ${advisor.fullName} to internship ${internshipId}`,
       ip: req.ip
     });
 
     await notify(
       advisor._id,
       'ADVISOR_ASSIGNED',
-      `You have been assigned as an advisor for student ${internship.student?.user?.name || 'Unknown'}.`,
+      `You have been assigned as an advisor for student ${internship.student?.user?.fullName || 'Unknown'}.`,
       '/advisor/dashboard'
     );
 
@@ -232,7 +232,7 @@ export const assignAdvisor = async (req, res, next) => {
       await notify(
         internship.student.user._id,
         'ADVISOR_ASSIGNED',
-        `${advisor.name} has been assigned as your faculty advisor.`,
+        `${advisor.fullName} has been assigned as your faculty advisor.`,
         '/student-dashboard'
       );
     }
@@ -259,7 +259,7 @@ export const getAdvisorWorkload = async (req, res, next) => {
     const similarDepts = await Department.find({ name: deptName }).select('_id');
     const allDeptIds = similarDepts.map(d => d._id);
 
-    const advisors = await User.find({ role: 'advisor', department: { $in: allDeptIds } }).select('name username email isActive status');
+    const advisors = await User.find({ role: 'advisor', department: { $in: allDeptIds } }).select('fullName username email isActive status');
 
     const workloads = await Promise.all(advisors.map(async (adv) => {
       const activeInternships = await Internship.countDocuments({ advisor_id: adv._id, status: { $in: ['Active', 'Approved', 'ACTIVE', 'APPROVED', 'Ongoing', 'ONGOING'] } });
@@ -354,7 +354,7 @@ export const getInternshipHistory = async (req, res, next) => {
         { details: { $regex: String(internshipId), $options: 'i' } }
       ]
     })
-      .populate('user', 'name role')
+      .populate('user', 'fullName role')
       .sort({ createdAt: -1 });
 
     const history = [...logs];

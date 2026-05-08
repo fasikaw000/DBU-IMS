@@ -28,25 +28,26 @@ export const getMe = async (req, res, next) => {
 
 export const updateMe = async (req, res, next) => {
   try {
-    const { name, email } = req.body;
+    const { fullName, email } = req.body;
     const user = await User.findById(req.user.id).select('-password');
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
     const updates = {};
-    if (typeof name === 'string') {
-      const trimmed = name.trim();
+    if (typeof fullName === 'string') {
+      const trimmed = fullName.trim();
       if (!trimmed) {
         return res.status(400).json({ success: false, message: 'Full name cannot be empty' });
       }
-      updates.name = trimmed;
+      updates.fullName = trimmed;
     }
 
     if (req.body.phone !== undefined) {
       const phone = String(req.body.phone || '').trim();
-      if (phone && !/^\d{10,15}$/.test(phone)) {
-        return res.status(400).json({ success: false, message: 'Phone number must be between 10 and 15 digits' });
+      const ethiopianPhoneRegex = /^(?:\+2519\d{8}|09\d{8})$/;
+      if (phone && !ethiopianPhoneRegex.test(phone)) {
+        return res.status(400).json({ success: false, message: 'Please enter a valid Ethiopian phone number.' });
       }
       updates.phone = phone;
     }
@@ -77,7 +78,7 @@ export const updateMe = async (req, res, next) => {
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #1e3a5f;">DBU Internship Management System</h2>
-              <p>Hello <strong>${user.name}</strong>,</p>
+              <p>Hello <strong>${user.fullName}</strong>,</p>
               <p>Click the button below to verify your new email address for your account (<strong>${user.username}</strong>).</p>
               <div style="text-align: center; margin: 30px 0;">
                 <a href="${verifyUrl}" style="background-color: #1e3a5f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
@@ -99,9 +100,7 @@ export const updateMe = async (req, res, next) => {
     if (normalizeRole(user.role) === 'Student') {
       studentProfile = await Student.findOne({ user: user._id });
       if (studentProfile) {
-        if (updates.phone) {
-          studentProfile.phone = updates.phone;
-        }
+        // CBE Update stays in student profile as it is student-specific
 
         // Consolidated CBE Update
         if (req.body.cbeAccount !== undefined) {

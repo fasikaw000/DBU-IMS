@@ -55,7 +55,7 @@ const AssignmentsPage = () => {
                     department: s.department || 'N/A',
                     field: s.internship?.field || 'N/A',
                     assignedAdvisorId: s.internship.advisor_id?._id || s.internship.advisor_id,
-                    assignedAdvisorName: s.internship.advisor_id?.name || 'Not Assigned',
+                    assignedAdvisorName: s.internship.advisor_id?.fullName || s.internship.advisor_id?.name || 'Not Assigned',
                     companyName: s.internship.company?.name || s.companyName || 'Unknown Company',
                     status: s.internship.status,
                     studentIsActive: s.isActive
@@ -192,7 +192,7 @@ const AssignmentsPage = () => {
                         return (
                             <div key={idx} className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-100 hover:border-dbu-primary/20 transition-all">
                                 <div className="md:w-1/3">
-                                    <p className="text-sm font-black text-slate-700">{w.advisor?.name}</p>
+                                    <p className="text-sm font-black text-slate-700">{w.advisor?.fullName || w.advisor?.name}</p>
                                     <p className="text-[10px] font-mono text-slate-400">({w.advisor?.username})</p>
                                 </div>
 
@@ -324,7 +324,7 @@ const AssignmentsPage = () => {
                                                             value={w.advisor?._id}
                                                             disabled={(w.count >= MAX_WORKLOAD && item.assignedAdvisorId !== w.advisor?._id) || w.advisor?.isActive === false}
                                                         >
-                                                            {w.advisor?.name} {w.advisor?.isActive === false ? '(INACTIVE)' : `(${w.count}/${MAX_WORKLOAD})`} {w.count >= MAX_WORKLOAD && w.advisor?.isActive !== false ? '— FULL' : ''}
+                                                            {w.advisor?.fullName || w.advisor?.name} {w.advisor?.isActive === false ? '(INACTIVE)' : `(${w.count}/${MAX_WORKLOAD})`} {w.count >= MAX_WORKLOAD && w.advisor?.isActive !== false ? '— FULL' : ''}
                                                         </option>
                                                     ))}
                                                 </select>
@@ -392,7 +392,7 @@ const AssignmentsPage = () => {
                                                     <div className="w-5 h-5 bg-slate-200 rounded-full flex items-center justify-center">
                                                         <User size={10} className="text-slate-500" />
                                                     </div>
-                                                    <span className="text-[10px] font-bold text-slate-500">Performed by <span className="text-slate-800">{log.user?.name || 'System'}</span></span>
+                                                    <span className="text-[10px] font-bold text-slate-500">Performed by <span className="text-slate-800">{log.user?.fullName || log.user?.name || 'System'}</span></span>
                                                 </div>
                                             </div>
                                         </div>

@@ -176,7 +176,7 @@ const StudentDashboard = () => {
                     <h1 className="text-3xl font-black text-slate-800 tracking-tight">Student Dashboard</h1>
                     <p className="text-slate-500 mt-1 flex items-center gap-2">
                         <User size={16} className="text-dbu-primary" />
-                        {user?.name || user?.fullName} • ID: {user?.studentId || "N/A"}
+                        {user?.fullName || user?.name} • ID: {user?.studentId || "N/A"}
                     </p>
                 </div>
                 <div className="flex items-center gap-4 relative z-10">
@@ -402,7 +402,7 @@ const StudentDashboard = () => {
                                         </div>
                                         <div className="col-span-2 md:col-span-1 pt-6 border-t border-slate-50">
                                             <p className="text-[10px] font-black text-dbu-primary uppercase tracking-widest">Faculty Advisor</p>
-                                            <p className="text-sm font-bold text-slate-700">{internship.advisor?.name || internship.advisor_id?.name || 'Pending Assignment'}</p>
+                                            <p className="text-sm font-bold text-slate-700">{internship.advisor?.fullName || internship.advisor?.name || internship.advisor_id?.fullName || internship.advisor_id?.name || 'Pending Assignment'}</p>
                                         </div>
                                     </div>
                                     <div className="p-6 bg-slate-50 flex gap-4">

@@ -50,7 +50,7 @@ const CompanyStudentsPage = () => {
     }, [id]);
 
     const filteredPlacements = placements.filter(p =>
-        p.student?.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
+        (p.student?.user?.fullName || p.student?.user?.name || '').toLowerCase().includes(search.toLowerCase()) ||
         p.student?.studentId?.toLowerCase().includes(search.toLowerCase()) ||
         p.field?.toLowerCase().includes(search.toLowerCase())
     );
@@ -168,7 +168,7 @@ const CompanyStudentsPage = () => {
                         return (
                             <div key={idx} className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-100 hover:border-dbu-primary/20 transition-all">
                                 <div className="md:w-1/3">
-                                    <p className="text-sm font-black text-slate-700">{w.advisor?.name}</p>
+                                    <p className="text-sm font-black text-slate-700">{w.advisor?.fullName || w.advisor?.name}</p>
                                     <p className="text-[10px] font-mono text-slate-400">({w.advisor?.username})</p>
                                 </div>
                                 
@@ -225,10 +225,10 @@ const CompanyStudentsPage = () => {
                             <div className="flex items-start justify-between mb-6">
                                 <div className="flex items-center gap-4">
                                     <div className="w-14 h-14 bg-dbu-primary/10 rounded-2xl flex items-center justify-center text-dbu-primary font-black text-xl">
-                                        {intern.student?.user?.name?.charAt(0) || 'S'}
+                                        {(intern.student?.user?.fullName || intern.student?.user?.name || 'S').charAt(0)}
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-black text-slate-800 leading-tight">{intern.student?.user?.name || 'N/A'}</h3>
+                                        <h3 className="text-lg font-black text-slate-800 leading-tight">{intern.student?.user?.fullName || intern.student?.user?.name || 'N/A'}</h3>
                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{intern.student?.studentId}</p>
                                         <p className="text-[10px] text-dbu-primary font-black uppercase tracking-wider mt-1">{intern.field}</p>
                                     </div>
@@ -270,7 +270,7 @@ const CompanyStudentsPage = () => {
                                             <p className="text-[9px] font-black text-dbu-primary uppercase tracking-widest">Faculty Advisor</p>
                                             {intern.advisor_id ? (
                                                 <p className="text-xs font-bold text-slate-700">
-                                                    {intern.advisor_id.name} <span className="text-[9px] text-slate-400 font-mono">({intern.advisor_id.username})</span>
+                                                    {intern.advisor_id.fullName || intern.advisor_id.name} <span className="text-[9px] text-slate-400 font-mono">({intern.advisor_id.username})</span>
                                                 </p>
                                             ) : (
                                                 <p className="text-xs font-bold text-amber-600 italic">Pending Assignment</p>

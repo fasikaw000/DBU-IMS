@@ -16,7 +16,8 @@ import {
     User,
     Clock,
     ClipboardList,
-    AlertTriangle
+    AlertTriangle,
+    XCircle
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -43,6 +44,18 @@ const LogbookPage = () => {
     // Advisor Comment State
     const [commentText, setCommentText] = useState('');
     const [commentingId, setCommentingId] = useState(null);
+
+    useEffect(() => {
+        let timer;
+        if (message) {
+            timer = setTimeout(() => {
+                setMessage(null);
+            }, 4000);
+        }
+        return () => {
+            if (timer) clearTimeout(timer);
+        };
+    }, [message]);
 
     useEffect(() => {
         fetchLogbooks();
@@ -133,9 +146,18 @@ const LogbookPage = () => {
             </div>
 
             {message && (
-                <div className={`p-4 rounded-2xl border flex items-center gap-3 ${message.type === 'error' ? 'bg-red-50 border-red-100 text-red-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
-                    {message.type === 'error' ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
-                    <p className="font-bold text-sm">{message.text}</p>
+                <div className={`p-4 rounded-2xl border flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${message.type === 'error' ? 'bg-red-50 border-red-100 text-red-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'
+                    }`}>
+                    <div className="flex items-center gap-3">
+                        {message.type === 'error' ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
+                        <p className="font-bold text-sm">{message.text}</p>
+                    </div>
+                    <button 
+                        onClick={() => setMessage(null)}
+                        className="p-1 hover:bg-black/5 rounded-lg transition-colors"
+                    >
+                        <XCircle size={18} className="opacity-50 hover:opacity-100" />
+                    </button>
                 </div>
             )}
 

@@ -15,7 +15,10 @@ import {
     Printer,
     Upload,
     FileText,
-    Download
+    Download,
+    XCircle,
+    CheckCircle,
+    AlertCircle
 } from 'lucide-react';
 
 const AdminStaff = () => {
@@ -39,13 +42,13 @@ const AdminStaff = () => {
     const [printModalTitle, setPrintModalTitle] = useState('');
     const [statusModal, setStatusModal] = useState({ open: false, userId: null });
     const [staffData, setStaffData] = useState({
-        name: '',
+        fullName: '',
         role: '',
         department: ''
     });
 
     const [editData, setEditData] = useState({
-        name: '',
+        fullName: '',
         role: '',
         department: ''
     });
@@ -60,7 +63,7 @@ const AdminStaff = () => {
         const timeout = setTimeout(() => {
             setMessage('');
             setMessageType('success');
-        }, 2500);
+        }, 4000);
         return () => clearTimeout(timeout);
     }, [message]);
 
@@ -88,7 +91,7 @@ const AdminStaff = () => {
 
         // Validation
         let newErrors = {};
-        if (!staffData.name) newErrors.name = "Required";
+        if (!staffData.fullName) newErrors.fullName = "Required";
         if (!staffData.role) newErrors.role = "Required";
         if (!staffData.department) newErrors.department = "Required";
 
@@ -105,7 +108,7 @@ const AdminStaff = () => {
             await api.post('/admin/staff', staffData);
             setMessageType('success');
             setMessage(`Success: Staff account created.`);
-            setStaffData({ name: '', role: '', department: departments[0]?._id || '' });
+            setStaffData({ fullName: '', role: '', department: departments[0]?._id || '' });
             setShowAddForm(false);
             fetchData();
         } catch (err) {
@@ -119,7 +122,7 @@ const AdminStaff = () => {
     const handleEditStaff = (staff) => {
         setEditingStaff(staff);
         setEditData({
-            name: staff.name,
+            fullName: staff.fullName || staff.name,
             role: staff.role === 'dean' ? 'department_dean' : 'advisor',
             department: staff.department?._id || staff.department
         });
@@ -133,7 +136,7 @@ const AdminStaff = () => {
         try {
             await api.put(`/admin/staff/${editingStaff._id}`, editData);
             setMessageType('success');
-            setMessage(`Success: Staff member ${editData.name} updated.`);
+            setMessage(`Success: Staff member ${editData.fullName} updated.`);
             setShowEditForm(false);
             fetchData();
         } catch (err) {
@@ -224,7 +227,7 @@ const AdminStaff = () => {
         if (!data || data.length === 0) return;
         const headers = 'Full Name,Department,Username,Role';
         const rows = data.map(s =>
-            `"${s.name}","${s.department?.name || 'Central'}","${s.username}","${s.role}"`
+            `"${s.fullName || s.name}","${s.department?.name || 'Central'}","${s.username}","${s.role}"`
         ).join('\n');
         const csvContent = 'data:text/csv;charset=utf-8,' + headers + '\n' + rows;
         const link = document.createElement('a');
@@ -286,7 +289,7 @@ const AdminStaff = () => {
                 <tbody>
                   ${data.map(s => `
                     <tr>
-                      <td style="font-weight: bold;">${s.name}</td>
+                      <td style="font-weight: bold;">${s.fullName || s.name}</td>
                       <td>${s.department?.name || 'Central'}</td>
                       <td class="mono">${s.username}</td>
                       <td style="text-transform: uppercase; font-weight: bold;">${s.role}</td>
@@ -335,7 +338,7 @@ const AdminStaff = () => {
     };
 
     const filteredStaff = users.filter(s =>
-        s.name.toLowerCase().includes(search.toLowerCase()) ||
+        (s.fullName || s.name || '').toLowerCase().includes(search.toLowerCase()) ||
         s.email?.toLowerCase().includes(search.toLowerCase()) ||
         s.username.toLowerCase().includes(search.toLowerCase())
     );
@@ -374,8 +377,17 @@ const AdminStaff = () => {
             </div>
 
             {message && (
-                <div className={`p-4 rounded-xl font-bold text-sm transition-opacity duration-300 whitespace-pre-line ${messageType === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
-                    {message}
+                <div className={`p-4 rounded-xl font-bold text-sm flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${messageType === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
+                    <div className="flex items-center gap-3">
+                        {messageType === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+                        <p className="whitespace-pre-line">{message}</p>
+                    </div>
+                    <button 
+                        onClick={() => setMessage('')}
+                        className="p-1 hover:bg-black/5 rounded-lg transition-colors shrink-0"
+                    >
+                        <XCircle size={18} className="opacity-50 hover:opacity-100" />
+                    </button>
                 </div>
             )}
 
@@ -536,11 +548,11 @@ const AdminStaff = () => {
                                     <input
                                         type="text"
                                         placeholder="Enter staff's full name"
-                                        value={staffData.name}
-                                        onChange={e => { setStaffData({ ...staffData, name: e.target.value }); setErrors({ ...errors, name: null }); }}
+                                        value={staffData.fullName}
+                                        onChange={e => { setStaffData({ ...staffData, fullName: e.target.value }); setErrors({ ...errors, fullName: null }); }}
                                         className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all ${errors.name ? 'border-red-500' : 'border-slate-200'}`}
                                     />
-                                    {errors.name && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.name}</p>}
+                                    {errors.fullName && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.fullName}</p>}
                                 </div>
 
                                 <div className="col-span-2">
@@ -619,8 +631,8 @@ const AdminStaff = () => {
                                     <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Full Name</label>
                                     <input
                                         type="text"
-                                        value={editData.name}
-                                        onChange={e => setEditData({ ...editData, name: e.target.value })}
+                                        value={editData.fullName}
+                                        onChange={e => setEditData({ ...editData, fullName: e.target.value })}
                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-dbu-primary transition-all"
                                         required
                                     />

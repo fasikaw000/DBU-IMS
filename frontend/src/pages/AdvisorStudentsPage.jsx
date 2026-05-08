@@ -51,9 +51,50 @@ const AdvisorStudentsPage = () => {
         advisorComment: ''
     });
 
+    // Revision modal state
+    const [revisionModal, setRevisionModal] = useState({ open: false, reportId: null, feedback: '' });
+
+    useEffect(() => {
+        let timer;
+        if (message) {
+            timer = setTimeout(() => {
+                setMessage(null);
+            }, 4000);
+        }
+        return () => {
+            if (timer) clearTimeout(timer);
+        };
+    }, [message]);
+
     useEffect(() => {
         fetchStudents();
+        const interval = setInterval(fetchStudents, 30000); // Refresh list every 30s
+        return () => clearInterval(interval);
     }, []);
+
+    // Poll student details when in profile view
+    useEffect(() => {
+        let interval;
+        if (view === 'profile' && selectedInternship) {
+            interval = setInterval(async () => {
+                try {
+                    const [reportsRes, logbooksRes] = await Promise.all([
+                        api.get(`/advisor/reports/${selectedInternship._id}`),
+                        api.get(`/logbooks/assigned-logbooks?studentId=${selectedInternship.student?._id}`)
+                    ]);
+                    
+                    const reportsData = reportsRes?.data || (Array.isArray(reportsRes) ? reportsRes : []);
+                    setReports(Array.isArray(reportsData) ? reportsData : []);
+
+                    const logData = logbooksRes?.data?.logbooks || logbooksRes?.data || (Array.isArray(logbooksRes) ? logbooksRes : []);
+                    setLogbooks(Array.isArray(logData) ? logData : []);
+                } catch (err) {
+                    console.error("Polling error", err);
+                }
+            }, 15000); // Refresh sub-data every 15s
+        }
+        return () => clearInterval(interval);
+    }, [view, selectedInternship]);
 
     const fetchStudents = async () => {
         try {
@@ -122,7 +163,10 @@ const AdvisorStudentsPage = () => {
     };
 
     const handleLogbookComment = async (logId, text) => {
-        if (!text.trim()) return;
+        if (!text.trim()) {
+            setMessage({ type: 'error', text: 'Please type a comment before sending.' });
+            return;
+        }
         setActionLoading(true);
         try {
             await api.post(`/logbooks/${logId}/comment`, { text });
@@ -130,8 +174,10 @@ const AdvisorStudentsPage = () => {
             const res = await api.get(`/logbooks/assigned-logbooks?studentId=${selectedInternship.student?._id}`);
             const logData = res?.data?.logbooks || res?.data || (Array.isArray(res) ? res : []);
             setLogbooks(Array.isArray(logData) ? logData : []);
+            setMessage({ type: 'success', text: 'Comment added successfully.' });
         } catch (err) {
             console.error(err);
+            setMessage({ type: 'error', text: 'Failed to add comment.' });
         } finally {
             setActionLoading(false);
         }
@@ -162,7 +208,7 @@ const AdvisorStudentsPage = () => {
     };
 
     const filteredStudents = Array.isArray(students) ? students.filter(s => {
-        const matchesSearch = s.student?.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
+        const matchesSearch = (s.student?.user?.fullName || s.student?.user?.name || '').toLowerCase().includes(search.toLowerCase()) ||
             s.student?.studentId?.toLowerCase().includes(search.toLowerCase());
         const matchesFilter = filterStatus === 'All' || s.status === filterStatus;
         return matchesSearch && matchesFilter;
@@ -242,7 +288,7 @@ const AdvisorStudentsPage = () => {
                                                 <td className="p-6">
                                                     <div className="flex flex-col">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="font-bold text-slate-800">{intern.student?.user?.name}</span>
+                                                            <span className="font-bold text-slate-800">{intern.student?.user?.fullName || intern.student?.user?.name}</span>
                                                             {intern.student?.user?.isActive === false && (
                                                                 <span className="px-1.5 py-0.5 bg-red-50 text-red-500 text-[8px] font-black uppercase rounded border border-red-100 tracking-tighter">Deactivated</span>
                                                             )}
@@ -292,9 +338,9 @@ const AdvisorStudentsPage = () => {
                 </div>
             ) : (
                 /* Student Profile View */
-                <div className="animate-in slide-in-from-right-4 duration-300">
-                    {/* Sub Header */}
-                    <div className="bg-white border-b border-slate-200 p-6 sticky top-0 z-20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="animate-in fade-in duration-500">
+                    {/* Sub Header - Adjusted for sticky behavior and layout padding */}
+                    <div className="bg-white border-b border-slate-200 p-6 sticky top-[-2rem] z-20 flex flex-col md:flex-row md:items-center justify-between gap-4 -mx-8 -mt-8 mb-8 px-8">
                         <div className="flex items-center gap-4">
                             <button
                                 onClick={() => setView('list')}
@@ -303,7 +349,7 @@ const AdvisorStudentsPage = () => {
                                 <ArrowLeft size={20} />
                             </button>
                                 <div className="flex items-center gap-2">
-                                    <h2 className="text-xl font-black text-slate-800 tracking-tight">{selectedInternship.student?.user?.name}</h2>
+                                    <h2 className="text-xl font-black text-slate-800 tracking-tight">{selectedInternship.student?.user?.fullName || selectedInternship.student?.user?.name}</h2>
                                     {selectedInternship.student?.user?.isActive === false && (
                                         <span className="px-1.5 py-0.5 bg-red-50 text-red-500 text-[8px] font-black uppercase rounded border border-red-100 tracking-tighter">Deactivated</span>
                                     )}
@@ -326,10 +372,20 @@ const AdvisorStudentsPage = () => {
 
                     <div className="p-8 max-w-5xl mx-auto space-y-8">
                         {message && (
-                            <div className={`p-4 rounded-xl border flex items-center gap-3 ${message.type === 'error' ? 'bg-red-50 border-red-100 text-red-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'
-                                }`}>
-                                {message.type === 'error' ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
-                                <p className="font-bold text-sm">{message.text}</p>
+                            <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md animate-in fade-in slide-in-from-top-4 duration-300">
+                                <div className={`p-4 rounded-2xl shadow-2xl border flex items-center justify-between gap-3 ${message.type === 'error' ? 'bg-red-50 border-red-100 text-red-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'
+                                    }`}>
+                                    <div className="flex items-center gap-3">
+                                        {message.type === 'error' ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
+                                        <p className="font-bold text-sm">{message.text}</p>
+                                    </div>
+                                    <button 
+                                        onClick={() => setMessage(null)}
+                                        className="p-1 hover:bg-black/5 rounded-lg transition-colors"
+                                    >
+                                        <XCircle size={18} className="opacity-50 hover:opacity-100" />
+                                    </button>
+                                </div>
                             </div>
                         )}
 
@@ -345,7 +401,7 @@ const AdvisorStudentsPage = () => {
                                         <div className="grid grid-cols-2 gap-8">
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Full Name</p>
-                                                <p className="text-sm font-bold text-slate-700">{selectedInternship.student?.user?.name}</p>
+                                                <p className="text-sm font-bold text-slate-700">{selectedInternship.student?.user?.fullName || selectedInternship.student?.user?.name}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Student ID</p>
@@ -357,7 +413,7 @@ const AdvisorStudentsPage = () => {
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Phone</p>
-                                                <p className="text-sm font-bold text-slate-700">{selectedInternship.student?.user?.phone || selectedInternship.student?.phone || 'N/A'}</p>
+                                                <p className="text-sm font-bold text-slate-700">{selectedInternship.student?.user?.phone || 'N/A'}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Department</p>
@@ -441,7 +497,7 @@ const AdvisorStudentsPage = () => {
                                             <p className="text-xs text-slate-500 leading-relaxed">Student has uploaded the required evaluation form from the company supervisor.</p>
                                             <div className="flex gap-2">
                                                 <button
-                                                    onClick={() => setPreviewData({ url: selectedInternship.companyEvaluationUrl, name: `Company Evaluation - ${selectedInternship.student?.user?.name}` })}
+                                                    onClick={() => setPreviewData({ url: selectedInternship.companyEvaluationUrl, name: `Company Evaluation - ${selectedInternship.student?.user?.fullName || selectedInternship.student?.user?.name}` })}
                                                     className="flex-1 flex items-center justify-center gap-2 py-3 bg-dbu-primary text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-dbu-accent transition shadow-lg shadow-dbu-primary/20"
                                                 >
                                                     <ExternalLink size={14} />
@@ -497,7 +553,7 @@ const AdvisorStudentsPage = () => {
                                                     <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                                                         <div className="flex items-center gap-4">
                                                             <button
-                                                                onClick={() => setPreviewData({ url: report.fileUrl, name: `${report.type} Report - ${selectedInternship.student?.user?.name}` })}
+                                                                onClick={() => setPreviewData({ url: report.fileUrl, name: `${report.type} Report - ${selectedInternship.student?.user?.fullName || selectedInternship.student?.user?.name}` })}
                                                                 className="text-[10px] font-black text-dbu-primary hover:underline flex items-center gap-1.5 transition-all"
                                                             >
                                                                 <ExternalLink size={12} />
@@ -516,10 +572,7 @@ const AdvisorStudentsPage = () => {
                                                         {report.status === 'Pending' && (
                                                             <div className="flex gap-2">
                                                                 <button
-                                                                    onClick={() => {
-                                                                        const feedback = prompt("Enter revision feedback:");
-                                                                        if (feedback) handleReportReview(report._id, 'Revision Required', feedback);
-                                                                    }}
+                                                                    onClick={() => setRevisionModal({ open: true, reportId: report._id, feedback: '' })}
                                                                     disabled={actionLoading || selectedInternship.student?.user?.isActive === false}
                                                                     className="px-3 py-1.5 text-[9px] font-black bg-white text-red-500 border border-red-100 rounded-lg hover:bg-red-50 transition disabled:opacity-30"
                                                                 >
@@ -611,9 +664,9 @@ const AdvisorStudentsPage = () => {
                                                                         handleLogbookComment(log._id, input.value);
                                                                     }}
                                                                     disabled={selectedInternship.student?.user?.isActive === false}
-                                                                    className="p-2 bg-dbu-primary text-white rounded-xl hover:bg-dbu-accent transition disabled:opacity-30"
+                                                                    className="px-4 py-2 bg-dbu-primary text-white rounded-xl hover:bg-dbu-accent transition disabled:opacity-30 text-[10px] font-black tracking-widest"
                                                                 >
-                                                                    <Send size={16} />
+                                                                    SEND
                                                                 </button>
                                                             </div>
                                                         )}
@@ -712,6 +765,57 @@ const AdvisorStudentsPage = () => {
                 fileUrl={previewData?.url} 
                 fileName={previewData?.name} 
             />
+
+            {/* Revision Feedback Modal */}
+            {revisionModal.open && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+                    <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 bg-red-50 border-b border-red-100 flex justify-between items-center">
+                            <h2 className="text-lg font-black text-red-800 flex items-center gap-2">
+                                <AlertCircle size={20} />
+                                Revision Feedback
+                            </h2>
+                            <button 
+                                onClick={() => setRevisionModal({ open: false, reportId: null, feedback: '' })} 
+                                className="text-red-400 hover:text-red-600 transition-colors"
+                            >
+                                <XCircle size={20} />
+                            </button>
+                        </div>
+                        <div className="p-8 space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Comments for Student</label>
+                                <textarea
+                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-red-500 transition text-sm font-medium min-h-[120px] resize-none"
+                                    placeholder="Explain what needs to be fixed or improved in this report..."
+                                    value={revisionModal.feedback}
+                                    onChange={(e) => setRevisionModal({ ...revisionModal, feedback: e.target.value })}
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button 
+                                    onClick={() => setRevisionModal({ open: false, reportId: null, feedback: '' })}
+                                    className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-[10px] tracking-widest hover:bg-slate-200 transition uppercase"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    disabled={!revisionModal.feedback.trim() || actionLoading}
+                                    onClick={() => {
+                                        handleReportReview(revisionModal.reportId, 'Revision Required', revisionModal.feedback);
+                                        setRevisionModal({ open: false, reportId: null, feedback: '' });
+                                    }}
+                                    className="flex-[2] py-4 bg-red-500 text-white rounded-2xl font-black text-[10px] tracking-widest hover:bg-red-600 transition shadow-lg shadow-red-500/20 uppercase flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                                    Send Feedback
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
