@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
-import { 
-  Briefcase, 
-  Search, 
-  Eye, 
-  CheckCircle, 
-  Clock, 
-  Building, 
-  Folder, 
+import {
+  Briefcase,
+  Search,
+  Eye,
+  CheckCircle,
+  Clock,
+  Building,
+  Folder,
   Calendar,
   XCircle,
   FileText,
@@ -26,6 +26,8 @@ const AdminInternships = () => {
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(fetchData, 30000); // 30s auto-refresh
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -51,16 +53,16 @@ const AdminInternships = () => {
 
   const handleExportCSV = () => {
     if (internships.length === 0) return;
-    
+
     const headers = [
-      'Student Name', 'Student ID', 'Department', 'Company', 
-      'Company Supervisor Name', 'Company Supervisor Email', 'Company Supervisor Phone', 
-      'Field', 'Start Date', 'End Date', 'Status', 'Faculty Advisor'
+      'STUDENT NAME', 'STUDENT ID', 'DEPARTMENT', 'COMPANY',
+      'COMPANY SUPERVISOR NAME', 'COMPANY SUPERVISOR EMAIL', 'COMPANY SUPERVISOR PHONE',
+      'FIELD', 'START DATE', 'END DATE', 'INTERNSHIP STATUS', 'FACULTY ADVISOR'
     ].join(',');
 
     const rows = internships.map(i => {
       return [
-      `"${i.student?.fullName || i.student?.name || ''}"`,
+        `"${i.student?.user?.fullName || i.student?.user?.name || i.student?.fullName || i.student?.name || ''}"`,
         `"${i.student?.studentId || ''}"`,
         `"${i.student?.department?.name || ''}"`,
         `"${i.company?.name || ''}"`,
@@ -99,13 +101,23 @@ const AdminInternships = () => {
 
   const filtered = internships.filter(i => {
     const matchesSearch = 
-      (i.student?.fullName || i.student?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (i.student?.user?.fullName || i.student?.fullName || i.student?.name || '').toLowerCase().includes(search.toLowerCase()) ||
       i.company?.name?.toLowerCase().includes(search.toLowerCase()) ||
       i.student?.studentId?.toLowerCase().includes(search.toLowerCase());
-    
+
     if (filter === 'ALL') return matchesSearch;
+    if (filter === 'ACTIVE_ONGOING') {
+      return matchesSearch && ['APPROVED', 'ONGOING', 'ACTIVE'].includes(i.status);
+    }
     return matchesSearch && i.status === filter;
   });
+
+  const displayStats = {
+    total: internships.length,
+    pending: internships.filter(i => i.status === 'PENDING_APPROVAL').length,
+    active: internships.filter(i => ['APPROVED', 'ONGOING', 'ACTIVE'].includes(i.status)).length,
+    completed: internships.filter(i => i.status === 'COMPLETED').length
+  };
 
   if (loading) return (
     <div className="flex h-96 items-center justify-center">
@@ -126,23 +138,23 @@ const AdminInternships = () => {
           <p className="text-slate-500 text-sm">Monitor internship placements, approvals, and lifecycle status.</p>
         </div>
         <div className="flex items-center gap-2">
-            <button
-              onClick={handleExportCSV}
-              className="bg-white text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center hover:bg-slate-50 transition-all shadow-sm"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </button>
+          <button
+            onClick={handleExportCSV}
+            className="bg-white text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center hover:bg-slate-50 transition-all shadow-sm"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </button>
         </div>
       </div>
 
       {/* Stats Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Placements', value: stats.total, icon: Folder, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Pending Approval', value: stats.pending, icon: Clock, color: 'text-orange-600', bg: 'bg-orange-50' },
-          { label: 'Active / Ongoing', value: stats.active, icon: Activity, color: 'text-green-600', bg: 'bg-green-50' },
-          { label: 'Completed', value: stats.completed, icon: CheckCircle, color: 'text-slate-600', bg: 'bg-slate-50' },
+          { label: 'Total Placements', value: displayStats.total, icon: Folder, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Pending Approval', value: displayStats.pending, icon: Clock, color: 'text-orange-600', bg: 'bg-orange-50' },
+          { label: 'Active / Ongoing', value: displayStats.active, icon: Activity, color: 'text-green-600', bg: 'bg-green-50' },
+          { label: 'Completed', value: displayStats.completed, icon: CheckCircle, color: 'text-slate-600', bg: 'bg-slate-50' },
         ].map((s, idx) => (
           <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
             <div className={`p-3 rounded-xl ${s.bg}`}>
@@ -169,7 +181,7 @@ const AdminInternships = () => {
             />
           </div>
           <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
-            {['ALL', 'PENDING_APPROVAL', 'APPROVED', 'ONGOING', 'COMPLETED'].map((f) => (
+            {['ALL', 'PENDING_APPROVAL', 'APPROVED', 'ACTIVE_ONGOING', 'COMPLETED'].map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -177,7 +189,7 @@ const AdminInternships = () => {
                   filter === f ? 'bg-dbu-primary text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                 }`}
               >
-                {f.replace('_', ' ')}
+                {f === 'ALL' ? 'ALL' : f === 'ACTIVE_ONGOING' ? 'ACTIVE / ONGOING' : f.replace(/_/g, ' ')}
               </button>
             ))}
           </div>
@@ -204,7 +216,7 @@ const AdminInternships = () => {
                   <tr key={intern._id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-slate-800">{intern.student?.fullName || intern.student?.name}</span>
+                        <span className="text-sm font-bold text-slate-800">{intern.student?.user?.fullName || intern.student?.user?.name || intern.student?.fullName || intern.student?.name || 'N/A'}</span>
                         <span className="text-[10px] text-slate-400">{intern.student?.studentId} • {intern.student?.department?.code}</span>
                       </div>
                     </td>
@@ -218,16 +230,15 @@ const AdminInternships = () => {
                       {new Date(intern.startDate).toLocaleDateString()} - {new Date(intern.endDate).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`text-[9px] font-black uppercase tracking-tighter px-2 py-1 rounded-lg ${
-                        intern.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
-                        intern.status === 'PENDING_APPROVAL' ? 'bg-orange-100 text-orange-700' :
-                        'bg-blue-100 text-blue-700'
-                      }`}>
+                      <span className={`text-[9px] font-black uppercase tracking-tighter px-2 py-1 rounded-lg ${intern.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                          intern.status === 'PENDING_APPROVAL' ? 'bg-orange-100 text-orange-700' :
+                            'bg-blue-100 text-blue-700'
+                        }`}>
                         {intern.status.replace('_', ' ')}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button 
+                      <button
                         onClick={() => setSelectedInternship(intern)}
                         className="p-2 text-slate-400 hover:text-dbu-primary transition-colors"
                       >
@@ -255,14 +266,14 @@ const AdminInternships = () => {
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
-            
+
             <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
               <section className="space-y-4">
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">Student & Academic</h4>
                 <div className="space-y-3">
                   <div>
                     <label className="text-[10px] text-slate-400 block lowercase">Full Name</label>
-                    <p className="text-sm font-bold text-slate-800">{selectedInternship.student?.fullName || selectedInternship.student?.name}</p>
+                    <p className="text-sm font-bold text-slate-800">{selectedInternship.student?.user?.fullName || selectedInternship.student?.user?.name || selectedInternship.student?.fullName || selectedInternship.student?.name || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-[10px] text-slate-400 block lowercase">Internship Field</label>
@@ -296,7 +307,7 @@ const AdminInternships = () => {
                     <label className="text-[10px] text-slate-400 block lowercase">Company Supervisor Email</label>
                     <p className="text-sm font-bold text-slate-800">{selectedInternship.companySupervisorEmail}</p>
                   </div>
-                   <div>
+                  <div>
                     <label className="text-[10px] text-slate-400 block lowercase">Company Supervisor Phone</label>
                     <p className="text-sm font-bold text-slate-800">{selectedInternship.companySupervisorPhone}</p>
                   </div>
@@ -310,7 +321,7 @@ const AdminInternships = () => {
                 </div>
                 <div className="flex gap-2">
                   {selectedInternship.status === 'PENDING_APPROVAL' && (
-                    <button 
+                    <button
                       onClick={() => handleStatusUpdate(selectedInternship._id, 'APPROVED')}
                       className="bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all"
                     >
@@ -318,19 +329,26 @@ const AdminInternships = () => {
                     </button>
                   )}
                   {['APPROVED', 'PENDING_APPROVAL'].includes(selectedInternship.status) && (
-                    <button 
+                    <button
                       onClick={() => handleStatusUpdate(selectedInternship._id, 'ONGOING')}
                       className="bg-dbu-primary text-white px-4 py-2 rounded-xl text-xs font-bold shadow-lg shadow-dbu-primary/20 hover:bg-dbu-accent transition-all"
                     >
                       Start
                     </button>
                   )}
-                  {selectedInternship.status !== 'COMPLETED' && (
-                    <button 
+                  {selectedInternship.status !== 'COMPLETED' ? (
+                    <button
                       onClick={() => handleStatusUpdate(selectedInternship._id, 'COMPLETED')}
                       className="bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-900 transition-all"
                     >
                       Mark Completed
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleStatusUpdate(selectedInternship._id, 'ACTIVE')}
+                      className="bg-orange-100 text-orange-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-orange-200 transition-all"
+                    >
+                      Revert to Active
                     </button>
                   )}
                 </div>

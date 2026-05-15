@@ -39,6 +39,8 @@ const AdminDepartments = () => {
 
     useEffect(() => {
         fetchData();
+        const interval = setInterval(fetchData, 30000); // 30s auto-refresh
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {

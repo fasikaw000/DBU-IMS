@@ -304,20 +304,18 @@ export const getDepartmentStats = async (req, res, next) => {
 
     const totalAdvisors = await User.countDocuments({ role: 'advisor', department: { $in: allDeptIds } });
 
+    const totalPlacements = await Internship.countDocuments({
+      student: { $in: studentIds }
+    });
+
     const pendingApplications = await Internship.countDocuments({
       student: { $in: studentIds },
       status: { $in: ['PENDING', 'PENDING_APPROVAL', 'RESUBMITTED', 'REVISION_REQUIRED'] }
     });
 
-    const awaitingAdvisor = await Internship.countDocuments({
-      student: { $in: studentIds },
-      status: 'APPROVED',
-      advisor_id: { $exists: false }
-    });
-
     const activeInternships = await Internship.countDocuments({
       student: { $in: studentIds },
-      status: 'ACTIVE'
+      status: { $in: ['ACTIVE', 'ONGOING', 'APPROVED'] }
     });
 
     res.status(200).json({
@@ -325,7 +323,7 @@ export const getDepartmentStats = async (req, res, next) => {
       data: {
         pendingApplications,
         totalAdvisors,
-        awaitingAdvisor,
+        totalPlacements,
         activeInternships
       }
     });

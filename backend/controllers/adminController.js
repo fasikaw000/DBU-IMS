@@ -921,10 +921,13 @@ export const getAllInternships = async (req, res, next) => {
     const internships = await Internship.find({})
       .populate({
         path: 'student',
-        populate: { path: 'department', select: 'name code' }
+        populate: [
+          { path: 'user' },
+          { path: 'department' }
+        ]
       })
-      .populate('company', 'name email location')
-      .populate('advisor_id', 'name email')
+      .populate('company')
+      .populate('advisor_id')
       .sort({ createdAt: -1 });
 
     res.status(200).json({ success: true, count: internships.length, data: internships });
@@ -1023,7 +1026,7 @@ export const assignAdvisor = async (req, res, next) => {
 export const getInternshipDashboardStats = async (req, res, next) => {
   try {
     const total = await Internship.countDocuments();
-    const active = await Internship.countDocuments({ status: { $in: ['APPROVED', 'ONGOING'] } });
+    const active = await Internship.countDocuments({ status: { $in: ['APPROVED', 'ONGOING', 'ACTIVE'] } });
     const completed = await Internship.countDocuments({ status: 'COMPLETED' });
     const pending = await Internship.countDocuments({ status: 'PENDING_APPROVAL' });
 
@@ -1043,29 +1046,44 @@ export const getInternshipDashboardStats = async (req, res, next) => {
 export const getReportAnalytics = async (req, res, next) => {
   try {
     // 1. Student Distribution by Department
-    const distribution = await Student.aggregate([
+    const rawDistribution = await Student.aggregate([
       { $group: { _id: '$department', count: { $sum: 1 } } },
       { $lookup: { from: 'departments', localField: '_id', foreignField: '_id', as: 'dept' } },
       { $unwind: '$dept' },
-      { $project: { name: '$dept.name', count: 1, _id: 0 } }
+      { $project: { name: '$dept.name', count: 1, _id: 0 } },
+      { $sort: { name: 1 } }
     ]);
+    const distribution = rawDistribution.map(d => ({
+      DEPARTMENT: d.name,
+      'TOTAL STUDENTS': d.count
+    }));
 
     // 2. Internship Status Summary
-    const statusSummary = await Internship.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } }
+    const rawStatus = await Internship.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } }
     ]);
+    const statusSummary = rawStatus.map(s => ({
+      'INTERNSHIP STATUS': String(s._id || 'NOT APPLIED').replace(/_/g, ' '),
+      'TOTAL STUDENTS': s.count
+    }));
 
     // 3. Advisor Workload
-    const workload = await Internship.aggregate([
+    const rawWorkload = await Internship.aggregate([
       { $match: { advisor_id: { $ne: null } } },
       { $group: { _id: '$advisor_id', studentCount: { $sum: 1 } } },
       { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'advisor' } },
       { $unwind: '$advisor' },
-      { $project: { name: { $ifNull: ['$advisor.fullName', '$advisor.name'] }, count: '$studentCount', _id: 0 } }
+      { $project: { name: { $ifNull: ['$advisor.fullName', '$advisor.name'] }, count: '$studentCount', _id: 0 } },
+      { $sort: { name: 1 } }
     ]);
+    const workload = rawWorkload.map(w => ({
+      'FACULTY ADVISOR': w.name,
+      'TOTAL STUDENTS': w.count
+    }));
 
     // 4. Grade Distribution
-    const grades = await Internship.aggregate([
+    const rawGrades = await Internship.aggregate([
       { $match: { 'finalGrade.total': { $exists: true } } },
       {
         $bucket: {
@@ -1076,6 +1094,10 @@ export const getReportAnalytics = async (req, res, next) => {
         }
       }
     ]);
+    const grades = rawGrades.map(g => ({
+      'GRADE BAND': g._id === 'Other' ? 'Other' : `${g._id}+`,
+      'TOTAL STUDENTS': g.count
+    }));
 
     res.status(200).json({
       success: true,

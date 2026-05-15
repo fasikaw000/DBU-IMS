@@ -182,6 +182,9 @@ export const getMyLogbooks = async (req, res, next) => {
 // @desc    Update student profile
 export const updateProfile = async (req, res, next) => {
   try {
+    if (req.body.fullName) {
+      return res.status(400).json({ success: false, message: 'Full name cannot be changed.' });
+    }
     const { phone, cbeAccount } = req.body;
     
     if (phone) {

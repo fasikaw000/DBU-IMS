@@ -24,7 +24,9 @@ const AdminReports = () => {
 
   useEffect(() => {
     fetchAnalytics();
-  }, []);
+    const interval = setInterval(() => fetchAnalytics(dateFilter), 30000); // 30s auto-refresh
+    return () => clearInterval(interval);
+  }, [dateFilter]);
 
   const fetchAnalytics = async (filter = 'all') => {
     try {
@@ -193,16 +195,16 @@ const AdminReports = () => {
           </h3>
           <div className="space-y-6">
             {activeTab === 'distribution' && (data?.distribution || []).map((d, i) => (
-              <StatBar key={i} label={d.name} value={d.count} max={Math.max(1, ...(data?.distribution || []).map(x => x.count))} />
+              <StatBar key={i} label={d['DEPARTMENT']} value={d['TOTAL STUDENTS']} max={Math.max(1, ...(data?.distribution || []).map(x => x['TOTAL STUDENTS']))} />
             ))}
             {activeTab === 'status' && (data?.statusSummary || []).map((s, i) => (
-              <StatBar key={i} label={s._id.replace('_', ' ')} value={s.count} max={Math.max(1, ...(data?.statusSummary || []).map(x => x.count))} color="bg-orange-500" />
+              <StatBar key={i} label={s['INTERNSHIP STATUS']} value={s['TOTAL STUDENTS']} max={Math.max(1, ...(data?.statusSummary || []).map(x => x['TOTAL STUDENTS']))} color="bg-orange-500" />
             ))}
             {activeTab === 'workload' && (data?.workload || []).map((w, i) => (
-              <StatBar key={i} label={w.name} value={w.count} max={Math.max(1, ...(data?.workload || []).map(x => x.count))} color="bg-purple-500" />
+              <StatBar key={i} label={w['FACULTY ADVISOR']} value={w['TOTAL STUDENTS']} max={Math.max(1, ...(data?.workload || []).map(x => x['TOTAL STUDENTS']))} color="bg-purple-500" />
             ))}
             {activeTab === 'grades' && (data?.grades || []).map((g, i) => (
-              <StatBar key={i} label={`Score Range: ${g._id}+`} value={g.count} max={Math.max(1, ...(data?.grades || []).map(x => x.count))} color="bg-green-500" />
+              <StatBar key={i} label={`Score Range: ${g['GRADE BAND']}`} value={g['TOTAL STUDENTS']} max={Math.max(1, ...(data?.grades || []).map(x => x['TOTAL STUDENTS']))} color="bg-green-500" />
             ))}
             {(!data || (data[activeTab === 'distribution' ? 'distribution' : activeTab === 'status' ? 'statusSummary' : activeTab] || []).length === 0) && (
               <div className="py-12 text-center text-slate-400 italic">No data available for this metric.</div>
@@ -220,33 +222,19 @@ const AdminReports = () => {
             <table className="w-full text-left">
               <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                 <tr>
-                  <th className="px-6 py-4">Attribute</th>
-                  <th className="px-6 py-4 text-right">Count / Value</th>
+                  {getActiveData().length > 0 && Object.keys(getActiveData()[0]).map((header, idx) => (
+                    <th key={idx} className={`px-6 py-4 ${idx > 0 ? 'text-right' : ''}`}>{header}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {activeTab === 'distribution' && (data?.distribution || []).map((d, i) => (
+                {getActiveData().map((row, i) => (
                   <tr key={i} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 text-sm font-bold text-slate-700">{d.name}</td>
-                    <td className="px-6 py-4 text-sm text-right font-mono text-dbu-primary">{d.count} Students</td>
-                  </tr>
-                ))}
-                {activeTab === 'status' && (data?.statusSummary || []).map((s, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 text-sm font-bold text-slate-700">{s._id.replace('_', ' ')}</td>
-                    <td className="px-6 py-4 text-sm text-right font-mono text-orange-500">{s.count} Internships</td>
-                  </tr>
-                ))}
-                {activeTab === 'workload' && (data?.workload || []).map((w, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 text-sm font-bold text-slate-700">{w.name}</td>
-                    <td className="px-6 py-4 text-sm text-right font-mono text-purple-500">{w.count} Students</td>
-                  </tr>
-                ))}
-                {activeTab === 'grades' && (data?.grades || []).map((g, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 text-sm font-bold text-slate-700">Grade Band: {g._id}+</td>
-                    <td className="px-6 py-4 text-sm text-right font-mono text-green-500">{g.count} Submissions</td>
+                    {Object.values(row).map((val, idx) => (
+                      <td key={idx} className={`px-6 py-4 text-sm ${idx === 0 ? 'font-bold text-slate-700' : 'text-right font-mono text-dbu-primary'}`}>
+                        {val} {idx > 0 ? (activeTab === 'grades' ? 'Records' : 'Students') : ''}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>

@@ -34,7 +34,7 @@ const DeptDashboard = () => {
     const [stats, setStats] = useState({
         pendingApplications: 0,
         totalAdvisors: 0,
-        awaitingAdvisor: 0,
+        totalPlacements: 0,
         activeInternships: 0
     });
     const [students, setStudents] = useState([]);
@@ -166,7 +166,7 @@ const DeptDashboard = () => {
                     {[
                         { label: 'Pending Apps', value: stats.pendingApplications, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
                         { label: 'Dept Advisors', value: stats.totalAdvisors, icon: Users, color: 'text-blue-500', bg: 'bg-blue-50' },
-                        { label: 'Placement', value: stats.awaitingAdvisor, icon: Briefcase, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+                        { label: 'Placement', value: stats.totalPlacements, icon: Briefcase, color: 'text-indigo-500', bg: 'bg-indigo-50' },
                         { label: 'Active Field', value: stats.activeInternships, icon: ShieldCheck, color: 'text-emerald-500', bg: 'bg-emerald-50' }
                     ].map((card, i) => (
                         <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all group cursor-default">

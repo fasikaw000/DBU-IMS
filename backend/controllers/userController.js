@@ -35,12 +35,11 @@ export const updateMe = async (req, res, next) => {
     }
 
     const updates = {};
-    if (typeof fullName === 'string') {
-      const trimmed = fullName.trim();
-      if (!trimmed) {
-        return res.status(400).json({ success: false, message: 'Full name cannot be empty' });
+    if (req.body.fullName !== undefined) {
+      const user = await User.findById(req.user.id);
+      if (req.body.fullName !== user.fullName) {
+        return res.status(400).json({ success: false, message: 'Full name cannot be changed.' });
       }
-      updates.fullName = trimmed;
     }
 
     if (req.body.phone !== undefined) {

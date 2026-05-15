@@ -50,6 +50,8 @@ const DeanStudents = () => {
 
     useEffect(() => {
         fetchData();
+        const interval = setInterval(fetchData, 30000); // 30s auto-refresh
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
@@ -235,8 +237,8 @@ const DeanStudents = () => {
                                     <td className="px-6 py-6 text-[11px] font-mono font-bold text-dbu-primary">{s.cbeAccount}</td>
                                     <td className="px-6 py-6 text-center">
                                         <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${s.internshipStatus === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                s.internshipStatus === 'PENDING_APPROVAL' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                                                    'bg-slate-50 text-slate-400 border-slate-100'
+                                            s.internshipStatus === 'PENDING_APPROVAL' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                                'bg-slate-50 text-slate-400 border-slate-100'
                                             }`}>
                                             {s.internshipStatus?.replace('_', ' ') || 'NOT APPLIED'}
                                         </span>

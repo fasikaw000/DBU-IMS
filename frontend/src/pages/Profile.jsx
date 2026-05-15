@@ -31,6 +31,20 @@ const Profile = () => {
   const [loadingProfile, setLoadingProfile] = useState(user?.role === 'Student');
 
   useEffect(() => {
+    const refreshUserData = async () => {
+      try {
+        const res = await api.get('/users/me');
+        if (res?.data) setUser(res.data);
+      } catch (err) {
+        console.error("Failed to refresh profile", err);
+      }
+    };
+
+    const interval = setInterval(refreshUserData, 30000);
+    return () => clearInterval(interval);
+  }, [setUser]);
+
+  useEffect(() => {
     if (!message && !error) return;
     const timer = setTimeout(() => {
       setMessage('');
@@ -103,7 +117,6 @@ const Profile = () => {
     setError('');
     try {
       await api.put('/users/me', {
-        fullName: fullName,
         email,
         phone,
         cbeAccount: user?.role === 'Student' ? cbeAccount : undefined
@@ -250,16 +263,19 @@ const Profile = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
-                  <div className="relative">
-                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <div className="relative group">
+                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-dbu-primary transition-colors" />
                     <input
                       value={fullName}
-                      onChange={e => { setFullName(e.target.value); setErrors({ ...errors, fullName: null }); }}
-                      className={`w-full pl-12 pr-4 py-3 bg-slate-50 border rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-dbu-primary ${errors.fullName ? 'border-red-500' : 'border-slate-100'}`}
+                      readOnly
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 cursor-not-allowed outline-none"
                       placeholder="Your Full Name"
                     />
                   </div>
-                  {errors.fullName && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1">{errors.fullName}</p>}
+                  <p className="text-[9px] font-medium text-slate-400 mt-1 ml-1 flex items-center gap-1">
+                    <BadgeCheck className="w-3 h-3 text-dbu-primary" />
+                    Contact administrator for official name corrections.
+                  </p>
                 </div>
 
                 <div className="space-y-2">

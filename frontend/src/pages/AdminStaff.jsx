@@ -56,6 +56,8 @@ const AdminStaff = () => {
 
     useEffect(() => {
         fetchData();
+        const interval = setInterval(fetchData, 30000); // 30s auto-refresh
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
@@ -225,7 +227,7 @@ const AdminStaff = () => {
     const handleExportStaffCSV = () => {
         const data = printModalData;
         if (!data || data.length === 0) return;
-        const headers = 'Full Name,Department,Username,Role';
+        const headers = 'FULL NAME,DEPARTMENT,USERNAME,ROLE';
         const rows = data.map(s =>
             `"${s.fullName || s.name}","${s.department?.name || 'Central'}","${s.username}","${s.role}"`
         ).join('\n');
@@ -280,10 +282,10 @@ const AdminStaff = () => {
               <table>
                 <thead>
                   <tr>
-                    <th>Full Name</th>
-                    <th>Department</th>
-                    <th>Username</th>
-                    <th>Role</th>
+                    <th>FULL NAME</th>
+                    <th>DEPARTMENT</th>
+                    <th>USERNAME</th>
+                    <th>ROLE</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -382,7 +384,7 @@ const AdminStaff = () => {
                         {messageType === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
                         <p className="whitespace-pre-line">{message}</p>
                     </div>
-                    <button 
+                    <button
                         onClick={() => setMessage('')}
                         className="p-1 hover:bg-black/5 rounded-lg transition-colors shrink-0"
                     >
@@ -446,8 +448,8 @@ const AdminStaff = () => {
                                         <td className="px-6 py-4 text-sm font-mono text-slate-600">{staff.username}</td>
                                         <td className="px-6 py-4">
                                             <span className={`text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded ${staff.role === 'department_dean' || staff.role === 'dean' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
-                                                {staff.role === 'advisor' || staff.role === 'Advisor' ? 'Faculty Advisor' : 
-                                                 staff.role === 'department_dean' || staff.role === 'dean' || staff.role === 'Dean' ? 'Department Dean' : staff.role}
+                                                {staff.role === 'advisor' || staff.role === 'Advisor' ? 'Faculty Advisor' :
+                                                    staff.role === 'department_dean' || staff.role === 'dean' || staff.role === 'Dean' ? 'Department Dean' : staff.role}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-center">

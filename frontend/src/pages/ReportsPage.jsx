@@ -33,6 +33,8 @@ const ReportsPage = () => {
 
     useEffect(() => {
         fetchReports();
+        const interval = setInterval(fetchReports, 30000); // 30s auto-refresh
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {

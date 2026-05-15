@@ -14,7 +14,8 @@ const NotificationCenter = () => {
 
   useEffect(() => {
     fetchNotifications();
-
+    const interval = setInterval(fetchNotifications, 15000); // 15s auto-refresh
+    
     const handleNotificationRead = (e) => {
       setNotifications(prev => prev.map(n => n._id === e.detail.id ? { ...n, is_read: true } : n));
     };
@@ -29,6 +30,7 @@ const NotificationCenter = () => {
     return () => {
       window.removeEventListener('notification-read', handleNotificationRead);
       window.removeEventListener('notifications-read-all', handleNotificationsReadAll);
+      clearInterval(interval);
     };
   }, []);
 

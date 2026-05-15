@@ -47,6 +47,8 @@ const CompanyStudentsPage = () => {
         };
 
         fetchCompanyAndPlacements();
+        const interval = setInterval(fetchCompanyAndPlacements, 30000); // 30s auto-refresh
+        return () => clearInterval(interval);
     }, [id]);
 
     const filteredPlacements = placements.filter(p =>
@@ -171,15 +173,15 @@ const CompanyStudentsPage = () => {
                                     <p className="text-sm font-black text-slate-700">{w.advisor?.fullName || w.advisor?.name}</p>
                                     <p className="text-[10px] font-mono text-slate-400">({w.advisor?.username})</p>
                                 </div>
-                                
+
                                 <div className="flex-1 space-y-2">
                                     <div className="flex justify-between items-end">
                                         <span className="text-[10px] font-black text-slate-400 uppercase">Capacity Usage</span>
                                         <span className="text-xs font-black text-slate-700">{w.count} / {MAX_WORKLOAD}</span>
                                     </div>
                                     <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
-                                        <div 
-                                            className={`h-full ${statusColor} transition-all duration-1000 ease-out`} 
+                                        <div
+                                            className={`h-full ${statusColor} transition-all duration-1000 ease-out`}
                                             style={{ width: `${Math.min(100, percentage)}%` }}
                                         />
                                     </div>
@@ -234,8 +236,8 @@ const CompanyStudentsPage = () => {
                                     </div>
                                 </div>
                                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${intern.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                        intern.status === 'COMPLETED' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                            'bg-slate-50 text-slate-500 border-slate-100'
+                                    intern.status === 'COMPLETED' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                        'bg-slate-50 text-slate-500 border-slate-100'
                                     }`}>{intern.status}</span>
                             </div>
 

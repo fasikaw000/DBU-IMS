@@ -38,6 +38,8 @@ const AdminLogs = () => {
 
   useEffect(() => {
     fetchLogs();
+    const interval = setInterval(fetchLogs, 30000); // 30s auto-refresh
+    return () => clearInterval(interval);
   }, [page, searchTerm]);
 
   const actionLabels = {

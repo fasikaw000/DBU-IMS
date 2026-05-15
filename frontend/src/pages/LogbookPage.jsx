@@ -59,6 +59,8 @@ const LogbookPage = () => {
 
     useEffect(() => {
         fetchLogbooks();
+        const interval = setInterval(fetchLogbooks, 30000); // 30s auto-refresh
+        return () => clearInterval(interval);
     }, [targetStudentId]);
 
     const fetchLogbooks = async () => {

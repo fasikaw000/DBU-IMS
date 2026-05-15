@@ -34,6 +34,8 @@ const AdvisorDashboard = () => {
 
     useEffect(() => {
         fetchDashboardData();
+        const interval = setInterval(fetchDashboardData, 30000); // 30s auto-refresh
+        return () => clearInterval(interval);
     }, []);
 
     const fetchDashboardData = async () => {

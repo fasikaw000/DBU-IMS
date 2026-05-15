@@ -8,6 +8,8 @@ const CollegeHeadDashboard = () => {
 
   useEffect(() => {
     fetchAnalytics();
+    const interval = setInterval(fetchAnalytics, 30000); // 30s auto-refresh
+    return () => clearInterval(interval);
   }, []);
 
   const fetchAnalytics = async () => {

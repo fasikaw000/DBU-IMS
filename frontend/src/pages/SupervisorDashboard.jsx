@@ -16,6 +16,8 @@ const SupervisorDashboard = () => {
 
   useEffect(() => {
     fetchStudents();
+    const interval = setInterval(fetchStudents, 30000); // 30s auto-refresh
+    return () => clearInterval(interval);
   }, []);
 
   const fetchStudents = async () => {

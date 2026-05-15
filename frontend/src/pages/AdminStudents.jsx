@@ -54,6 +54,8 @@ const AdminStudents = () => {
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(fetchData, 30000); // 30s auto-refresh
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -172,16 +174,16 @@ const AdminStudents = () => {
 
     const activeFields = Object.keys(printFields).filter(f => printFields[f]);
     const fieldLabels = {
-      fullName: 'Full Name',
-      studentId: 'Student ID',
-      username: 'Username',
-      department: 'Department',
-      year: 'Year',
-      cbeAccount: 'CBE Account',
-      email: 'Email',
-      phone: 'Phone',
-      internshipStatus: 'Internship Status',
-      companyName: 'Company'
+      fullName: 'STUDENT NAME',
+      studentId: 'STUDENT ID',
+      username: 'USERNAME',
+      department: 'DEPARTMENT',
+      year: 'YEAR',
+      cbeAccount: 'CBE ACCOUNT',
+      email: 'EMAIL',
+      phone: 'PHONE',
+      internshipStatus: 'INTERNSHIP STATUS',
+      companyName: 'COMPANY'
     };
 
     const printWindow = window.open('', '_blank');
@@ -411,7 +413,7 @@ const AdminStudents = () => {
             {messageType === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
             <p className="whitespace-pre-line">{message}</p>
           </div>
-          <button 
+          <button
             onClick={() => setMessage('')}
             className="p-1 hover:bg-black/5 rounded-lg transition-colors shrink-0"
           >
