@@ -1,4 +1,5 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
 import mongoose from 'mongoose';
 import User from './models/User.js';
 
@@ -7,7 +8,7 @@ import User from './models/User.js';
  * Edit the details below and run 'node create-admin.js'
  */
 const adminDetails = {
-  name: "Dr. Seblewengel E.",   // You can change this
+  fullName: "Dr. Seblewengel E.",   // You can change this
   username: "STF000001",    // Professional format STFXXXXXX
   role: "Admin",    // DO NOT CHANGE THIS ROLE
   email: "admin@gmail.com",
@@ -16,11 +17,13 @@ const adminDetails = {
 
 const createAdmin = async () => {
   try {
+    console.log('🔗 Connecting to:', process.env.MONGO_URI);
     await mongoose.connect(process.env.MONGO_URI);
     console.log('🔗 Connected to MongoDB...');
 
     // 1. Check if admin already exists
     const existing = await User.findOne({ username: adminDetails.username });
+    console.log('Existing check result:', existing);
     if (existing) {
       console.log(`⚠️ User with username ${adminDetails.username} already exists!`);
       process.exit(0);

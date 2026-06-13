@@ -21,16 +21,27 @@ const generateToken = (id, role) => {
 export const loginUser = async (req, res, next) => {
   try {
     const { username, password } = req.body;
+    const enteredUsername = typeof username === 'string' ? username.trim() : username;
+    const lookupUsername = typeof enteredUsername === 'string' ? enteredUsername.toUpperCase() : enteredUsername;
 
-    if (!username || !password) {
+    console.log('[loginUser] username entered:', JSON.stringify(username));
+    console.log('[loginUser] lookup username:', lookupUsername);
+
+    if (!enteredUsername || !password) {
       return res.status(400).json({ success: false, message: 'Please provide username and password' });
     }
 
-    const user = await User.findOne({ username }).select('+password').populate('department', 'name code');
+    const user = await User.findOne({ username: lookupUsername }).select('+password').populate('department', 'name code');
 
     if (!user) {
-      await AuditLog.create({ action: 'failed_login', details: `Invalid username: ${username}`, ip: req.ip });
+      console.log('[loginUser] user found: false', { lookupUsername });
+      await AuditLog.create({ action: 'failed_login', details: `Invalid username: ${lookupUsername}`, ip: req.ip });
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    console.log('[loginUser] user found: true', { username: user.username, role: user.role, isActivated: user.isActivated });
+    if (user.role && user.role.toLowerCase() === 'admin') {
+      console.log('Admin found');
     }
 
     // Self-heal legacy/inconsistent activation fields (e.g. isActivated=true but activationStatus="Pending")
@@ -59,8 +70,16 @@ export const loginUser = async (req, res, next) => {
       });
     }
 
+    console.log('[loginUser] role:', user.role);
+    console.log('[loginUser] isActivated:', user.isActivated);
+    console.log('[loginUser] starting bcrypt compare for user:', user.username);
+
     const isMatch = await user.matchPassword(password);
+    console.log('[loginUser] bcrypt.compare result:', isMatch);
     if (!isMatch) {
+      if (user.role && user.role.toLowerCase() === 'admin') {
+        console.log('Password mismatch');
+      }
       user.loginAttempts = (user.loginAttempts || 0) + 1;
       if (user.loginAttempts >= 5) {
         user.lockUntil = Date.now() + 15 * 60 * 1000;
@@ -100,6 +119,11 @@ export const loginUser = async (req, res, next) => {
       details: `User ${username} logged in`,
       ip: req.ip
     });
+
+    if (user.role && user.role.toLowerCase() === 'admin') {
+      console.log('Password matched');
+      console.log('Admin login successful');
+    }
 
     res.status(200).json({
       success: true,

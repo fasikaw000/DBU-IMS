@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import { fileURLToPath } from 'url';
+import path from 'path';
 
 const connectDB = async () => {
   try {
@@ -13,15 +15,34 @@ const connectDB = async () => {
       autoIndex: true
     });
 
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    console.log("Database connected successfully and is now persistent.");
-    
-    // Log database name to verify we are not in memory
-    console.log(`Connected to database: ${conn.connection.name}`);
-
+    // Successful persistent connection
+    return conn.connection;
   } catch (error) {
-    console.error(`❌ Database Connection Error: ${error.message}`);
-    console.error("Critical Failure: Could not connect to persistent database. Exiting...");
+    // Log failure reason
+    console.error('❌ MongoDB Connection Failed');
+    console.error(`Reason: ${error.message}`);
+
+    // Only allow memory DB fallback when explicitly enabled in development
+    const allowMemory = process.env.NODE_ENV === 'development' && process.env.ENABLE_MEMORY_DB === 'true';
+    if (allowMemory) {
+      try {
+        console.warn('Attempting mongodb-memory-server fallback (development + ENABLE_MEMORY_DB=true)...');
+        const { MongoMemoryServer } = await import('mongodb-memory-server');
+        const mongod = await MongoMemoryServer.create({
+          instance: { dbName: 'dbu_ims' }
+        });
+        const uri = mongod.getUri();
+        console.log('✅ mongodb-memory-server started');
+        const memConn = await mongoose.connect(uri, { autoIndex: true });
+        return memConn.connection;
+      } catch (memErr) {
+        console.error('❌ In-memory MongoDB fallback failed');
+        console.error(`Reason: ${memErr.message}`);
+      }
+    }
+
+    // If we get here, we must exit to avoid starting server without DB
+    console.error('Critical Failure: Could not connect to MongoDB. Exiting...');
     process.exit(1);
   }
 };

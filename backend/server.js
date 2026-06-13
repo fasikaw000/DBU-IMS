@@ -1,4 +1,5 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -27,9 +28,24 @@ import errorHandler from './middleware/error.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Connect to MongoDB
-await connectDB();
-console.log('Connected to DB:', mongoose.connection.name);
+// Ensure .env from backend directory is loaded (explicit)
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+const extractHostFromUri = (uri) => {
+  try {
+    const m = uri.match(/mongodb(?:\+srv)?:\/\/(?:[^@]+@)?([^\/]+)/);
+    return m ? m[1] : 'unknown';
+  } catch (e) {
+    return 'unknown';
+  }
+};
+
+// Connect to MongoDB and start server only after successful DB connection
+const dbConnection = await connectDB();
+const databaseName = (dbConnection && dbConnection.name) || process.env.DB_NAME || 'unknown';
+const hostName = extractHostFromUri(process.env.MONGO_URI || '');
+
+// Seed database (runs after DB connection)
 await seedDatabase();
 
 const app = express();
@@ -70,5 +86,8 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log('✅ MongoDB Connected Successfully');
+  console.log(`📦 Database: ${databaseName}`);
+  console.log(`🌐 Host: ${hostName}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
