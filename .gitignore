@@ -2,3 +2,8 @@ node_modules/
 .env
 dist/
 build/
+
+# Local backend runtime data
+/backend/data/db/
+/backend/logs/
+/backend/run-with-memdb.js
